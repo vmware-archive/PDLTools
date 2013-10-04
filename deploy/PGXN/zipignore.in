@@ -1,0 +1,16 @@
+*/.git/*
+*/build*
+*.so
+*.o
+*.pyc
+*/.DS_Store
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.synctex.gz
+*.toc
+*.thm
+*-blx.bib
+*.run.xml
