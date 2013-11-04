@@ -39,9 +39,9 @@ ExternalProject_Add(EP_cpptest
   DOWNLOAD_DIR ${DSTOOLS_THIRD_PARTY}/downloads
   URL ${CPPTEST_TAR_SOURCE}
   URL_MD5 ${CPPTEST_TAR_MD5}
-  CONFIGURE_COMMAND ./configure --disable-doc
+  CONFIGURE_COMMAND ./configure --disable-doc --prefix=${DSTOOLS_THIRD_PARTY}/install
   BUILD_COMMAND make
-  INSTALL_COMMAND /usr/bin/env echo Ignored: make
+  INSTALL_COMMAND make install
   BINARY_DIR ${DSTOOLS_THIRD_PARTY}/src/EP_cpptest)
 
 # ======================================================================
@@ -68,12 +68,13 @@ ExternalProject_Add(EP_uriparser
   DOWNLOAD_DIR ${DSTOOLS_THIRD_PARTY}/downloads
   URL ${URIPARSER_TAR_SOURCE}
   URL_MD5 ${URIPARSER_TAR_MD5}
-  CONFIGURE_COMMAND ./configure --disable-doc CPPTEST_CFLAGS=-I${DSTOOLS_THIRD_PARTY}/src/EP_cpptest/src CPPTEST_LIBS=${DSTOOLS_THIRD_PARTY}/src/EP_cpptest/src/.libs
+  CONFIGURE_COMMAND ./configure --disable-doc CPPTEST_CFLAGS=-I${DSTOOLS_THIRD_PARTY}/install CPPTEST_LIBS=${DSTOOLS_THIRD_PARTY}/install/lib --prefix=${DSTOOLS_THIRD_PARTY}/install
   BUILD_COMMAND make
-  INSTALL_COMMAND /usr/bin/env echo Ignored: make
+  INSTALL_COMMAND make install
   BINARY_DIR ${DSTOOLS_THIRD_PARTY}/src/EP_uriparser)
 
-include_directories(BEFORE SYSTEM ${DSTOOLS_THIRD_PARTY}/src/EP_uriparser/include)
+include_directories(${DSTOOLS_THIRD_PARTY}/install/include)
+link_directories(${DSTOOLS_THIRD_PARTY}/install/lib)
 
 # ======================================================================
 # -- Macros to be used by ports
@@ -143,7 +144,7 @@ macro(add_dstools_connector_library IN_TARGET_NAME IN_LIB_DIR IN_LIB_LOADER)
     ${IN_TARGET_NAME}
     MODULE
     ${IN_LIBRARY_SOURCES})
-  add_dependencies(${IN_TARGET_NAME} EP_eigen)
+  add_dependencies(${IN_TARGET_NAME} EP_uriparser)
   set_target_properties(${IN_TARGET_NAME} PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${IN_LIB_DIR}"
     OUTPUT_NAME "dstools"
@@ -152,7 +153,7 @@ macro(add_dstools_connector_library IN_TARGET_NAME IN_LIB_DIR IN_LIB_LOADER)
   if(APPLE)
     set_target_properties(${IN_TARGET_NAME} PROPERTIES
       LINK_FLAGS
-      "-Wl,-unexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../../../unexported_symbols_list.txt -bundle_loader \"${IN_LIB_LOADER}\"")
+      "-Wl -bundle_loader \"${IN_LIB_LOADER}\" -luriparser")
   endif(APPLE)
   
   if((NOT APPLE)) 
