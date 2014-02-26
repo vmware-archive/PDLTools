@@ -1,0 +1,1 @@
+cmd='./configure;--disable-doc;--prefix=/home/pivotal/code/dstools/cmake/third_party/install'

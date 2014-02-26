@@ -26,7 +26,7 @@ endif(PACKAGE_SUFFIX)
 
 set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/description.txt")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
-    "Open-Source Library for Scalable in-Database Analytics")
+    "DS Tools Library.")
 set(CPACK_PACKAGE_FILE_NAME
     "dstools${_PACKAGE_SUFFIX}-${DSTOOLS_VERSION_STRING}-${CMAKE_SYSTEM_NAME}")
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "dstools")

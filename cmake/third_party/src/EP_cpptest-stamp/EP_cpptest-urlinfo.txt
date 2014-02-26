@@ -1,0 +1,3 @@
+repository='external project URL'
+module='http://sourceforge.net/projects/cpptest/files/cpptest-1.1.2.tar.gz'
+tag='MD5=79b9bff371d182f11a3235969f84ccb6'

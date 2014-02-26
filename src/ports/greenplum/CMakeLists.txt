@@ -29,33 +29,23 @@ include(GreenplumUtils)
 # ======================================================================
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
+set(DSTOOLS_DBAL_SOURCES  ${DSTOOLS_SOURCES})
 
-set(DSTOOLS_DBAL_SOURCES
-  ${DSTOOLS_SOURCES})
-
-file(GLOB_RECURSE LEGACY_SQL_FILES RELATIVE
-  "${CMAKE_SOURCE_DIR}/methods"
-  "${CMAKE_SOURCE_DIR}/methods/*.sql_in")
-foreach(CURRENT_FILE ${LEGACY_SQL_FILES})
-  get_filename_component(CURRENT_PATH "${CMAKE_SOURCE_DIR}/methods/${CURRENT_FILE}" ABSOLUTE)
-  set(OUTFILE "${CMAKE_CURRENT_BINARY_DIR}/modules/${CURRENT_FILE}")
-  string(REPLACE "/src/pg_gp" "" OUTFILE ${OUTFILE})
-  string(REPLACE "/sql/" "/test/" OUTFILE ${OUTFILE})
-  add_custom_command(OUTPUT "${OUTFILE}"
-    COMMAND "${CMAKE_SOURCE_DIR}/cmake/TestIfNoUTF8BOM.py" "${CURRENT_PATH}"
-    COMMAND ${CMAKE_COMMAND} -E copy "${CURRENT_PATH}" "${OUTFILE}"
-    DEPENDS "${CURRENT_PATH}"
-    COMMENT "Validating and copying ${CURRENT_FILE}")
-  list(APPEND SQL_TARGET_FILES ${OUTFILE})
-endforeach(CURRENT_FILE ${LEGACY_SQL_FILES})
+add_sql_files(
+    SQL_TARGET_FILES
+    "../postgres/modules"
+    "${CMAKE_CURRENT_BINARY_DIR}/modules"
+)
 
 add_custom_target(sqlFiles_${PORT_LC} ALL DEPENDS ${SQL_TARGET_FILES})
+
 
 # ======================================================================
 # 2. Install all SQL files
 # ======================================================================
 
 cpack_add_port_group_and_component_for_all_versions()
+
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/modules
   DESTINATION ports/${PORT_DIR_NAME}
   COMPONENT ${PORT_LC}_any
@@ -93,7 +83,7 @@ function(add_${PORT_LC}_library IN_PORT_VERSION)
     lib
     "${${DBMS_UC}_EXECUTABLE}"
     ${DSTOOLS_DBAL_SOURCES})
-  
+
   if(CMAKE_COMPILER_IS_GNUCXX)
     # The source code specifies that we are POSIX.1-2001 compliant:
     # On the Mac, this is done in $GP_HOME/include/pg_config_manual.h.
@@ -143,14 +133,10 @@ function(add_${PORT_LC}_library IN_PORT_VERSION)
   # --------------------------------------------------------------------
   
   cpack_add_version_component()
-  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/modules
-    DESTINATION ports/${PORT_DIR_NAME}/${IN_PORT_VERSION}
-    COMPONENT ${DBMS}
-    REGEX "^(.*/)?\\.DS_Store\$" EXCLUDE
-    )
-  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/madpack/SQLCommon.m4"
-    DESTINATION ports/${PORT_DIR_NAME}/${IN_PORT_VERSION}/madpack
-    COMPONENT ${DBMS}
+
+  install(TARGETS dstools_${DBMS}
+        LIBRARY DESTINATION ports/${PORT_DIR_NAME}/${IN_PORT_VERSION}/lib
+        COMPONENT ${DBMS}
     )
   
   # --------------------------------------------------------------------

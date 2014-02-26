@@ -24,14 +24,19 @@ Provides:       /bin/sh
 :
 
 %install
+if [ ! @DSTOOLS_GPPKG_RPM_SOURCE_DIR@ -ef $RPM_BUILD_ROOT ]
+then
+    mkdir -p $RPM_BUILD_ROOT
+    ln -s @DSTOOLS_GPPKG_RPM_SOURCE_DIR@/* $RPM_BUILD_ROOT/
+fi
+
 
 %post
+echo $RPM_INSTALL_PREFIX
+echo "DONE"
 ln -nsf $RPM_INSTALL_PREFIX/dstools/Versions/%{_dstools_version} $RPM_INSTALL_PREFIX/dstools/Current
 ln -nsf $RPM_INSTALL_PREFIX/dstools/Current/bin $RPM_INSTALL_PREFIX/dstools/bin
 ln -nsf $RPM_INSTALL_PREFIX/dstools/Current/doc $RPM_INSTALL_PREFIX/dstools/doc
-# creating symlink for madpack (does not work at present)
-# find $RPM_INSTALL_PREFIX/bin/madpack -type f -exec mv {} $RPM_INSTALL_PREFIX/bin/old_madpack \; 2>/dev/null
-# ln -nsf $RPM_INSTALL_PREFIX/dstools/Current/bin/madpack $RPM_INSTALL_PREFIX/bin/madpack
 
 %files
 %((cd "@DSTOOLS_GPPKG_RPM_SOURCE_DIR@@CPACK_PACKAGING_INSTALL_PREFIX@" && find . \( -type f -or -type l \) | grep -E -v "^\./ports/.*" && find ./ports/greenplum \( -type f -or -type l \) | grep -E -v "^\./ports/greenplum/[[:digit:]]+\.[[:digit:]]+/.*" && find ./ports/greenplum/@GPDB_VERSION@ \( -type f -or -type l \)) | cut -c 2- | awk '{ print "\"@CPACK_PACKAGING_INSTALL_PREFIX@" $0 "\""}')

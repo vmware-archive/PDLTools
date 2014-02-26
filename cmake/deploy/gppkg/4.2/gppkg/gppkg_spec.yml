@@ -1,0 +1,19 @@
+Pkgname: dstools
+Architecture: x86_64
+Version: 1.0
+OS: rhel5
+GPDBVersion: 4.2
+Description: DSTools is an open source library which provides scalable in-database analytics. It provides data-parallel implementations of mathematical, statistical and machine learning methods for structured and unstructured data.
+PostInstall:
+- Master: "echo 'Please run the following command to deploy DSTools';
+           echo 'usage:  madpack install [-s schema_name]  -p greenplum -c user@host:port/database';
+           echo 'Example:';
+           echo '       $ $GPHOME/dstools/bin/madpack install -s dstools -p greenplum -c gpadmin@mdw:5432/testdb';
+           echo '       This will install DSTools objects into a Greenplum database named \"testdb\"';
+           echo '       running on server \"mdw\" on port 5432. Installer will try to login as \"gpadmin\"';
+           echo '       and will prompt for password. The target schema will be \"dstools\".';
+           echo '       To upgrade to a new version of DSTools from version v0.5 or later, use option \"-upgrade\",';
+           echo '       instead of \"-install\" ';
+           echo 'For additional options run:';
+           echo '$ madpack --help';
+           echo 'Release notes and additional documentation can be found at http://dstools.net';"

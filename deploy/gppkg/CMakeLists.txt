@@ -34,9 +34,12 @@ add_custom_target(gppkg
     COMMENT "Generating all Greenplum gppkg installers"
 )
 
+MESSAGE(" $$$$$----- Running Generated Files ---- $$$$")
+
 # We now run generated files, one for each Greenplum version
 file(GLOB GPPKG_VERSIONS "${CMAKE_CURRENT_BINARY_DIR}/Version_*.cmake")
 foreach(GPPKG_VERSION ${GPPKG_VERSIONS})
+    MESSAGE(" $$$$$----- GPPKG_VERSIONS $$$$ :" ${GPPKG_VERSIONS})
     include("${GPPKG_VERSION}")
 endforeach(GPPKG_VERSION)
 

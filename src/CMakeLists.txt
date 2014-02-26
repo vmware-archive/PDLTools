@@ -121,10 +121,13 @@ macro(add_sql_files OUT_SQL_TARGET_FILES IN_SOURCE_DIR IN_TARGET_DIR)
   file(GLOB_RECURSE SQL_FILES
     RELATIVE "${SOURCE_DIR_ABS}"
     "${SOURCE_DIR_ABS}/*.sql_in")
-  # psql of PostgreSQL < 9 does not like byte-order marks
-  set(_DSTOOLS_VERIFY_AND_COPY_COMMAND
-    COMMAND "${CMAKE_SOURCE_DIR}/cmake/TestIfNoUTF8BOM.py" "\"\${CURRENT_PATH}\""
-    COMMAND "${CMAKE_COMMAND}" -E copy "\"\${CURRENT_PATH}\"" "\"\${OUTFILE}\"")
+ 
+    # psql of PostgreSQL < 9 does not like byte-order marks
+    # TBD: This chunk has been copied & edited from MADlib cmake. Will need to
+    # revisit this later to see if it is even required for DStools
+    set(_DSTOOLS_VERIFY_AND_COPY_COMMAND
+        COMMAND "${CMAKE_COMMAND}" -E copy "\"\${CURRENT_PATH}\"""\"\${OUTFILE}\"")
+
   batch_add_command(
     TARGET_PREFIX "${TARGET_DIR_ABS}/"
     SOURCE_PREFIX "${SOURCE_DIR_ABS}/"
@@ -139,7 +142,7 @@ endmacro(add_sql_files)
 # Add a connector library for a specific DBMS port
 macro(add_dstools_connector_library IN_TARGET_NAME IN_LIB_DIR IN_LIB_LOADER)
   set(IN_LIBRARY_SOURCES ${ARGN})
-  
+ 
   add_library(
     ${IN_TARGET_NAME}
     MODULE

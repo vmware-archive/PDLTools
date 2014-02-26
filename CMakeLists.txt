@@ -49,6 +49,23 @@ message ("     DSTOOLS_VERSION_MINOR ... : ${DSTOOLS_VERSION_MINOR}")
 message ("     DSTOOLS_VERSION_PATCH ... : ${DSTOOLS_VERSION_PATCH}")
 message ("   ------------------------------------------------------------")
 
+# ===============================================================
+# -- Install Read-me files and license directory
+# ===============================================================
+
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/license"
+    DESTINATION .
+    COMPONENT core
+    PATTERN ".DS_Store" EXCLUDE
+)
+install(
+    FILES
+        "${CMAKE_CURRENT_SOURCE_DIR}/README.md"
+    DESTINATION doc
+    COMPONENT core
+)
+
+
 # ======================================================================
 # -- Local includes
 # ======================================================================
