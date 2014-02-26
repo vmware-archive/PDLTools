@@ -32,8 +32,16 @@ To create a gppkg installer, run the following (from the build directory):
 
 * make gppkg
 
-Installation (TBD)
-===================
+Installation
+===========
+
+Installation is a two-step process. First, you'll have to install DSTools on the target machine where GPDB is running.
+To do this, you'll run the following:
+
+gppkg -i <dstools-version.gppkg file>
+
+This will place all the relevant binaries & SQL files at the appropriate location (usually `$GPHOME/dstools`).
+Next, you'll have to install the SQL UDFs in the target database.
 
 To install dstools into a database of your choice, run the following (assuming "dspack" is in your PATH):
 dspack install -s <schema name> -c <username>@<hostname>:<port>/<database name>
