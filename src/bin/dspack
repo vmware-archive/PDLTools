@@ -1,0 +1,65 @@
+#!/bin/bash
+
+# This script does the following:
+# 0. If indicated by environent variables, look for DBMS-supplied Python
+#    installation. E.g., Greenplum supplies its own Python, and its currently
+#    the first choice to use because it guarantees that python, pygresql
+#    (currently needed to connect to a GP database), and libpg all have the same
+#    architecture.
+# 1. Of step 0 failed, find python interpreter by
+#    - first looking for "python${VERSION}" in $PATH where
+#      ${VERSION} in {2.7, 2.6}
+#    - Only if that fails, look for "python" in $PATH
+# 2. Pass all arguments to ../dspack/dspack.py
+
+PYTHON_PREFIX="python"
+PYTHON_VERSIONS="2.7 2.6"
+
+# create absolute path to dspack.py
+pushd `dirname $0` > /dev/null
+DSPACK_PATH="$(pwd -P)/../dspack/dspack.py"
+popd > /dev/null
+
+# Initialization
+DID_NOT_FIND_INTERPRETER=1
+
+# Platform-specific overrides
+if test "$GPHOME" && test "$PYTHONHOME" && \
+    test "${PYTHONHOME:0:${#GPHOME}}" = "$GPHOME"; then
+
+    DID_NOT_FIND_INTERPRETER=0
+    PYTHON_EXE_NAME="${PYTHONHOME}/bin/python"
+fi
+
+errorNoPythonFound() {
+    echo "No Python interpreter found. Please install Python 2.6 or higher to" \
+        "run dspack."
+    exit 1
+}
+
+setAndTestPythonVesion() {
+    PYTHON_EXE_NAME="${PYTHON_PREFIX}$1"
+    command -v "${PYTHON_EXE_NAME}" > /dev/null
+    DID_NOT_FIND_INTERPRETER=$?
+}
+
+
+# function main()
+if test $DID_NOT_FIND_INTERPRETER -ne 0; then
+    for VERSION in $PYTHON_VERSIONS; do
+        setAndTestPythonVesion "${VERSION}"
+        if test $DID_NOT_FIND_INTERPRETER -eq 0; then
+            break
+        fi
+    done
+fi
+
+if test $DID_NOT_FIND_INTERPRETER -ne 0; then
+    setAndTestPythonVesion ""
+fi
+
+if test $DID_NOT_FIND_INTERPRETER -ne 0; then
+    errorNoPythonFound
+fi
+
+"$PYTHON_EXE_NAME" "${DSPACK_PATH}" "$@"

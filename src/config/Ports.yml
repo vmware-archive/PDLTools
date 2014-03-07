@@ -1,0 +1,9 @@
+# List of DB Ports to compile DSTools for.
+# 
+# Synopsis:
+# - name   : descriptive name of the new DB port
+#
+
+greenplum:
+    name:   Greenplum DB
+

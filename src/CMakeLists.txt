@@ -177,3 +177,6 @@ list(APPEND DSTOOLS_SOURCES
   ${DSTOOLS_C_SOURCES})
 
 add_subdirectory(ports)
+add_subdirectory(dspack)
+add_subdirectory(config)
+add_subdirectory(bin)

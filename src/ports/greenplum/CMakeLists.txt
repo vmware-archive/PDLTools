@@ -18,8 +18,7 @@ else(APPLE)
 endif(APPLE)
 
 list(APPEND CMAKE_MODULE_PATH
-  ${CMAKE_CURRENT_SOURCE_DIR}/cmake
-  ${CMAKE_CURRENT_SOURCE_DIR}/../postgres/cmake)
+  ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(PostgreSQLUtils)
 include(GreenplumUtils)
 
@@ -33,7 +32,7 @@ set(DSTOOLS_DBAL_SOURCES  ${DSTOOLS_SOURCES})
 
 add_sql_files(
     SQL_TARGET_FILES
-    "../postgres/modules"
+    "./modules"
     "${CMAKE_CURRENT_BINARY_DIR}/modules"
 )
 
