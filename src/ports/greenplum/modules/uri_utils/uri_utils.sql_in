@@ -1,8 +1,6 @@
 -- File: uri_utils.sql
 -- Implementation of URI handling utility.
 
-CREATE SCHEMA DSTOOLS_SCHEMA;
-
 DROP TYPE IF EXISTS DSTOOLS_SCHEMA.uri_type CASCADE;
 
 /**
@@ -97,7 +95,7 @@ CREATE TYPE DSTOOLS_SCHEMA.uri_array_type AS (
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.parse_uri(uri text, normalize boolean,
                                    parse_query boolean)
 RETURNS DSTOOLS_SCHEMA.uri_type
-AS '/home/gpadmin/michael/DSTOOLS_SCHEMA/url/ver4/uri_utils.so','parse_uri'
+AS 'MODULE_PATHNAME','parse_uri'
 LANGUAGE C IMMUTABLE STRICT;
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.parse_uri()
@@ -177,7 +175,7 @@ $$;
  */
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.extract_uri(txt text, normalize boolean)
 RETURNS DSTOOLS_SCHEMA.uri_array_type
-AS '/home/gpadmin/michael/DSTOOLS_SCHEMA/url/ver4/uri_utils.so','extract_uri'
+AS 'MODULE_PATHNAME','extract_uri'
 LANGUAGE C IMMUTABLE STRICT;
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.extract_uri()

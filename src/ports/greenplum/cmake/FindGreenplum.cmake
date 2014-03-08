@@ -12,7 +12,7 @@ set(_SEARCH_PATH_HINTS
     "$ENV{GPHOME}/bin"
 )
 
-include("${CMAKE_CURRENT_LIST_DIR}/../../postgres/cmake/FindPostgreSQL.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/FindPostgreSQL.cmake")
 
 if(${PKG_NAME}_FOUND)
     # server/funcapi.h ultimately includes server/access/xact.h, from which
