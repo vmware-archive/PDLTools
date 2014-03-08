@@ -162,7 +162,7 @@ macro(add_dstools_connector_library IN_TARGET_NAME IN_LIB_DIR IN_LIB_LOADER)
   if((NOT APPLE)) 
     set_target_properties(${IN_TARGET_NAME} PROPERTIES
       LINK_FLAGS
-      "-Wl")
+      "-Wl -luriparser")
   endif((NOT APPLE))
 endmacro(add_dstools_connector_library)
 

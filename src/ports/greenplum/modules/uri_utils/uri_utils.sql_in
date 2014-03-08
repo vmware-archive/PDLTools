@@ -104,13 +104,13 @@ IMMUTABLE
 LANGUAGE SQL
 AS
 $$
-SELECT '
+SELECT $__STRING__$
 parse_uri: Parse a URI into its components.
 
 A row function, parsing URIs in text format to parsed URIs in uri_type.
 
 For full usage instructions, run "DSTOOLS_SCHEMA.parse_uri(''usage'')".
-'::VARCHAR;
+$__STRING__$::VARCHAR;
 $$;
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.parse_uri(option VARCHAR)
@@ -119,7 +119,7 @@ IMMUTABLE
 LANGUAGE SQL
 AS
 $$
-SELECT CASE WHEN $1!='usage' THEN DSTOOLS_SCHEMA.parse_uri() ELSE '
+SELECT CASE WHEN $1!='usage' THEN DSTOOLS_SCHEMA.parse_uri() ELSE $__STRING__$
 parse_uri: Parse a URI into its components.
 
 A row function, parsing URIs in text format to parsed URIs in uri_type.
@@ -149,7 +149,7 @@ SELECT DSTOOLS_SCHEMA.parse_uri('http://myself:password@www.goPivotal.com:80/%7e
 ------------------------------------------------------------------------------------------------------------------------
  (http,myself:password,www.gopivotal.com,,,,80,"{~hello,to,you,index.html}",who=I&whom=me,here,f,"{who,whom}","{I,me}")
 (1 row)
-' END;
+$__STRING__$ END;
 $$;
 
 /**
@@ -184,13 +184,13 @@ IMMUTABLE
 LANGUAGE SQL
 AS
 $$
-SELECT '
+SELECT $__STRING__$
 extract_uri: Extract all URIs embedded in text input.
 
 A row function, extracting uri_array_type from a text field.
 
 For full usage instructions, run "DSTOOLS_SCHEMA.extract_uri(''usage'')".
-'::VARCHAR;
+$__STRING__$::VARCHAR;
 $$;
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.extract_uri(option VARCHAR)
@@ -199,7 +199,8 @@ IMMUTABLE
 LANGUAGE SQL
 AS
 $$
-SELECT CASE WHEN $1!='usage' THEN DSTOOLS_SCHEMA.extract_uri() ELSE '
+SELECT CASE WHEN $1!='usage' THEN DSTOOLS_SCHEMA.extract_uri() ELSE
+$__STRING__$ 
 extract_uri: Extract all URIs embedded in text input.
 
 A row function, extracting uri_array_type from a text field.
@@ -227,7 +228,7 @@ SELECT DSTOOLS_SCHEMA.extract_uri('First go to http://[0123:4567:89ab:cdef:0123:
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  ("{http,https}","{"""",""""}","{0123:4567:89ab:cdef:0123:4567:89ab:cdef,192.165.0.1}","{"""",300245000001}","{001043105147211253315357001043105147211253315357,""""}","{"""",""""}","{"""",""""}","{"""",""""}","{"""",""""}","{"""",""""}","{f,f}","{http://[0123:4567:89ab:cdef:0123:4567:89ab:cdef]/,https://192.165.0.1/}")
 (1 row)
-' END;
+$__STRING__$ END;
 $$;
 
 
@@ -255,7 +256,7 @@ LANGUAGE SQL
 AS
 $$
 SELECT CASE WHEN $1!='usage' THEN regexp_split_to_array($1,E'\\.') ELSE
-array['
+array[$__STRING__$
 parse_domain: Parse a URI domain into its components.
 
 A row function, parsing a textual hierarchical domain name into components.
@@ -274,7 +275,7 @@ SELECT DSTOOLS_SCHEMA.parse_domain('www.gopivotal.com');
 ---------------------
  {www,gopivotal,com}
 (1 row)
-'] END;
+$__STRING__$] END;
 $$;
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.parse_domain()
@@ -283,12 +284,12 @@ IMMUTABLE
 LANGUAGE SQL
 AS
 $$
-SELECT '
+SELECT $__STRING__$
 parse_domain: Parse a URI domain into its components.
 
 A row function, parsing a textual hierarchical domain name into components.
 
 For full usage instructions, run "DSTOOLS_SCHEMA.parse_domain(''usage'')".
-'::VARCHAR;
+$__STRING__$::VARCHAR;
 $$;
 

@@ -181,13 +181,10 @@ def __run_sql_file(schema, maddir_mod_py, module, sqlfile,
                   '-I' + dstoolsdir_dspack,
                   sqlfile]
 
-        print '###m4agrs:',m4args
-
         __info("> ... parsing: " + " ".join(m4args), verbose)
 
         subprocess.call(m4args, stdout=f)
         f.close()
-        print '###ran m4'
     except:
         __error("Failed executing m4 on %s" % sqlfile, False)
         raise Exception
@@ -208,7 +205,6 @@ def __run_sql_file(schema, maddir_mod_py, module, sqlfile,
             open(tmpfile, 'w').write(sql)
 
     # Run the SQL using DB command-line utility
-    print '#### calling psql'
     sqlcmd = 'psql'
     # Test the DB cmd line utility
     std, err = subprocess.Popen(['which', sqlcmd], stdout=subprocess.PIPE,
