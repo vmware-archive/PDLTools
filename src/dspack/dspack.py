@@ -1,6 +1,7 @@
 '''
 Simple Python based installer of DStools. In time this will involve to become more complex
 but perhaps not quite as complex as madpack :-)
+Note: Large portions of this script have been copied from madpack.py
 Srivatsan Ramanujam
 <sramanujam@gopivotal.com>
 28 Jan 2014

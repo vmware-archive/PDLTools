@@ -1,1 +1,0 @@
-cmd='./configure;--disable-doc;CPPTEST_CFLAGS=-I/home/pivotal/code/dstools/cmake/third_party/install;CPPTEST_LIBS=/home/pivotal/code/dstools/cmake/third_party/install/lib;--prefix=/home/pivotal/code/dstools/cmake/third_party/install'
