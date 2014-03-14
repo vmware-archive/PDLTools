@@ -39,7 +39,7 @@ ExternalProject_Add(EP_cpptest
   DOWNLOAD_DIR ${DSTOOLS_THIRD_PARTY}/downloads
   URL ${CPPTEST_TAR_SOURCE}
   URL_MD5 ${CPPTEST_TAR_MD5}
-  CONFIGURE_COMMAND ./configure --disable-doc --prefix=${DSTOOLS_THIRD_PARTY}/install
+  CONFIGURE_COMMAND ./configure --with-pic --disable-doc --prefix=${DSTOOLS_THIRD_PARTY}/install
   BUILD_COMMAND make
   INSTALL_COMMAND make install
   BINARY_DIR ${DSTOOLS_THIRD_PARTY}/src/EP_cpptest)
@@ -68,7 +68,7 @@ ExternalProject_Add(EP_uriparser
   DOWNLOAD_DIR ${DSTOOLS_THIRD_PARTY}/downloads
   URL ${URIPARSER_TAR_SOURCE}
   URL_MD5 ${URIPARSER_TAR_MD5}
-  CONFIGURE_COMMAND ./configure --disable-doc CPPTEST_CFLAGS=-I${DSTOOLS_THIRD_PARTY}/install CPPTEST_LIBS=${DSTOOLS_THIRD_PARTY}/install/lib --prefix=${DSTOOLS_THIRD_PARTY}/install
+  CONFIGURE_COMMAND ./configure --with-pic --disable-doc CPPTEST_CFLAGS=-I${DSTOOLS_THIRD_PARTY}/install CPPTEST_LIBS=${DSTOOLS_THIRD_PARTY}/install/lib --prefix=${DSTOOLS_THIRD_PARTY}/install
   BUILD_COMMAND make
   INSTALL_COMMAND make install
   BINARY_DIR ${DSTOOLS_THIRD_PARTY}/src/EP_uriparser)
@@ -162,12 +162,13 @@ macro(add_dstools_connector_library IN_TARGET_NAME IN_LIB_DIR IN_LIB_LOADER)
   if((NOT APPLE)) 
     set_target_properties(${IN_TARGET_NAME} PROPERTIES
       LINK_FLAGS
-      "-Wl -luriparser")
+#      "-Wl,-rpath -Wl,\"${DSTOOLS_THIRD_PARTY}\"/install/lib -L\"${DSTOOLS_THIRD_PARTY}\"/install/lib")
+      "-Wl,--whole-archive \"${DSTOOLS_THIRD_PARTY}\"/install/lib/liburiparser.a -Wl,--no-whole-archive")
   endif((NOT APPLE))
 endmacro(add_dstools_connector_library)
 
 # ======================================================================
-# -- Speciy files that will be compiled into DSTools core library
+# -- Specify files that will be compiled into DSTools core library
 # ======================================================================
 
 file(GLOB_RECURSE DSTOOLS_C_SOURCES
