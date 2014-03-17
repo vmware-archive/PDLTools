@@ -6,9 +6,9 @@ GPDBVersion: @GPDB_VERSION@
 Description: DSTools is an open source library to supplement the capabilities of MADlib, for in-database ML algorithms.
 PostInstall:
 - Master: "echo 'Please run the following command to deploy DSTools';
-           echo 'usage:  dspack install [-s schema_name]  -p greenplum -c user@host:port/database';
+           echo 'usage:  dspack install [-s schema_name]  -c user@host:port/database';
            echo 'Example:';
-           echo '       $ $GPHOME/dstools/bin/dspack install -s dstools -p greenplum -c gpadmin@mdw:5432/testdb';
+           echo '       $ $GPHOME/dstools/bin/dspack install -s dstools -c gpadmin@mdw:5432/testdb';
            echo '       This will install DSTools objects into a Greenplum database named \"testdb\"';
            echo '       running on server \"mdw\" on port 5432. Installer will try to login as \"gpadmin\"';
            echo '       and will prompt for password. The target schema will be \"dstools\".';

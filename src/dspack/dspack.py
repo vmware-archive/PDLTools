@@ -101,7 +101,6 @@ def ____run_sql_query(sql, show_error):
 	global con_args
 	runcmd = [sqlcmd,
 		  '-h', con_args['host'].split(':')[0],
-		  '-p', con_args['host'].split(':')[1],
 		  '-d', con_args['database'],
 		  '-U', con_args['user'],
 		  '-F', delimiter,
@@ -216,7 +215,6 @@ def __run_sql_file(schema, maddir_mod_py, module, sqlfile,
     runcmd = [sqlcmd, '-a',
               '-v', 'ON_ERROR_STOP=1',
               '-h', con_args['host'].split(':')[0],
-              '-p', con_args['host'].split(':')[1],
               '-d', con_args['database'],
               '-U', con_args['user'],
               '-f', tmpfile]
@@ -585,7 +583,7 @@ def main():
                 formatter_class=argparse.RawTextHelpFormatter,
                 epilog="""Example:
 
-  $ dspack install -s dstools -p -c gpadmin@mdw:5432/testdb
+  $ dspack install -s dstools -c gpadmin@mdw:5432/testdb
 
   This will install DSTools objects into a Greenplum database called TESTDB
   running on server MDW:5432. Installer will try to login as GPADMIN
