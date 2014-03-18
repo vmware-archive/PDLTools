@@ -28,6 +28,6 @@ select (
     --Test path
     (select assert((select array_to_string(path,',') from testcase), $BODY$%7ehello,to,you,index.html$BODY$)) AND
     --Test absolutepath
-    (select assert((select absolutepath::text from testcase), $BODY$f$BODY$))
+    (select assert((select case when absolutepath=FALSE then 'f' else 't' end as absolutepath  from testcase), $BODY$f$BODY$))
 );
 
