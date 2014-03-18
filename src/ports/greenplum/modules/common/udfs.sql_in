@@ -1,0 +1,23 @@
+-- A collection of UDFs essential for DSTools
+-- These may be required for testing scripts or may be a common folder for UDFs required for DSTools in general
+
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.assert(actual text, expected text, msg text)
+  RETURNS boolean AS
+$BODY$
+BEGIN
+   IF NOT actual=expected THEN
+      RAISE EXCEPTION 'Failed assertion: %',msg;
+   END IF;
+   RETURN TRUE;
+END
+$BODY$ LANGUAGE plpgsql IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.assert(actual text, expected text)
+  RETURNS boolean AS
+$BODY$
+BEGIN
+   PERFORM assert(actual, expected, '');
+   RETURN TRUE;
+END
+$BODY$ LANGUAGE plpgsql IMMUTABLE;
+

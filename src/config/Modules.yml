@@ -2,4 +2,6 @@
 # List of methods/modules and their dependencies:
 ###
 modules:
-    - name: uri_utils
+    - name: common
+    - name: uri_utils 
+      depends: ['common']

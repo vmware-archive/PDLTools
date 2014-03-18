@@ -1,7 +1,7 @@
 '''
 Simple Python based installer of DStools. In time this will involve to become more complex
 but perhaps not quite as complex as madpack :-)
-Note: Large portions of this script have been copied from madpack.py
+Note: Most of this script has been copied from madpack.py. We've removed irrelevant portions from madpack to build dspack.
 Srivatsan Ramanujam
 <sramanujam@gopivotal.com>
 28 Jan 2014
@@ -11,7 +11,7 @@ Usage:
 python dspack.py [-s schema_name] -c <username>@<hostname>:<port>/<databasename>
 '''
 
-import os, sys, getpass, re, subprocess, tempfile, glob
+import os, sys, datetime, getpass, re, subprocess, tempfile, glob
 import argparse, configyml
 
 dstoolsdir = None
@@ -310,6 +310,25 @@ def __info(msg, verbose=True):
     if verbose:
         print this + ' : INFO : ' + msg
 
+def __print_revs(rev, dbrev, con_args, schema):
+    """
+    Print version information
+        @param rev OS-level DSTools version
+        @param dbrev DB-level DSTools version
+        @param con_args database connection arguments
+        @param schema MADlib schema name
+    """
+    __info("MADlib tools version    = %s (%s)" % (rev, sys.argv[0]), True)
+    if con_args:
+        try:
+            __info("DSTools database version = %s (host=%s, db=%s, schema=%s)"
+                   % (dbrev, con_args['host'], con_args['database'], schema), True)
+        except:
+            __info("DSTools database version = [Unknown] (host=%s, db=%s, schema=%s)"
+                   % (dbrev, con_args['host'], con_args['database'], schema), True)
+    return
+
+
 def __get_dbver():
     """ Read version number from database (of form X.Y) """
     try:
@@ -413,6 +432,7 @@ def __db_create_objects(schema, old_schema, upgrade=False, sc=None, testcase="",
 
     # Loop through all modules/modules
     ## portspecs is a global variable
+
     for moduleinfo in portspecs['modules']:
 
         # Get the module name
@@ -454,9 +474,6 @@ def __db_create_objects(schema, old_schema, upgrade=False, sc=None, testcase="",
         # Execute all SQL files for the module
         for sqlfile in sql_files:
             algoname = os.path.basename(sqlfile).split('.')[0]
-            if (hawq_debug or hawq_fresh) and algoname in \
-                    ('svec', 'rf'):
-                continue
 
             if module in modset and len(modset[module]) > 0 and algoname not in modset[module]:
                 continue
@@ -592,9 +609,10 @@ def main():
 
     parser.add_argument(
         'command', metavar='COMMAND', nargs=1,
-        choices=['install'],
+        choices=['install', 'install-check'],
         help = "One of the following options:\n"
             + "  install        : run sql scripts to load into DB\n"
+            + "  install-check  : Run test scripts"
     )
     
     parser.add_argument(
@@ -683,7 +701,6 @@ def main():
                     "DSTools support files have been installed (%s)." %
                    ('greenplum', ", ".join(supportedVersions)), True)
 
-
     global dstoolsdir_lib
     global dstoolsdir_conf
 
@@ -694,12 +711,142 @@ def main():
     global portspecs
     portspecs = configyml.get_modules(dstoolsdir_conf)
 
+    if(args.command[0]=='install'):
+        install(py_min_ver, schema, args)
+    elif(args.command[0]=='install-check'):
+        install_check(schema, rev, args)
+
+def install(py_min_ver, schema, args):
+    '''
+        Install dspack
+    '''
     # Run installation
     try:
         __plpy_check(py_min_ver)
         __db_install(schema, None, args.testcase)
     except:
         __error("DSTools installation failed.", True)
+
+
+def install_check(schema, dbrev, args):
+	'''
+	Run install checks
+	'''
+	global con_args, portspecs
+	# 0) First check if DSTools schema exists, if not we'll exit (install-check should only be called post installation of dstools)
+	dstools_schema_exists = __run_sql_query("select schema_name from information_schema.schemata where schema_name='{dstools_schema}';".format(dstools_schema=schema), False)
+	if(not dstools_schema_exists):
+	    __info("{dstools_schema} schema does not exist. Please run install-check after installing DSTools. Install-check stopped.".format(dstools_schema=schema), True)
+            return
+
+	# 1) Compare OS and DB versions. Continue if OS = DB.
+	if __get_rev_num(dbrev) != __get_rev_num(rev):
+	    __print_revs(rev, dbrev, con_args, schema)
+	    __info("Versions do not match. Install-check stopped.", True)
+	    return
+
+	# Create install-check user
+	test_user = 'dstools_' + rev.replace('.', '') + '_installcheck'
+	try:
+	    __run_sql_query("DROP USER IF EXISTS %s;" % (test_user), False)
+	except:
+	    __run_sql_query("DROP OWNED BY %s CASCADE;" % (test_user), True)
+	    __run_sql_query("DROP USER IF EXISTS %s;" % (test_user), True)
+	__run_sql_query("CREATE USER %s;" % (test_user), True)
+	__run_sql_query("GRANT ALL ON SCHEMA %s TO %s;" %(schema, test_user), True)
+
+	# 2) Run test SQLs
+	__info("> Running test scripts for:", verbose)
+
+	caseset = (set([test.strip() for test in args.testcase.split(',')])
+		   if args.testcase != "" else set())
+
+	# Loop through all modules
+	for moduleinfo in portspecs['modules']:
+
+	    # Get module name
+	    module = moduleinfo['name']
+
+	    # Skip if doesn't meet specified modules
+	    if len(caseset) > 0 and module not in caseset:
+		continue
+
+	    __info("> - %s" % module, verbose)
+
+	    # Make a temp dir for this module (if doesn't exist)
+	    cur_tmpdir = tmpdir + '/' + module + '/test'  # tmpdir is a global variable
+	    __make_dir(cur_tmpdir)
+
+	    # Find the Python module dir (platform specific or generic)
+	    if os.path.isdir(dstoolsdir + "/ports/greenplum" + "/" + dbver + "/modules/" + module):
+		maddir_mod_py = dstoolsdir + "/ports/greenplum" + "/" + dbver + "/modules"
+	    else:
+		maddir_mod_py = dstoolsdir + "/modules"
+
+	    # Find the SQL module dir (platform specific or generic)
+	    if os.path.isdir(dstoolsdir + "/ports/greenplum" + "/modules/" + module):
+		maddir_mod_sql = dstoolsdir + "/ports/greenplum" + "/modules"
+	    else:
+		maddir_mod_sql = dstoolsdir + "/modules"
+
+	    # Prepare test schema
+	    test_schema = "dstools_installcheck_%s" % (module)
+	    __run_sql_query("DROP SCHEMA IF EXISTS %s CASCADE; CREATE SCHEMA %s;"
+			    % (test_schema, test_schema), True)
+	    __run_sql_query("GRANT ALL ON SCHEMA %s TO %s;"
+			    % (test_schema, test_user), True)
+
+	    # Switch to test user and prepare the search_path
+	    pre_sql = '-- Switch to test user:\n' \
+		      'SET ROLE %s;\n' \
+		      '-- Set SEARCH_PATH for install-check:\n' \
+		      'SET search_path=%s,%s;\n' \
+		      % (test_user, test_schema, schema)
+
+	    # Loop through all test SQL files for this module
+	    sql_files = maddir_mod_sql + '/' + module + '/test/*.sql_in'
+	    for sqlfile in sorted(glob.glob(sql_files), reverse=True):
+		# Set file names
+		tmpfile = cur_tmpdir + '/' + os.path.basename(sqlfile) + '.tmp'
+		logfile = cur_tmpdir + '/' + os.path.basename(sqlfile) + '.log'
+
+		# If there is no problem with the SQL file
+		milliseconds = 0
+
+		# Run the SQL
+		run_start = datetime.datetime.now()
+		retval = __run_sql_file(schema, maddir_mod_py, module,
+					sqlfile, tmpfile, logfile, pre_sql)
+		# Runtime evaluation
+		run_end = datetime.datetime.now()
+		milliseconds = round((run_end - run_start).seconds * 1000 +
+				     (run_end - run_start).microseconds / 1000)
+
+		# Check the exit status
+		if retval != 0:
+		    __error("Failed executing %s" % tmpfile, False)
+		    __error("Check the log at %s" % logfile, False)
+		    result = 'FAIL'
+		    keeplogs = True
+		# Since every single statement in the test file gets logged,
+		# an empty log file indicates an empty or a failed test
+		elif os.path.isfile(logfile) and os.path.getsize(logfile) > 0:
+		    result = 'PASS'
+		# Otherwise
+		else:
+		    result = 'ERROR'
+
+		# Spit the line
+		print "TEST CASE RESULT|Module: " + module + \
+		    "|" + os.path.basename(sqlfile) + "|" + result + \
+		    "|Time: %d milliseconds" % (milliseconds)
+
+	    # Cleanup test schema for the module
+	    __run_sql_query("DROP SCHEMA IF EXISTS %s CASCADE;" % (test_schema), True)
+
+	# Drop install-check user
+	__run_sql_query("DROP OWNED BY %s CASCADE;" % (test_user), True)
+	__run_sql_query("DROP USER %s;" % (test_user), True)
 
 
 if(__name__=='__main__'):
