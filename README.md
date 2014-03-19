@@ -45,3 +45,10 @@ Installation
     For example:
         `$GPHOME/dstools/bin/dspack install -s dstools -c gpadmin@mdw:5432/testdb`
 
+Running Install Check Tests
+=============================
+    
+    Post installation, you can run the unit tests in DSTools with the install-check command like so:
+        `$GPHOME/dstools/bin/dspack install-check -s dstools -c gpadmin@mdw:5432/testdb`
+
+    If any of the tests fail, you will see an error message displayed on your console.
