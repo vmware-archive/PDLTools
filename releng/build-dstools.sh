@@ -1,6 +1,18 @@
 #!/bin/bash
 ## ======================================================================
+## DSTools build script
+## ----------------------------------------------------------------------
+## Basic steps
 ##
+##   o Retrieve latest 4.2 installer
+##   o Deploy new cluster
+##   o Perform DSTools build process
+##   o Perform DSTools packaging processes (rpm & gppkg)
+##   o Use gppkg to install DSTools
+##   o Use dspack to install DSTools
+##   o Execute install-check tests
+##   o (optionally) Publish artifacts to:
+##        http://build-prod.dh.greenplum.com/releases/dstools
 ## ======================================================================
 
 BASEDIR=$(pwd)
@@ -20,10 +32,6 @@ else
     export SCHEMA="madlib"
     export SCHEMA_CMD=""
 fi
-
-## ======================================================================
-## 
-## ======================================================================
 
 cat > ${BASEDIR}/releng/conf/hosts.conf <<-EOF
 	$(hostname -f)
@@ -131,7 +139,7 @@ done
 cat <<-EOF
 	
 	======================================================================
-	Executing: rm -rf build /tmp/madlib ~/.cmake /usr/local/greenplum-db ${LOGDIR}
+	Executing: rm -rf build ~/.cmake /usr/local/greenplum-db ${LOGDIR}
 	----------------------------------------------------------------------
 	
 EOF
@@ -139,134 +147,17 @@ EOF
 rm -rf /usr/local/greenplum-db
 rm -rf build ~/.cmake ${LOGDIR}
 
-cat <<-EOF
-	
-	======================================================================
-	Executing: func_dbstop
-	----------------------------------------------------------------------
-	
-EOF
-
-for envfile in ${ENVIRONMENT_FILES}; do
-
-    set_environment
-
-    (
-        source ${BASEDIR}/releng/${envfile}
-
-        rm -rf ${LOGDIR}
-        mkdir -p ${LOGDIR}
-
-        func_dbstop
-    )
-
-    sleep 5
-    ps uxww | grep postgres | grep -v grep | grep -v bash
-
-done
-
-for envfile in ${ENVIRONMENT_FILES}; do
-
-    set_environment
-
-    (
-        source ${BASEDIR}/releng/${envfile}
-
-		cat <<-EOF
-			
-			======================================================================
-			Executing: RESTORE from snapshot (${PLATFORM_CONFIG})
-			----------------------------------------------------------------------
-			
-		EOF
-		
-		restore_snapshot 1
-
-		cat <<-EOF
-			
-			======================================================================
-			Executing: GPSTART or GPINITSYSTEM (${PLATFORM_CONFIG})
-			----------------------------------------------------------------------
-			
-		EOF
-		
-		cat >> ${MASTER_DATA_DIRECTORY}/pg_hba.conf <<-EOF
-		
-			local    all         madlibuser      ident
-			host     all         madlibuser      127.0.0.1/28    trust
-			local    all         dstoolsuser     ident
-			host     all         dstoolsuser     127.0.0.1/28    trust
-		
-		EOF
-
-		gpstart -a
-		
-		sleep 5
-
-		ps uxww | grep postgres | grep -v grep | grep -v bash
-
-		cat <<-EOF
-			
-			======================================================================
-			Executing: CREATEDB ${DBNAME}
-			----------------------------------------------------------------------
-			
-		EOF
-		
-		createdb ${DBNAME}
-		
-		cat <<-EOF
-			
-			======================================================================
-			Executing: select * from pg_database
-			----------------------------------------------------------------------
-			
-		EOF
-		
-		psql ${DBNAME} -c 'select * from pg_database'
-		
-		cat <<-EOF
-			
-			======================================================================
-			Executing: select version()
-			----------------------------------------------------------------------
-			
-		EOF
-		
-		psql ${DBNAME} -c 'select version()'
-		
-		cat <<-EOF
-			
-			======================================================================
-			Executing: psql ${DBNAME} -c 'CREATE LANGUAGE plpythonu'
-			----------------------------------------------------------------------
-			
-		EOF
-		
-		psql ${DBNAME} -c 'CREATE LANGUAGE plpythonu'
-		
-		if [ "${PLATFORM}" = "postgres" ]; then
-			cat <<-EOF
-				
-				======================================================================
-				Executing: psql ${DBNAME} -c 'CREATE LANGUAGE plpgsql'
-				----------------------------------------------------------------------
-				
-			EOF
-			
-			psql ${DBNAME} -c 'CREATE LANGUAGE plpgsql'
-		fi
-		
-        func_dbstop
-    )
-
-done
-
 for envfile in ${ENVIRONMENT_FILES}; do
     source ${BASEDIR}/releng/${envfile}
-    echo "======================================================================"
-    echo "Building DSTools"
-    echo "======================================================================"
+
+	cat <<-EOF
+		
+		======================================================================
+		Building DSTools
+		----------------------------------------------------------------------
+		
+	EOF
+
     mkdir build
     cd build
     cmake ..
@@ -292,13 +183,56 @@ for envfile in ${ENVIRONMENT_FILES}; do
 		----------------------------------------------------------------------
 		
 	EOF
-	
+
+    set_environment
+
+    source ${BASEDIR}/releng/${envfile}
+
 	gpstart -a
 	
 	sleep 5
 
 	ps uxww | grep postgres | grep -v grep | grep -v bash
 
+	cat <<-EOF
+		
+		======================================================================
+		Executing: CREATEDB ${DBNAME}
+		----------------------------------------------------------------------
+		
+	EOF
+	
+	createdb ${DBNAME}
+	
+	cat <<-EOF
+		
+		======================================================================
+		Executing: select * from pg_database
+		----------------------------------------------------------------------
+		
+	EOF
+	
+	psql ${DBNAME} -c 'select * from pg_database'
+	
+	cat <<-EOF
+		
+		======================================================================
+		Executing: select version()
+		----------------------------------------------------------------------
+		
+	EOF
+	
+	psql ${DBNAME} -c 'select version()'
+	
+	cat <<-EOF
+		
+		======================================================================
+		Executing: psql ${DBNAME} -c 'CREATE LANGUAGE plpythonu'
+		----------------------------------------------------------------------
+		
+	EOF
+	
+	psql ${DBNAME} -c 'CREATE LANGUAGE plpythonu'
 
 	cat <<-EOF
 		
@@ -375,13 +309,38 @@ for envfile in ${ENVIRONMENT_FILES}; do
 		EOF
     fi
 
-	cat <<-EOF
-	
-	======================================================================
-	Executing: func_dbstop
-	----------------------------------------------------------------------
-	
-	EOF
 	func_dbstop
 
 done
+
+if [ "${PUBLISH}" = "true" ]; then
+
+    DSTOOLS_VERSION=$( awk '{print $2}' ${BASEDIR}/src/config/Version.yml )
+    RELEASE_DIR=/var/www/html/releases/dstools/${DSTOOLS_VERSION}-${PULSE_BUILD_NUMBER}
+
+	cat <<-EOF
+	
+		======================================================================
+		Executing: Publish artifacts: http://build-prod.dh.greenplum.com/releases/dstools/${DSTOOLS_VERSION}-${PULSE_BUILD_NUMBER}
+		----------------------------------------------------------------------
+	
+	EOF
+
+    ssh build@build-prod.dh.greenplum.com mkdir -p ${RELEASE_DIR}
+    scp ${BASEDIR}/build/deploy/gppkg/4.2/dstools*.gppkg ${BASEDIR}/build/dstools-*Linux.rpm build@build-prod.dh.greenplum.com:${RELEASE_DIR}
+    ssh build@build-prod.dh.greenplum.com ls -al ${RELEASE_DIR}
+
+	cat <<-EOF
+	
+		======================================================================
+	EOF
+else
+	cat <<-EOF
+	
+		======================================================================
+		Publishing artifacts is disabled.
+		======================================================================
+	EOF
+fi
+
+exit 0
