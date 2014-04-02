@@ -1,0 +1,55 @@
+# FILE NAME: gp_init_config
+
+# A configuration file is needed by the gpinitsystem
+# script to tell it how to configure the master and segment 
+# instances in your Greenplum Database system. This file can be named 
+# whatever you like, and is referenced when you run gpinitsystem. 
+
+################################################
+#### REQUIRED PARAMETERS
+################################################
+
+#### Name of this Greenplum system enclosed in quotes.
+ARRAY_NAME="Green Hornet"
+
+#### Absolute path to the segment host list file.
+MACHINE_LIST_FILE=%HOSTSCONF%
+
+#### Naming convention for utility-generated data directories.
+SEG_PREFIX=%SEG_PREFIX%
+
+#### Base number by which primary segment port numbers 
+#### are calculated.
+PORT_BASE=%PORT_BASE%
+
+#### OS-configured hostname or IP address of the master host.
+MASTER_HOSTNAME=%MASTER_HOSTNAME%
+
+#### File system location where the master data directory 
+#### will be created.
+MASTER_DIRECTORY=%MASTER_DATA_DIRECTORY_BASE%
+
+#### Port number for the master instance. 
+MASTER_PORT=%MASTER_PORT%
+
+#### Shell utility used to connect to remote hosts.
+TRUSTED_SHELL=ssh
+
+#### Maximum log file segments between automatic WAL checkpoints.
+CHECK_POINT_SEGMENTS=8
+
+#### Default server-side character set encoding.
+ENCODING=UNICODE
+
+################################################
+#### OPTIONAL CREATE DATABASE PARAMETER
+################################################
+
+#### Create a database of this name after initialization.
+## DATABASE_NAME=GreenHornet
+
+##
+##
+##
+
+MASTER_MAX_CONNECT=50
