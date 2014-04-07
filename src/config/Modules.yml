@@ -5,3 +5,5 @@ modules:
     - name: common
     - name: uri_utils 
       depends: ['common']
+    - name: edit_distance 
+      depends: ['common']

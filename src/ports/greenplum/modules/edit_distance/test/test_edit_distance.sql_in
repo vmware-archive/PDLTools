@@ -1,0 +1,69 @@
+-- File: test_edit_distance.sql
+-- Unit test for edit_distance.sql
+
+SELECT assert(edit_distance_unsafe('ONE_TWO_THREE_F0UR_FIVE_SIX_END',
+                                   'TONE_TW0_TREE_TOUR_EF_ISX_EDEN',
+                                   1048576+512,1048576+64,1048576+8,
+                                   1048576+32768,1048576+4096,1048576+1,
+                                   '0O','O0')::TEXT,
+              '11605194');
+
+SELECT assert(edit_distance('ONE_TWO_THREE_F0UR_FIVE_SIX_END',
+                            'TONE_TW0_TREE_TOUR_EF_ISX_EDEN',
+                            1048576+512,1048576+64,1048576+8,
+                            1048576+32768,1048576+4096,1048576+1,
+                            '0O','O0')::TEXT,
+              '11605194');
+
+SELECT assert(edit_distance_unsafe('ONE_TWO_THREE_F0UR_FIVE_SIX_END',
+                                   'TONE_TW0_TREE_TOUR_EF_ISX_EDEN',
+                                   1048576+512,1048576+64,1048576+8,
+                                   1048576+32768,1048576+4096
+                                   )::TEXT,
+              '11605208');
+
+SELECT assert(edit_distance('ONE_TWO_THREE_F0UR_FIVE_SIX_END',
+                            'TONE_TW0_TREE_TOUR_EF_ISX_EDEN',
+                            1048576+512,1048576+64,1048576+8,
+                            1048576+32768,1048576+4096
+                            )::TEXT,
+              '11605208');
+
+SELECT assert(edit_distance_unsafe('ONE_TWO_THREE_F0UR_FIVE_SIX_END',
+                                   'TONE_TW0_TREE_TOUR_EF_ISX_EDEN',
+                                   1048576+512,1048576+64,1048576+8,
+                                   1048576+32768
+                                   )::TEXT,
+              '11633880');
+
+SELECT assert(edit_distance('ONE_TWO_THREE_F0UR_FIVE_SIX_END',
+                            'TONE_TW0_TREE_TOUR_EF_ISX_EDEN',
+                            1048576+512,1048576+64,1048576+8,
+                            1048576+32768
+                            )::TEXT,
+              '11633880');
+
+SELECT assert(edit_distance('ONE_TWO_THREE_F0UR_FIVE_SIX_END',
+                            'TONE_TW0_TREE_TOUR_EF_ISX_EDEN',
+                            1048576+512,1048576+64,1048576+8
+                            )::TEXT,
+              '14681352');
+
+SELECT assert(edit_distance('ONE_TWO_THREE_F0UR_FIVE_SIX_END',
+                            'TONE_TW0_TREE_TOUR_EF_ISX_EDEN',
+                            1048576+512,1048576+64
+                            )::TEXT,
+              '17830464');
+
+SELECT assert(levenshtein_distance('ONE_TWO_THREE_F0UR_FIVE_SIX_END',
+                            'TONE_TW0_TREE_TOUR_EF_ISX_EDEN')::TEXT,
+              '14');
+
+SELECT assert(demerau_levenshtein_distance('ONE_TWO_THREE_F0UR_FIVE_SIX_END',
+                            'TONE_TW0_TREE_TOUR_EF_ISX_EDEN')::TEXT,
+              '11');
+
+SELECT assert(optimal_alignment_distance('ONE_TWO_THREE_F0UR_FIVE_SIX_END',
+                            'TONE_TW0_TREE_TOUR_EF_ISX_EDEN')::TEXT,
+              '13');
+

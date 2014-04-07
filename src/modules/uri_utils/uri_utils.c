@@ -5,11 +5,7 @@
 
 #include <postgres.h>
 #include <fmgr.h>
-#include<sys/time.h>
-
-#ifdef PG_MODULE_MAGIC
-PG_MODULE_MAGIC;
-#endif
+#include <sys/time.h>
 
 #include <funcapi.h>
 #include <utils/array.h>
