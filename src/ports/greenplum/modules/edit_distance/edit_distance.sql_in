@@ -46,8 +46,12 @@
  * (3) the spec_sub_from and spec_sub_to lists are symmetric.
  *
  * @examp
- * SELECT DSTOOLS_SCHEMA.edit_distance_unsafe('demerau','levenshtein',10,10,10,
- *                                            10,1,1,'01OIIL','OI01LI');
+ * SELECT DSTOOLS_SCHEMA.edit_distance_unsafe('demerau','levenshtein',1,1,1,
+ *                                            1,1,1,'01OIIL','OI01LI');
+ *  edit_distance_unsafe
+ * ----------------------
+ *                     9
+ * (1 row)
  *
  */
 
@@ -105,8 +109,12 @@ LANGUAGE C IMMUTABLE STRICT;
  * (3) the spec_sub_from and spec_sub_to lists are symmetric.
  *
  * @examp
- * SELECT DSTOOLS_SCHEMA.edit_distance('demerau','levenshtein',10,10,10,10,1,
+ * SELECT DSTOOLS_SCHEMA.edit_distance('demerau','levenshtein',1,1,1,1,1,
  *                                      1,'01OIIL','OI01LI');
+ *  edit_distance
+ * ---------------
+ *              9
+ * (1 row)
  *
  */
 
@@ -158,8 +166,12 @@ LANGUAGE C IMMUTABLE STRICT;
  * (2) ins_cost = del_cost.
  *
  * @examp
- * SELECT DSTOOLS_SCHEMA.edit_distance_unsafe('demerau','levenshtein',10,10,10,
- *                                            10,1);
+ * SELECT DSTOOLS_SCHEMA.edit_distance_unsafe('demerau','levenshtein',1,1,1,
+ *                                            1,1);
+ *  edit_distance_unsafe
+ * ----------------------
+ *                     9
+ * (1 row)
  *
  */
 
@@ -211,7 +223,12 @@ LANGUAGE C IMMUTABLE STRICT;
  * (2) ins_cost = del_cost.
  *
  * @examp
- * SELECT DSTOOLS_SCHEMA.edit_distance('demerau','levenshtein',10,10,10,10,1);
+ * SELECT DSTOOLS_SCHEMA.edit_distance('demerau','levenshtein',1,1,1,1,1);
+ *
+ *  edit_distance
+ * ---------------
+ *              9
+ * (1 row)
  *
  */
 
@@ -256,8 +273,12 @@ LANGUAGE C IMMUTABLE STRICT;
  * ins_cost = del_cost.
  *
  * @examp
- * SELECT DSTOOLS_SCHEMA.edit_distance_unsafe('demerau','levenshtein',10,10,10,
- *                                            10);
+ * SELECT DSTOOLS_SCHEMA.edit_distance_unsafe('demerau','levenshtein',1,1,1,1);
+ * 
+ *  edit_distance_unsafe
+ * ----------------------
+ *                     9
+ * (1 row)
  *
  */
 
@@ -303,8 +324,12 @@ LANGUAGE C IMMUTABLE STRICT;
  * ins_cost = del_cost.
  *
  * @examp
- * SELECT DSTOOLS_SCHEMA.edit_distance('demerau','levenshtein',10,10,10,10);
+ * SELECT DSTOOLS_SCHEMA.edit_distance('demerau','levenshtein',1,1,1,1);
  *
+ *  edit_distance
+ * ---------------
+ *              9
+ * (1 row)
  */
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance(str1 text, str2 text,
@@ -336,8 +361,12 @@ LANGUAGE C IMMUTABLE STRICT;
  * ins_cost = del_cost.
  *
  * @examp
- * SELECT DSTOOLS_SCHEMA.edit_distance('demerau','levenshtein',10,10,10);
+ * SELECT DSTOOLS_SCHEMA.edit_distance('demerau','levenshtein',1,1,1);
  *
+ *  edit_distance
+ * ---------------
+ *              9
+ * (1 row)
  */
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance(str1 text, str2 text,
@@ -363,8 +392,12 @@ LANGUAGE C IMMUTABLE STRICT;
  * Returns the edit distance (integer).
  *
  * @examp
- * SELECT DSTOOLS_SCHEMA.edit_distance('demerau','levenshtein',10,10);
+ * SELECT DSTOOLS_SCHEMA.edit_distance('demerau','levenshtein',1,1);
  *
+ *  edit_distance
+ * ---------------
+ *             14
+ * (1 row)
  */
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance(str1 text, str2 text,
@@ -394,6 +427,10 @@ LANGUAGE C IMMUTABLE STRICT;
  * @examp
  * SELECT DSTOOLS_SCHEMA.levenshtein_distance('demerau','levenshtein');
  *
+ *  levenshtein_distance
+ * ----------------------
+ *                     9
+ * (1 row)
  */
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.levenshtein_distance(
@@ -419,6 +456,10 @@ LANGUAGE C IMMUTABLE STRICT;
  * @examp
  * SELECT DSTOOLS_SCHEMA.demerau_levenshtein_distance('demerau','levenshtein');
  *
+ *  demerau_levenshtein_distance
+ * ------------------------------
+ *                             9
+ * (1 row)
  */
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.demerau_levenshtein_distance
@@ -446,6 +487,10 @@ LANGUAGE C IMMUTABLE STRICT;
  * @examp
  * SELECT DSTOOLS_SCHEMA.optimal_alignment_distance('demerau','levenshtein');
  *
+ *  optimal_alignment_distance
+ * ----------------------------
+ *                           9
+ * (1 row)
  */
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.optimal_alignment_distance
@@ -585,8 +630,13 @@ str2 can always be found without any use of a non-final transpositon.
 
 Example
 =======
-SELECT DSTOOLS_SCHEMA.edit_distance_unsafe(''demerau'',''levenshtein'',10,10,10,
-                                           10,1,1,''01OIIL'',''OI01LI'');
+SELECT DSTOOLS_SCHEMA.edit_distance_unsafe(''demerau'',''levenshtein'',1,1,1,
+                                           1,1,1,''01OIIL'',''OI01LI'');
+
+ edit_distance_unsafe
+----------------------
+                    9
+(1 row)
 
 ' END;
 $$;
@@ -624,7 +674,7 @@ edit_distance: an edit distance calculator.
 A row function, taking two strings and calculating their edit distance.
 Costs for various edit operations, including the transposition of
 characters that are adjacent in both the input and output, are user-defined.
-This function is "safe" in the sense that it verifies certain qualities
+This function is "safe" in the sense that it verifies certain assumptions
 about the user-defined costs and throws an exception
 if they do not hold true, rather than returning an erroneous value.
 See "Usage" for a complete list of these assumptions.
@@ -724,8 +774,13 @@ str2 can always be found without any use of a non-final transpositon.
 
 Example
 =======
-SELECT DSTOOLS_SCHEMA.edit_distance(''demerau'',''levenshtein'',10,10,10,10,1,
+SELECT DSTOOLS_SCHEMA.edit_distance(''demerau'',''levenshtein'',1,1,1,1,1,
                                      1,''01OIIL'',''OI01LI'');
+
+ edit_distance
+---------------
+             9
+(1 row)
 
 ' END;
 $$;
@@ -767,71 +822,135 @@ str1, str2 - the two strings to be compared. Edits make str1 into str2.
 Usage
 =====
 Given two strings, str1 and str2, it is possible to transform the former into
-the latter by a sequence of edit operations such as insertion of a new
-character, deletion of an existing character and substitution of one character
-by another.
+the latter by a sequence of character insertions, deletions and substitutions.
 
-The Levenshtein distance is the minimum number of such edit operations that
-
-Suppose that each one of these operations is associated with a cost
-(in the form of a nonnegative integer), then the cost of a sequence of
-operations can be measured as the sum of the costs of its individual parts.
-
-There may be many sequences transforming str1 to str2, each with its own
-cost. The minimum of these costs is called the "edit distance" from str1
-to str2.
-
-The particular edit distance implementation given here allows each one of the
-operations discussed above to be assigned a cost. Furthermore, one can
-assign the following special costs:
-
-"final_tp_cost" is the cost of transposing two adjacent characters, given that
-these characters are at no point involved in any other type of operation.
-
-"spec_sub_cost" is the cost of making a character-to-character substitution
-that is one of a special list of substitutions defined by spec_sub_from and
-spec_sub_to. A substitution is "special" if it takes the i''th character in
-spec_sub_from and transforms it to the i''th character in spec_sub_to.
-For example, if spec_sub_from="OI" and spec_sub_to="01", then the list
-of special substitutions is the list of common character to numeral
-substitutions, namely the transformation of an "O" to a "0" and of an "I" to
-a "1". Note that the list is directional and case sensitive. So, for example,
-the above does not cover "o"-to-"0" or "0"-to-"O" substitutions. If we had
-wanted to include these, they would have had to be added to the list
-explicitly.
-
-The function makes the following assumptions:
-All costs are assumed to be nonnegative.
-final_tp_cost <= tp_cost
-ins_cost+del_cost <= 2*final_tp_cost
-max(sub_cost,special_sub_cost) <= final_tp_cost
-
-When these assumptions are voided, an exception is thrown.
-
-Note that, even though we use the term "distance", the result is not
-necessarily a distance metric. It is only a distance metric if all of the
-following conditions hold:
-(1) final_tp_cost = tp_cost;
-(2) ins_cost = del_cost; and
-(3) the spec_sub_from and spec_sub_to lists are symmetric.
-
-The variants of edit_distance that accept less parameters are equivalent
-to the long-form edit_distance, except for the fact that some
-operations (such as special substitution) cannot be used. The user can reach
-the same effect (although, perhaps with reduced run-time efficiency) by
-assigning to these operations sufficiently high costs.
-
-For example, a user can make sure that the only type of transpositions used
-are "final" transpositions by assigning to tp_cost the value
-len(str1)*del_cost+len(str2)*ins_cost. Because there is always an
-insertion-deletion path from str1 to str2 of that cost, assigning this as the
-cost for a single transposition ensures that the optimal path from str1 to
-str2 can always be found without any use of a non-final transpositon.
+The Levenshtein distance is the minimum number of such edit operations that is
+required to make str1 into str2.
 
 Example
 =======
-SELECT DSTOOLS_SCHEMA.edit_distance(''demerau'',''levenshtein'',10,10,10,10,1,
-                                     1,''01OIIL'',''OI01LI'');
+SELECT DSTOOLS_SCHEMA.levenshtein_distance(''demerau'',''levenshtein'');
+
+ levenshtein_distance
+----------------------
+                    9
+(1 row)
+
+' END;
+$$;
+
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.demerau_levenshtein_distance()
+RETURNS VARCHAR
+IMMUTABLE
+LANGUAGE SQL
+AS
+$$
+SELECT '
+demerau_levenshtein_distance: a Demerau-Levenshtein distance calculator.
+
+A row function, taking two strings and calculating their
+Demerau-Levenshtein distance.
+
+For full usage instructions, run
+"DSTOOLS_SCHEMA.demerau_levenshtein_distance(''usage'')".
+'::VARCHAR;
+$$;
+
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.demerau_levenshtein_distance(option VARCHAR)
+RETURNS VARCHAR
+IMMUTABLE
+LANGUAGE SQL
+AS
+$$
+SELECT CASE WHEN $1!='usage' THEN DSTOOLS_SCHEMA.demerau_levenshtein_distance() ELSE '
+demerau_levenshtein_distance: a Demerau-Levenshtein distance calculator.
+
+A row function, taking two strings and calculating their
+Demerau-Levenshtein distance.
+
+Synopsis
+========
+DSTOOLS_SCHEMA.demerau_levenshtein_distance(str1 text, str2 text)
+RETURNS integer
+
+str1, str2 - the two strings to be compared. Edits make str1 into str2.
+
+Usage
+=====
+Given two strings, str1 and str2, it is possible to transform the former into
+the latter by a sequence of character insertions, deletions, substitutions
+and the transposition of pairs of adjacent characters.
+
+The Demerau-Levenshtein distance is the minimum number of such edit operations
+that is required to make str1 into str2.
+
+Example
+=======
+SELECT DSTOOLS_SCHEMA.demerau_levenshtein_distance(''demerau'',''levenshtein'');
+
+ demerau_levenshtein_distance
+------------------------------
+                            9
+(1 row)
+
+' END;
+$$;
+
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.optimal_alignment_distance()
+RETURNS VARCHAR
+IMMUTABLE
+LANGUAGE SQL
+AS
+$$
+SELECT '
+optimal_alignment_distance: an Optimal Alignment distance calculator.
+
+A row function, taking two strings and calculating their
+Optimal Alignment distance.
+
+For full usage instructions, run
+"DSTOOLS_SCHEMA.optimal_alignment_distance(''usage'')".
+'::VARCHAR;
+$$;
+
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.optimal_alignment_distance(option VARCHAR)
+RETURNS VARCHAR
+IMMUTABLE
+LANGUAGE SQL
+AS
+$$
+SELECT CASE WHEN $1!='usage' THEN DSTOOLS_SCHEMA.optimal_alignment_distance() ELSE '
+optimal_alignment_distance: an Optimal Alignment distance calculator.
+
+A row function, taking two strings and calculating their
+Optimal Alignment distance.
+
+Synopsis
+========
+DSTOOLS_SCHEMA.optimal_alignment_distance(str1 text, str2 text)
+RETURNS integer
+
+str1, str2 - the two strings to be compared. Edits make str1 into str2.
+
+Usage
+=====
+Given two strings, str1 and str2, it is possible to transform the former into
+the latter by a sequence of character insertions, deletions, substitutions
+and the transposition of pairs of adjacent characters, under the restriction
+that characters that were once transposed can no longer undergo any further
+edit operation.
+
+The Optimal Alignment distance is the minimum number of such edit operations
+that is required to make str1 into str2.
+
+Example
+=======
+SELECT DSTOOLS_SCHEMA.optimal_alignment_distance(''demerau'',''levenshtein'');
+
+ optimal_alignment_distance
+----------------------------
+                          9
+(1 row)
 
 ' END;
 $$;
