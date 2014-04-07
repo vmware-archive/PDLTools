@@ -29,7 +29,7 @@ export DSTOOLSUSERPWD=123
 if [ -n "${SCHEMA}" ]; then
     export SCHEMA_CMD="--schema ${SCHEMA}"
 else
-    export SCHEMA="madlib"
+    export SCHEMA="dstools"
     export SCHEMA_CMD=""
 fi
 

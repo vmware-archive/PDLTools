@@ -1,12 +1,12 @@
 DSTools
 ========
 
-    DSTools is an a collection of functions to supplement the Data Science capabilities of MADlib.
+    DSTools is a library of tools for Data Scientists over a SQL interface.
 
 Pre-requisites
 ===============
 
-   The following are the pre-requisites to building the dstools package.
+   The following are the pre-requisites for building the dstools package.
        1) The cmake compiler (version >= 2.8)
        2) Greenplum Database (GPDB 4.2 or higher)
        3) rpmbuild package if you want to create rpm packages of the installer

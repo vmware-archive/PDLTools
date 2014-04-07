@@ -12,7 +12,7 @@ rh_version(RH_VERSION)
 # -- Set RPM-specific variables ------------------------------------------------
 
 set(CPACK_RPM_PACKAGE_ARCHITECTURE x86_64 PARENT_SCOPE)
-set(CPACK_RPM_PACKAGE_LICENSE "New BSD License" PARENT_SCOPE)
+set(CPACK_RPM_PACKAGE_LICENSE "Proprietary License" PARENT_SCOPE)
 set(CPACK_RPM_PACKAGE_GROUP "Development/Libraries" PARENT_SCOPE)
 set(CPACK_PACKAGING_INSTALL_PREFIX "/usr/local/dstools/Versions/${DSTOOLS_VERSION_STRING}" PARENT_SCOPE)
 

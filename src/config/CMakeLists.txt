@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# DSTools configuration files (these are configuration files used by the
+# DSTools configuration files (These are configuration files used by the
 # installer). End users are not supposed to make modifications.
 # ------------------------------------------------------------------------------
 

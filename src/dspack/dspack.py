@@ -138,12 +138,12 @@ def ____run_sql_query(sql, show_error):
 
 	return results
 
-def __run_sql_file(schema, maddir_mod_py, module, sqlfile,
+def __run_sql_file(schema, dsdir_mod_py, module, sqlfile,
                    tmpfile, logfile, pre_sql, upgrade=False,
                    sc=None):
     """Run SQL file
             @param schema name of the target schema
-            @param maddir_mod_py name of the module dir with Python code
+            @param dsdir_mod_py name of the module dir with Python code
             @param module  name of the module
             @param sqlfile name of the file to parse
             @param tmpfile name of the temp file to run
@@ -165,7 +165,7 @@ def __run_sql_file(schema, maddir_mod_py, module, sqlfile,
         if pre_sql:
             f.writelines([pre_sql, '\n\n'])
             f.flush()
-        # Find the madpack dir (platform specific or generic)
+        # Find the dspack dir (platform specific or generic)
         if os.path.isdir(dstoolsdir + "/ports/greenplum" + "/" + dbver + "/dspack"):
             dstoolsdir_dspack = dstoolsdir + "/ports/greenplum" + "/" + dbver + "/dspack"
         else:
@@ -175,7 +175,7 @@ def __run_sql_file(schema, maddir_mod_py, module, sqlfile,
         m4args = ['m4',
                   '-P',
                   '-DDSTOOLS_SCHEMA=' + schema,
-                  '-DPLPYTHON_LIBDIR=' + maddir_mod_py,
+                  '-DPLPYTHON_LIBDIR=' + dsdir_mod_py,
                   '-DMODULE_PATHNAME=' + dstoolsdir_lib,
                   '-DMODULE_NAME=' + module,
                   '-I' + dstoolsdir_dspack,
@@ -244,7 +244,7 @@ def __run_sql_file(schema, maddir_mod_py, module, sqlfile,
 def __plpy_check(py_min_ver):
     """
     Check pl/python existence and version
-        @param py_min_ver min Python version to run MADlib
+        @param py_min_ver min Python version to run DS Tools
     """
 
     __info("Testing PL/Python environment...", True)
@@ -265,9 +265,9 @@ def __plpy_check(py_min_ver):
             raise Exception
 
     # Check PL/Python version
-    __run_sql_query("DROP FUNCTION IF EXISTS plpy_version_for_madlib();", False)
+    __run_sql_query("DROP FUNCTION IF EXISTS plpy_version_for_dstools();", False)
     __run_sql_query("""
-        CREATE OR REPLACE FUNCTION plpy_version_for_madlib()
+        CREATE OR REPLACE FUNCTION plpy_version_for_dstools()
         RETURNS TEXT AS
         $$
             import sys
@@ -276,7 +276,7 @@ def __plpy_check(py_min_ver):
         $$
         LANGUAGE plpythonu;
     """, True)
-    rv = __run_sql_query("SELECT plpy_version_for_madlib() AS ver;", True)
+    rv = __run_sql_query("SELECT plpy_version_for_dstools() AS ver;", True)
     python = rv[0]['ver']
     py_cur_ver = [int(i) for i in python.split('.')]
     if py_cur_ver >= py_min_ver:
@@ -316,16 +316,16 @@ def __print_revs(rev, dbrev, con_args, schema):
         @param rev OS-level DSTools version
         @param dbrev DB-level DSTools version
         @param con_args database connection arguments
-        @param schema MADlib schema name
+        @param schema DS Tools schema name
     """
-    __info("MADlib tools version    = %s (%s)" % (rev, sys.argv[0]), True)
+    __info("DS Tools version    = %s (%s)" % (rev, sys.argv[0]), True)
     if con_args:
         try:
             __info("DSTools database version = %s (host=%s, db=%s, schema=%s)"
                    % (dbrev, con_args['host'], con_args['database'], schema), True)
         except:
             __info("DSTools database version = [Unknown] (host=%s, db=%s, schema=%s)"
-                   % (dbrev, con_args['host'], con_args['database'], schema), True)
+                   % (con_args['host'], con_args['database'], schema), True)
     return
 
 
@@ -371,7 +371,7 @@ def __db_create_schema(schema):
 def __db_create_objects(schema, old_schema, upgrade=False, sc=None, testcase="",
                         hawq_debug=False, hawq_fresh=False):
     """
-    Create MADlib DB objects in the schema
+    Create DS Tools DB objects in the schema
         @param schema Name of the target schema
         @param sc ScriptCleaner object
         @param testcase Command-line args for modules to install
@@ -446,15 +446,15 @@ def __db_create_objects(schema, old_schema, upgrade=False, sc=None, testcase="",
  
         # Find the Python module dir (platform specific or generic)
         if os.path.isdir(dstoolsdir + "/ports/greenplum" + "/" + dbver + "/modules/" + module):
-            maddir_mod_py = dstoolsdir + "/ports/greenplum" + "/" + dbver + "/modules"
+            dsdir_mod_py = dstoolsdir + "/ports/greenplum" + "/" + dbver + "/modules"
         else:
-            maddir_mod_py = dstoolsdir + "/modules"
+            dsdir_mod_py = dstoolsdir + "/modules"
 
         # Find the SQL module dir (platform specific or generic)
         if os.path.isdir(dstoolsdir + "/ports/greenplum" + "/modules/" + module):
-            maddir_mod_sql = dstoolsdir + "/ports/greenplum" + "/modules"
+            dsdir_mod_sql = dstoolsdir + "/ports/greenplum" + "/modules"
         elif os.path.isdir(dstoolsdir + "/modules/" + module):
-            maddir_mod_sql = dstoolsdir + "/modules"
+            dsdir_mod_sql = dstoolsdir + "/modules"
         else:
             # This was a platform-specific module, for which no default exists.
             # We can just skip this module.
@@ -465,7 +465,7 @@ def __db_create_objects(schema, old_schema, upgrade=False, sc=None, testcase="",
         __make_dir(cur_tmpdir)
 
         # Loop through all SQL files for this module
-        mask = maddir_mod_sql + '/' + module + '/*.sql_in'
+        mask = dsdir_mod_sql + '/' + module + '/*.sql_in'
         sql_files = glob.glob(mask)
 
         if not sql_files:
@@ -482,7 +482,7 @@ def __db_create_objects(schema, old_schema, upgrade=False, sc=None, testcase="",
             tmpfile = cur_tmpdir + '/' + os.path.basename(sqlfile) + '.tmp'
             logfile = cur_tmpdir + '/' + os.path.basename(sqlfile) + '.log'
 
-            retval = __run_sql_file(schema, maddir_mod_py, module, sqlfile,
+            retval = __run_sql_file(schema, dsdir_mod_py, module, sqlfile,
                                     tmpfile, logfile, None, upgrade,
                                     sc)
             # Check the exit status
@@ -520,7 +520,7 @@ def __db_rollback(drop_schema, keep_schema):
 
 def __db_install(schema, dbrev, testcase):
     """
-    Install MADlib
+    Install DS Tools
         @param schema dstools schema name
         @param dbrev DB-level dstools version
         @param testcase command-line args for a subset of modules
@@ -544,7 +544,7 @@ def __db_install(schema, dbrev, testcase):
        except:
             __db_rollback(schema, temp_schema)
 
-       # Create MADlib objects
+       # Create DS Tools objects
        try:
             __db_create_objects(schema, temp_schema, testcase=testcase)
        except:
@@ -553,7 +553,7 @@ def __db_install(schema, dbrev, testcase):
     else:
         __info("> Schema %s does not exist" % schema.upper(), verbose)
 
-        # Create MADlib schema
+        # Create DS Tools schema
         try:
             __db_create_schema(schema)
         except:
@@ -779,15 +779,15 @@ def install_check(schema, dbrev, args):
 
 	    # Find the Python module dir (platform specific or generic)
 	    if os.path.isdir(dstoolsdir + "/ports/greenplum" + "/" + dbver + "/modules/" + module):
-		maddir_mod_py = dstoolsdir + "/ports/greenplum" + "/" + dbver + "/modules"
+		dsdir_mod_py = dstoolsdir + "/ports/greenplum" + "/" + dbver + "/modules"
 	    else:
-		maddir_mod_py = dstoolsdir + "/modules"
+		dsdir_mod_py = dstoolsdir + "/modules"
 
 	    # Find the SQL module dir (platform specific or generic)
 	    if os.path.isdir(dstoolsdir + "/ports/greenplum" + "/modules/" + module):
-		maddir_mod_sql = dstoolsdir + "/ports/greenplum" + "/modules"
+		dsdir_mod_sql = dstoolsdir + "/ports/greenplum" + "/modules"
 	    else:
-		maddir_mod_sql = dstoolsdir + "/modules"
+		dsdir_mod_sql = dstoolsdir + "/modules"
 
 	    # Prepare test schema
 	    test_schema = "dstools_installcheck_%s" % (module)
@@ -804,7 +804,7 @@ def install_check(schema, dbrev, args):
 		      % (test_user, test_schema, schema)
 
 	    # Loop through all test SQL files for this module
-	    sql_files = maddir_mod_sql + '/' + module + '/test/*.sql_in'
+	    sql_files = dsdir_mod_sql + '/' + module + '/test/*.sql_in'
 	    for sqlfile in sorted(glob.glob(sql_files), reverse=True):
 		# Set file names
 		tmpfile = cur_tmpdir + '/' + os.path.basename(sqlfile) + '.tmp'
@@ -815,7 +815,7 @@ def install_check(schema, dbrev, args):
 
 		# Run the SQL
 		run_start = datetime.datetime.now()
-		retval = __run_sql_file(schema, maddir_mod_py, module,
+		retval = __run_sql_file(schema, dsdir_mod_py, module,
 					sqlfile, tmpfile, logfile, pre_sql)
 		# Runtime evaluation
 		run_end = datetime.datetime.now()

@@ -22,12 +22,12 @@ function(cpack_add_port_group_and_component_for_all_versions)
     file(WRITE "${PORT_DEPLOY_SCRIPT}" "
     cpack_add_component_group(${PORT}
         DISPLAY_NAME \"${PORT} Support\"
-        DESCRIPTION \"MADlib support for ${PORT}.\"
+        DESCRIPTION \"DS Tools support for ${PORT}.\"
         PARENT_GROUP ports
     )
     cpack_add_component(${PORT}_any
         DISPLAY_NAME \"All Versions\"
-        DESCRIPTION \"MADlib files shared by all ${PORT} versions.\"
+        DESCRIPTION \"DS Tools files shared by all ${PORT} versions.\"
         GROUP ${PORT}
     )")
 endfunction(cpack_add_port_group_and_component_for_all_versions)
@@ -39,7 +39,7 @@ function(cpack_add_version_component)
     file(APPEND "${PORT_DEPLOY_SCRIPT}" "
     cpack_add_component(${DBMS}
         DISPLAY_NAME \"${IN_PORT_VERSION}\"
-        DESCRIPTION \"MADlib files specific to ${PORT} ${IN_PORT_VERSION}.\"
+        DESCRIPTION \"DS Tools files specific to ${PORT} ${IN_PORT_VERSION}.\"
         GROUP ${PORT}
     )")
 endfunction(cpack_add_version_component)

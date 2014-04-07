@@ -1,10 +1,10 @@
 {
     "name": "dstools",
-    "abstract": "An open-source in-detabase analytics library",
-    "description": "An open-source in-database analytics library",
+    "abstract": "A library of tools for Data Scientists over a SQL interface",
+    "description": "A library of tools for Data Scientists over a SQL interface",
     "version": "@DSTOOLS_PGXN_VERSION_STR@",
-    "maintainer": "DSTools development team",
-    "license": "bsd",
+    "maintainer": "DS Tools development team",
+    "license": "proprietary",
     "provides": {
         "dstools": {
             "file": "dstools--@DSTOOLS_VERSION_MAJOR@.@DSTOOLS_VERSION_MINOR@.@DSTOOLS_VERSION_PATCH@.sql",
@@ -13,20 +13,18 @@
         }
     },
     "resources": {
-        "homepage": "http://dstools.net/",
-        "bugtracker": {
-            "web": "http://jira.dstools.net/"
-        },
+        "homepage": "https://sites.google.com/a/gopivotal.com/global-data-science/ds-tools",
         "repository": {
-            "url":  "https://github.com/dstools/dstools.git",
-            "web":  "https://github.com/dstools/dstools",
+            "url":  "https://stash.greenplum.com/scm/ds/dstools.git",
+            "web":  "https://stash.greenplum.com/scm/ds/dstools",
             "type": "git"
         }
     },
     "release_status": "stable",
     "tags": [
         "machine learning",
-        "analytics"
+        "analytics",
+        "data wrangling"
     ],
 
 

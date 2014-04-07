@@ -1,2 +1,1 @@
-This is a library of toolkits to supplement the capabilities offered by
-MADlib.
+A library of tools for use by Data Scientists over a SQL interface.

@@ -12,7 +12,7 @@ from itertools import chain
 ##
 # A Python exception class for our use
 ##
-class MadPackConfigError(Exception):
+class DSPackConfigError(Exception):
      def __init__(self, value):
          self.value = value
      def __str__(self):
@@ -125,7 +125,7 @@ def topsort(depdict):
                 newdepdict[k] = filter(lambda v: v not in valnotkey, depdict[k])
         # newdepdict = dict(newdepdict)
         if newdepdict == depdict:
-            raise MadPackConfigError(str(depdict))
+            raise DSPackConfigError(str(depdict))
         else:
             depdict = newdepdict
         if found > 0:
@@ -135,7 +135,7 @@ def topsort(depdict):
 
 ## 
 # Top-sort the modules in conf
-# @param conf a madpack configuration
+# @param conf a dspack configuration
 ##
 def topsort_modules(conf):
 
@@ -147,8 +147,8 @@ def topsort_modules(conf):
             depdict[m['name']] = []        
     try:
         module_dict = topsort(depdict)
-    except MadPackConfigError as e:
-        raise MadPackConfigError("invalid cyclic dependency between modules: " + e.value + "; check Modules.yml files")
+    except DSPackConfigError as e:
+        raise DSPackConfigError("invalid cyclic dependency between modules: " + e.value + "; check Modules.yml files")
     missing = set(module_dict.keys()) - set(depdict.keys())
     inverted = dict()
     if len(missing) > 0:
