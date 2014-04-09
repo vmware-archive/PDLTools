@@ -1,0 +1,840 @@
+-- File: anonymization.sql
+-- Implementation of anonymization utility.
+
+/**
+ * @brief create_anonymization_table: create conversion table for anonymization.
+ *
+ * @about
+ * A table is given with a column.
+ * Values are gathered from the columns and a 1-1 conversion table from them
+ * to anonymized entities is output.
+ *
+ * @prereq PL/pgSQL
+ *
+ * @usage
+ * in_tab - Name of input table
+ * out_tab - Name of output table
+ * id_col - Column to generate conversion table from
+ *
+ * Creates new table (out_tab) with columns "id" and "anon_id", such that
+ * "anon_id" is the anonymized version of "id".
+ *
+ * @examp
+ * user=# CREATE TABLE my_schema.clickstream(
+ * user(#                                    userid VARCHAR,
+ * user(#                                    time_stamp TIMESTAMP,
+ * user(#                                    affected_user VARCHAR
+ * user(#                                   ) DISTRIBUTED RANDOMLY;
+ * CREATE TABLE
+ *
+ * user=# INSERT INTO my_schema.clickstream VALUES
+ * user-#   ('Max', TIMESTAMP '2013-Aug-23 04:57:02.15', 'Max'),
+ * user-#   ('Tori', TIMESTAMP '2013-Aug-23 04:59:17.83', 'Max'),
+ * user-#   ('Max', TIMESTAMP '2013-Aug-23 05:03:01.42', 'Tori'),
+ * user-#   ('Tori', TIMESTAMP '2013-Aug-23 17:32:37.08', 'Tori');
+ * INSERT 0 4
+ *
+ * user=# SELECT DSTOOLS_SCHEMA.create_anonymization_table(
+ * user(#                               'my_schema.clickstream',
+ * user(#                               'my_schema.anonymization_table', 
+ * user(#                               'userid');
+ *  create_anonymization_table 
+ * ----------------------------
+ *
+ * (1 row)
+ * 
+ * user=# SELECT * FROM my_schema.anonymization_table;
+ *   id  |             anon_id              
+ * ------+----------------------------------
+ *  Tori | f7c2d7d11f9d74c7d2dffb87a452b2bb
+ *  Max  | 6e62042ed0f29c01a2b4ea261db01bae
+ * (2 rows)
+ * 
+ * user=# SELECT DSTOOLS_SCHEMA.anonymize('my_schema','clickstream',
+ * user(#                          'my_schema.anonymized_clickstream',
+ * user(#                          array['userid','affected_user'],
+ * user(#                          'my_schema.anonymization_table');
+ *  anonymize 
+ * -----------
+ *  
+ * (1 row)
+ * 
+ * user=# SELECT * FROM my_schema.anonymized_clickstream
+ * user(#                                           ORDER BY time_stamp;
+ *               userid              |       time_stamp       |          affected_user           
+ * ----------------------------------+------------------------+----------------------------------
+ *  6e62042ed0f29c01a2b4ea261db01bae | 2013-08-23 04:57:02.15 | 6e62042ed0f29c01a2b4ea261db01bae
+ *  f7c2d7d11f9d74c7d2dffb87a452b2bb | 2013-08-23 04:59:17.83 | 6e62042ed0f29c01a2b4ea261db01bae
+ *  6e62042ed0f29c01a2b4ea261db01bae | 2013-08-23 05:03:01.42 | f7c2d7d11f9d74c7d2dffb87a452b2bb
+ *  f7c2d7d11f9d74c7d2dffb87a452b2bb | 2013-08-23 17:32:37.08 | f7c2d7d11f9d74c7d2dffb87a452b2bb
+ * (4 rows)
+ * 
+ * user=# SELECT DSTOOLS_SCHEMA.deanonymize('my_schema','anonymized_clickstream',
+ * user(#                            'my_schema.deanonymized_clickstream',
+ * user(#                            array['userid','affected_user'],
+ * user(#                            'my_schema.anonymization_table');
+ *  deanonymize 
+ * -------------
+ *  
+ * (1 row)
+ * 
+ * user=# SELECT * FROM my_schema.deanonymized_clickstream
+ * user(#                                            ORDER BY time_stamp;
+ *  userid |       time_stamp       | affected_user 
+ * --------+------------------------+---------------
+ *  Max    | 2013-08-23 04:57:02.15 | Max
+ *  Tori   | 2013-08-23 04:59:17.83 | Max
+ *  Max    | 2013-08-23 05:03:01.42 | Tori
+ *  Tori   | 2013-08-23 17:32:37.08 | Tori
+ * (4 rows)
+ * 
+ * The anonymization process maps the original table values to random values.
+ * However, anyone who has the anonymization table can use the
+ * deanonymization process to map back to the original values.
+ */
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.create_anonymization_table(in_tab VARCHAR,
+                                          out_tab VARCHAR,
+                                          id_col VARCHAR)
+RETURNS VOID
+VOLATILE
+STRICT
+LANGUAGE plpgsql
+AS
+$$
+DECLARE
+  in_tab ALIAS FOR $1;
+  out_tab ALIAS FOR $2;
+  id_col ALIAS FOR $3;
+  random1 text;
+  random2 text;
+  random3 text;
+  random4 text;
+  random5 text;
+  random6 text;
+  random7 text;
+  random8 text;
+  randname text;
+  randstr text;
+  id_cnt integer;
+  anon_cnt integer;
+BEGIN
+  LOOP
+    random1 := trunc(random()*(1::bigint<<16))::text;
+    random2 := trunc(random()*(1::bigint<<16))::text;
+    random3 := trunc(random()*(1::bigint<<16))::text;
+    random4 := trunc(random()*(1::bigint<<16))::text;
+    random5 := trunc(random()*(1::bigint<<16))::text;
+    random6 := trunc(random()*(1::bigint<<16))::text;
+    random7 := trunc(random()*(1::bigint<<16))::text;
+    random8 := trunc(random()*(1::bigint<<16))::text;
+    randname := md5(trunc(random()*(1::bigint<<16))::text);
+    randstr :=
+           random1 || '_' || random2 || '_' || random3 || '_' || random4 || '_' ||
+           random5 || '_' || random6 || '_' || random7 || '_' || random8 || '_';
+    EXECUTE 'CREATE TABLE __anonymize_temp_table_' || randname || ' AS SELECT '
+      || id_col || ' as id FROM ' || in_tab || ' GROUP BY (' || id_col ||
+      ') DISTRIBUTED BY (id)';
+    EXECUTE 'CREATE TABLE ' || out_tab || ' AS SELECT id, md5(''' || randstr ||
+  $ABC$
+  '   || ctid::bigint::text || '_' || gp_segment_id::text) as anon_id
+  $ABC$
+      || ' FROM __anonymize_temp_table_' || randname || ' DISTRIBUTED BY (id)'
+      ;
+    EXECUTE 'DROP TABLE __anonymize_temp_table_' || randname;
+    EXECUTE 'SELECT count(*) FROM ' || out_tab INTO id_cnt;
+    EXECUTE 'SELECT count(DISTINCT anon_id) FROM ' || out_tab INTO anon_cnt;
+    IF id_cnt<>anon_cnt THEN
+      RAISE NOTICE
+              'Collisions detected in anonymization table. Recreating table.';
+      EXECUTE 'DROP TABLE ' || out_tab;
+    ELSE
+      EXIT;
+    END IF;
+  END LOOP;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.create_anonymization_table()
+RETURNS VARCHAR
+IMMUTABLE
+LANGUAGE SQL
+AS
+$$
+SELECT '
+create_anonymization_table: create conversion table for anonymization.
+
+A table is given with a column.
+Values are gathered from the columns and a 1-1 conversion table from them
+to anonymized entities is output.
+
+For full usage instructions, run "DSTOOLS_SCHEMA.create_anonymization_table(''usage'')".
+'::VARCHAR;
+$$;
+
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.create_anonymization_table(option VARCHAR)
+RETURNS VARCHAR
+IMMUTABLE
+LANGUAGE SQL
+AS
+$$
+SELECT CASE WHEN $1!='usage' THEN DSTOOLS_SCHEMA.create_anonymization_table() ELSE
+$ABC$
+create_anonymization_table: create conversion table for anonymization.
+
+A table is given with a column.
+Values are gathered from the columns and a 1-1 conversion table from them
+to anonymized entities is output.
+
+Synopsis
+========
+DSTOOLS_SCHEMA.create_anonymization_table(in_tab VARCHAR, out_tab VARCHAR,
+                                   id_col VARCHAR)
+RETURNS VOID
+
+in_tab - Name of input table
+out_tab - Name of output table
+id_col - Column to generate conversion table from
+
+Usage
+=====
+The function creates new table (out_tab) with columns "id" and "anon_id", such
+that "anon_id" is the anonymized version of "id".
+
+Example
+=======
+user=# CREATE TABLE my_schema.clickstream(
+user(#                                    userid VARCHAR,
+user(#                                    time_stamp TIMESTAMP,
+user(#                                    affected_user VARCHAR
+user(#                                   ) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+
+user=# INSERT INTO my_schema.clickstream VALUES
+user-#   ('Max', TIMESTAMP '2013-Aug-23 04:57:02.15', 'Max'),
+user-#   ('Tori', TIMESTAMP '2013-Aug-23 04:59:17.83', 'Max'),
+user-#   ('Max', TIMESTAMP '2013-Aug-23 05:03:01.42', 'Tori'),
+user-#   ('Tori', TIMESTAMP '2013-Aug-23 17:32:37.08', 'Tori');
+INSERT 0 4
+
+user=# SELECT DSTOOLS_SCHEMA.create_anonymization_table(
+user(#                               'my_schema.clickstream',
+user(#                               'my_schema.anonymization_table', 
+user(#                               'userid');
+ create_anonymization_table 
+----------------------------
+
+(1 row)
+
+user=# SELECT * FROM my_schema.anonymization_table;
+  id  |             anon_id              
+------+----------------------------------
+ Tori | f7c2d7d11f9d74c7d2dffb87a452b2bb
+ Max  | 6e62042ed0f29c01a2b4ea261db01bae
+(2 rows)
+
+user=# SELECT DSTOOLS_SCHEMA.anonymize('my_schema','clickstream',
+user(#                          'my_schema.anonymized_clickstream',
+user(#                          array['userid','affected_user'],
+user(#                          'my_schema.anonymization_table');
+ anonymize 
+-----------
+ 
+(1 row)
+
+user=# SELECT * FROM my_schema.anonymized_clickstream
+user(#                                           ORDER BY time_stamp;
+              userid              |       time_stamp       |          affected_user           
+----------------------------------+------------------------+----------------------------------
+ 6e62042ed0f29c01a2b4ea261db01bae | 2013-08-23 04:57:02.15 | 6e62042ed0f29c01a2b4ea261db01bae
+ f7c2d7d11f9d74c7d2dffb87a452b2bb | 2013-08-23 04:59:17.83 | 6e62042ed0f29c01a2b4ea261db01bae
+ 6e62042ed0f29c01a2b4ea261db01bae | 2013-08-23 05:03:01.42 | f7c2d7d11f9d74c7d2dffb87a452b2bb
+ f7c2d7d11f9d74c7d2dffb87a452b2bb | 2013-08-23 17:32:37.08 | f7c2d7d11f9d74c7d2dffb87a452b2bb
+(4 rows)
+
+user=# SELECT DSTOOLS_SCHEMA.deanonymize('my_schema','clickstream',
+user(#                            'my_schema.deanonymized_clickstream',
+user(#                            array['userid','affected_user'],
+user(#                            'my_schema.anonymization_table');
+ deanonymize 
+-------------
+ 
+(1 row)
+
+user=# SELECT * FROM my_schema.deanonymized_clickstream
+user(#                                            ORDER BY time_stamp;
+ userid |       time_stamp       | affected_user 
+--------+------------------------+---------------
+ Max    | 2013-08-23 04:57:02.15 | Max
+ Tori   | 2013-08-23 04:59:17.83 | Max
+ Max    | 2013-08-23 05:03:01.42 | Tori
+ Tori   | 2013-08-23 17:32:37.08 | Tori
+(4 rows)
+
+The anonymization process maps the original table values to random values.
+However, anyone who has the anonymization table can use the
+deanonymization process to map back to the original values.
+
+Prerequisites
+=============
+Requires PL/pgSQL
+$ABC$
+END;
+$$;
+
+/**
+ * @internal
+ * @brief __anonymize_imp: create an anonymized/deanonymized version of a
+ *                            table.
+ *
+ * @about
+ * A table is given with a set of columns and a conversion table.
+ * An output table is generated, where the chosen column values are replaced.
+ * This is an internal function that can either anonymize or deanonymize.
+ *
+ * @prereq PL/PythonU
+ *
+ * @usage
+ * in_schema - Name of input table's schema
+ * in_tab - Name of input table
+ * out_tab - Name of output table
+ * id_cols - Array of column names
+ * anon_tab - Anonymization table
+ * deanonymize - true deanonymizes, false anonymizes
+ *
+ * Creates new table (out_tab) with the same columns as in_schema.in_tab, such
+ * that values in columns id_cols are converted based on anon_tab.
+ *
+ */
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.__anonymize_imp(in_schema VARCHAR,
+                                          in_tab VARCHAR,
+                                          out_tab VARCHAR,
+                                          id_cols VARCHAR[], anon_tab VARCHAR,
+                                          deanonymize BOOLEAN)
+RETURNS VOID
+VOLATILE
+STRICT
+LANGUAGE PLPythonU
+AS
+$$
+  params=dict(in_tab=in_tab,in_schema=in_schema)
+  if deanonymize:
+    from_col='anon_id'
+    to_col='id'
+  else:
+    from_col='id'
+    to_col='anon_id'
+  cols=plpy.execute("""
+    SELECT column_name FROM information_schema.columns
+      WHERE table_schema='{in_schema}' AND table_name='{in_tab}'
+      ORDER BY ordinal_position;
+  """.format(**params))
+  command_arr=["CREATE TABLE "+out_tab+" AS SELECT "]
+  i=0
+  for col in cols:
+    if col['column_name'] in id_cols:
+      i+=1
+      command_arr.append("conv"+str(i)+"."+to_col+" AS "+col['column_name']+ \
+                         ", ")
+    else:
+      command_arr.append("in_tab."+col['column_name']+", ")
+  i=0
+  command_arr=["".join(command_arr)[:-2]," "]
+  command_arr.append("FROM "+in_schema+"."+in_tab+" AS in_tab");
+  for col in cols:
+    if col['column_name'] in id_cols:
+      i+=1
+      command_arr.append(", "+anon_tab+" AS conv"+str(i))
+  i=0
+  command_arr.append(" WHERE")
+  for col in cols:
+    if col['column_name'] in id_cols:
+      i+=1
+      if i>1:
+        command_arr.append(" AND")
+      command_arr.append(" in_tab."+col['column_name']+"=conv"+str(i)+"."+ \
+                         from_col)
+  cols=plpy.execute("""
+    SELECT column_name FROM information_schema.columns
+      WHERE table_schema='{in_schema}' AND table_name='{in_tab}'
+      AND ordinal_position IN
+        (SELECT unnest(attrnums) FROM pg_catalog.gp_distribution_policy
+          WHERE localoid='{in_schema}.{in_tab}'::regclass);
+  """.format(**params))
+  if len(cols)==0:
+    command_arr.append(" DISTRIBUTED RANDOMLY")
+  else:
+    cols=[x['column_name'] for x in cols]
+    command_arr.append(" DISTRIBUTED BY (")
+    command_arr.append(",".join(cols))
+    command_arr.append(")")
+  command="".join(command_arr)
+  plpy.execute(command)
+$$;
+
+/**
+ * @brief anonymize: create an anonymized version of a table.
+ *
+ * @about
+ * A table is given with a set of columns and a conversion table.
+ * An output table is generated, where the chosen column values are replaced.
+ *
+ * @prereq PL/PythonU
+ *
+ * @usage
+ * in_schema - Name of input table's schema
+ * in_tab - Name of input table
+ * out_tab - Name of output table
+ * id_cols - Array of column names
+ * anon_tab - Anonymization table
+ *
+ * Creates new table (out_tab) with the same columns as in_schema.in_tab, such
+ * that values in columns id_cols are converted based on dict.
+ *
+ * @examp
+ * user=# CREATE TABLE my_schema.clickstream(
+ * user(#                                    userid VARCHAR,
+ * user(#                                    time_stamp TIMESTAMP,
+ * user(#                                    affected_user VARCHAR
+ * user(#                                   ) DISTRIBUTED RANDOMLY;
+ * CREATE TABLE
+ *
+ * user=# INSERT INTO my_schema.clickstream VALUES
+ * user-#   ('Max', TIMESTAMP '2013-Aug-23 04:57:02.15', 'Max'),
+ * user-#   ('Tori', TIMESTAMP '2013-Aug-23 04:59:17.83', 'Max'),
+ * user-#   ('Max', TIMESTAMP '2013-Aug-23 05:03:01.42', 'Tori'),
+ * user-#   ('Tori', TIMESTAMP '2013-Aug-23 17:32:37.08', 'Tori');
+ * INSERT 0 4
+ *
+ * user=# SELECT DSTOOLS_SCHEMA.create_anonymization_table(
+ * user(#                               'my_schema.clickstream',
+ * user(#                               'my_schema.anonymization_table', 
+ * user(#                               'userid');
+ *  create_anonymization_table 
+ * ----------------------------
+ *
+ * (1 row)
+ * 
+ * user=# SELECT * FROM my_schema.anonymization_table;
+ *   id  |             anon_id              
+ * ------+----------------------------------
+ *  Tori | f7c2d7d11f9d74c7d2dffb87a452b2bb
+ *  Max  | 6e62042ed0f29c01a2b4ea261db01bae
+ * (2 rows)
+ * 
+ * user=# SELECT DSTOOLS_SCHEMA.anonymize('my_schema','clickstream',
+ * user(#                          'my_schema.anonymized_clickstream',
+ * user(#                          array['userid','affected_user'],
+ * user(#                          'my_schema.anonymization_table');
+ *  anonymize 
+ * -----------
+ *  
+ * (1 row)
+ * 
+ * user=# SELECT * FROM my_schema.anonymized_clickstream
+ * user(#                                           ORDER BY time_stamp;
+ *               userid              |       time_stamp       |          affected_user           
+ * ----------------------------------+------------------------+----------------------------------
+ *  6e62042ed0f29c01a2b4ea261db01bae | 2013-08-23 04:57:02.15 | 6e62042ed0f29c01a2b4ea261db01bae
+ *  f7c2d7d11f9d74c7d2dffb87a452b2bb | 2013-08-23 04:59:17.83 | 6e62042ed0f29c01a2b4ea261db01bae
+ *  6e62042ed0f29c01a2b4ea261db01bae | 2013-08-23 05:03:01.42 | f7c2d7d11f9d74c7d2dffb87a452b2bb
+ *  f7c2d7d11f9d74c7d2dffb87a452b2bb | 2013-08-23 17:32:37.08 | f7c2d7d11f9d74c7d2dffb87a452b2bb
+ * (4 rows)
+ * 
+ * user=# SELECT DSTOOLS_SCHEMA.deanonymize('my_schema','anonymized_clickstream',
+ * user(#                            'my_schema.deanonymized_clickstream',
+ * user(#                            array['userid','affected_user'],
+ * user(#                            'my_schema.anonymization_table');
+ *  deanonymize 
+ * -------------
+ *  
+ * (1 row)
+ * 
+ * user=# SELECT * FROM my_schema.deanonymized_clickstream
+ * user(#                                            ORDER BY time_stamp;
+ *  userid |       time_stamp       | affected_user 
+ * --------+------------------------+---------------
+ *  Max    | 2013-08-23 04:57:02.15 | Max
+ *  Tori   | 2013-08-23 04:59:17.83 | Max
+ *  Max    | 2013-08-23 05:03:01.42 | Tori
+ *  Tori   | 2013-08-23 17:32:37.08 | Tori
+ * (4 rows)
+ * 
+ * The anonymization process maps the original table values to random values.
+ * However, anyone who has the anonymization table can use the
+ * deanonymization process to map back to the original values.
+ */
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.anonymize(in_schema VARCHAR,
+                                          in_tab VARCHAR,
+                                          out_tab VARCHAR,
+                                          id_cols VARCHAR[], anon_tab VARCHAR)
+RETURNS VOID
+VOLATILE
+STRICT
+LANGUAGE SQL
+AS
+$$
+SELECT DSTOOLS_SCHEMA.__anonymize_imp($1,$2,$3,$4,$5,False);
+$$;
+
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.anonymize()
+RETURNS VARCHAR
+IMMUTABLE
+LANGUAGE SQL
+AS
+$$
+SELECT '
+anonymize: create an anonymized version of a table.
+
+A table is given with a set of columns and a conversion table.
+An output table is generated, where the chosen column values are replaced.
+
+For full usage instructions, run "DSTOOLS_SCHEMA.anonymize(''usage'')".
+'::VARCHAR;
+$$;
+
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.anonymize(option VARCHAR)
+RETURNS VARCHAR
+IMMUTABLE
+LANGUAGE SQL
+AS
+$$
+SELECT CASE WHEN $1!='usage' THEN DSTOOLS_SCHEMA.anonymize() ELSE
+$ABC$
+anonymize: create an anonymized version of a table.
+
+A table is given with a set of columns and a conversion table.
+An output table is generated, where the chosen column values are replaced.
+
+Synopsis
+========
+DSTOOLS_SCHEMA.anonymize(in_schema VARCHAR, in_tab VARCHAR, out_tab VARCHAR,
+                   id_cols VARCHAR[], anon_tab VARCHAR)
+RETURNS VOID
+
+in_schema - Name of input table's schema
+in_tab - Name of input table
+out_tab - Name of output table
+id_cols - Array of column names
+anon_tab - Anonymization table
+
+Usage
+=====
+The function creates a new table (out_tab) with the same columns as
+in_schema.in_tab, such that values in columns id_cols are converted based on
+the conversion table (anon_tab).
+
+Example
+=======
+user=# CREATE TABLE my_schema.clickstream(
+user(#                                    userid VARCHAR,
+user(#                                    time_stamp TIMESTAMP,
+user(#                                    affected_user VARCHAR
+user(#                                   ) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+
+user=# INSERT INTO my_schema.clickstream VALUES
+user-#   ('Max', TIMESTAMP '2013-Aug-23 04:57:02.15', 'Max'),
+user-#   ('Tori', TIMESTAMP '2013-Aug-23 04:59:17.83', 'Max'),
+user-#   ('Max', TIMESTAMP '2013-Aug-23 05:03:01.42', 'Tori'),
+user-#   ('Tori', TIMESTAMP '2013-Aug-23 17:32:37.08', 'Tori');
+INSERT 0 4
+
+user=# SELECT DSTOOLS_SCHEMA.create_anonymization_table(
+user(#                               'my_schema.clickstream',
+user(#                               'my_schema.anonymization_table', 
+user(#                               'userid');
+ create_anonymization_table 
+----------------------------
+ 
+(1 row)
+
+user=# SELECT * FROM my_schema.anonymization_table;
+  id  |             anon_id              
+------+----------------------------------
+ Tori | f7c2d7d11f9d74c7d2dffb87a452b2bb
+ Max  | 6e62042ed0f29c01a2b4ea261db01bae
+(2 rows)
+
+user=# SELECT DSTOOLS_SCHEMA.anonymize('my_schema','clickstream',
+user(#                          'my_schema.anonymized_clickstream',
+user(#                          array['userid','affected_user'],
+user(#                          'my_schema.anonymization_table');
+ anonymize 
+-----------
+ 
+(1 row)
+
+user=# SELECT * FROM my_schema.anonymized_clickstream
+user(#                                           ORDER BY time_stamp;
+              userid              |       time_stamp       |          affected_user           
+----------------------------------+------------------------+----------------------------------
+ 6e62042ed0f29c01a2b4ea261db01bae | 2013-08-23 04:57:02.15 | 6e62042ed0f29c01a2b4ea261db01bae
+ f7c2d7d11f9d74c7d2dffb87a452b2bb | 2013-08-23 04:59:17.83 | 6e62042ed0f29c01a2b4ea261db01bae
+ 6e62042ed0f29c01a2b4ea261db01bae | 2013-08-23 05:03:01.42 | f7c2d7d11f9d74c7d2dffb87a452b2bb
+ f7c2d7d11f9d74c7d2dffb87a452b2bb | 2013-08-23 17:32:37.08 | f7c2d7d11f9d74c7d2dffb87a452b2bb
+(4 rows)
+
+user=# SELECT DSTOOLS_SCHEMA.deanonymize('my_schema','anonymized_clickstream',
+user(#                            'my_schema.deanonymized_clickstream',
+user(#                            array['userid','affected_user'],
+user(#                            'my_schema.anonymization_table');
+ deanonymize 
+-------------
+ 
+(1 row)
+
+user=# SELECT * FROM my_schema.deanonymized_clickstream
+user(#                                            ORDER BY time_stamp;
+ userid |       time_stamp       | affected_user 
+--------+------------------------+---------------
+ Max    | 2013-08-23 04:57:02.15 | Max
+ Tori   | 2013-08-23 04:59:17.83 | Max
+ Max    | 2013-08-23 05:03:01.42 | Tori
+ Tori   | 2013-08-23 17:32:37.08 | Tori
+(4 rows)
+
+The anonymization process maps the original table values to random values.
+However, anyone who has the anonymization table can use the
+deanonymization process to map back to the original values.
+
+Prerequisites
+=============
+Requires PL/PythonU
+$ABC$
+END;
+$$;
+
+/**
+ * @brief deanonymize: create a deanonymized version of a table.
+ *
+ * @about
+ * A table is given with a set of columns and a conversion table.
+ * An output table is generated, where the chosen column values are replaced.
+ *
+ * @prereq PL/PythonU
+ *
+ * @usage
+ * in_schema - Name of input table's schema
+ * in_tab - Name of input table
+ * out_tab - Name of output table
+ * id_cols - Array of column names
+ * anon_tab - Anonymization table
+ *
+ * Creates new table (out_tab) with the same columns as in_schema.in_tab, such
+ * that values in columns id_cols are converted based on anon_tab.
+ *
+ * @examp
+ * user=# CREATE TABLE my_schema.clickstream(
+ * user(#                                    userid VARCHAR,
+ * user(#                                    time_stamp TIMESTAMP,
+ * user(#                                    affected_user VARCHAR
+ * user(#                                   ) DISTRIBUTED RANDOMLY;
+ * CREATE TABLE
+ *
+ * user=# INSERT INTO my_schema.clickstream VALUES
+ * user-#   ('Max', TIMESTAMP '2013-Aug-23 04:57:02.15', 'Max'),
+ * user-#   ('Tori', TIMESTAMP '2013-Aug-23 04:59:17.83', 'Max'),
+ * user-#   ('Max', TIMESTAMP '2013-Aug-23 05:03:01.42', 'Tori'),
+ * user-#   ('Tori', TIMESTAMP '2013-Aug-23 17:32:37.08', 'Tori');
+ * INSERT 0 4
+ *
+ * user=# SELECT DSTOOLS_SCHEMA.create_anonymization_table(
+ * user(#                               'my_schema.clickstream',
+ * user(#                               'my_schema.anonymization_table', 
+ * user(#                               'userid');
+ *  create_anonymization_table 
+ * ----------------------------
+ *
+ * (1 row)
+ * 
+ * user=# SELECT * FROM my_schema.anonymization_table;
+ *   id  |             anon_id              
+ * ------+----------------------------------
+ *  Tori | f7c2d7d11f9d74c7d2dffb87a452b2bb
+ *  Max  | 6e62042ed0f29c01a2b4ea261db01bae
+ * (2 rows)
+ * 
+ * user=# SELECT DSTOOLS_SCHEMA.anonymize('my_schema','clickstream',
+ * user(#                          'my_schema.anonymized_clickstream',
+ * user(#                          array['userid','affected_user'],
+ * user(#                          'my_schema.anonymization_table');
+ *  anonymize 
+ * -----------
+ *  
+ * (1 row)
+ * 
+ * user=# SELECT * FROM my_schema.anonymized_clickstream
+ * user(#                                           ORDER BY time_stamp;
+ *               userid              |       time_stamp       |          affected_user           
+ * ----------------------------------+------------------------+----------------------------------
+ *  6e62042ed0f29c01a2b4ea261db01bae | 2013-08-23 04:57:02.15 | 6e62042ed0f29c01a2b4ea261db01bae
+ *  f7c2d7d11f9d74c7d2dffb87a452b2bb | 2013-08-23 04:59:17.83 | 6e62042ed0f29c01a2b4ea261db01bae
+ *  6e62042ed0f29c01a2b4ea261db01bae | 2013-08-23 05:03:01.42 | f7c2d7d11f9d74c7d2dffb87a452b2bb
+ *  f7c2d7d11f9d74c7d2dffb87a452b2bb | 2013-08-23 17:32:37.08 | f7c2d7d11f9d74c7d2dffb87a452b2bb
+ * (4 rows)
+ * 
+ * user=# SELECT DSTOOLS_SCHEMA.deanonymize('my_schema','anonymized_clickstream',
+ * user(#                            'my_schema.deanonymized_clickstream',
+ * user(#                            array['userid','affected_user'],
+ * user(#                            'my_schema.anonymization_table');
+ *  deanonymize 
+ * -------------
+ *  
+ * (1 row)
+ * 
+ * user=# SELECT * FROM my_schema.deanonymized_clickstream
+ * user(#                                            ORDER BY time_stamp;
+ *  userid |       time_stamp       | affected_user 
+ * --------+------------------------+---------------
+ *  Max    | 2013-08-23 04:57:02.15 | Max
+ *  Tori   | 2013-08-23 04:59:17.83 | Max
+ *  Max    | 2013-08-23 05:03:01.42 | Tori
+ *  Tori   | 2013-08-23 17:32:37.08 | Tori
+ * (4 rows)
+ * 
+ * The anonymization process maps the original table values to random values.
+ * However, anyone who has the anonymization table can use the
+ * deanonymization process to map back to the original values.
+ */
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.deanonymize(in_schema VARCHAR,
+                                          in_tab VARCHAR,
+                                          out_tab VARCHAR,
+                                          id_cols VARCHAR[], anon_tab VARCHAR)
+RETURNS VOID
+VOLATILE
+STRICT
+LANGUAGE SQL
+AS
+$$
+SELECT DSTOOLS_SCHEMA.__anonymize_imp($1,$2,$3,$4,$5,True);
+$$;
+
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.deanonymize()
+RETURNS VARCHAR
+IMMUTABLE
+LANGUAGE SQL
+AS
+$$
+SELECT '
+deanonymize: create a deanonymized version of a table.
+
+A table is given with a set of columns and a conversion table.
+An output table is generated, where the chosen column values are replaced.
+
+For full usage instructions, run "DSTOOLS_SCHEMA.deanonymize(''usage'')".
+'::VARCHAR;
+$$;
+
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.deanonymize(option VARCHAR)
+RETURNS VARCHAR
+IMMUTABLE
+LANGUAGE SQL
+AS
+$$
+SELECT CASE WHEN $1!='usage' THEN DSTOOLS_SCHEMA.deanonymize() ELSE
+$ABC$
+deanonymize: create a deanonymized version of a table.
+
+A table is given with a set of columns and a conversion table.
+An output table is generated, where the chosen column values are replaced.
+
+Synopsis
+========
+DSTOOLS_SCHEMA.deanonymize(in_schema VARCHAR, in_tab VARCHAR, out_tab VARCHAR,
+                     id_cols VARCHAR[], anon_tab VARCHAR)
+RETURNS VOID
+
+in_schema - Name of input table's schema
+in_tab - Name of input table
+out_tab - Name of output table
+id_cols - Array of column names
+anon_tab - Anonymization table
+
+Usage
+=====
+The function creates a new table (out_tab) with the same columns as
+in_schema.in_tab, such that values in columns id_cols are converted based on the
+conversion table (anon_tab).
+
+Example
+=======
+user=# CREATE TABLE my_schema.clickstream(
+user(#                                    userid VARCHAR,
+user(#                                    time_stamp TIMESTAMP,
+user(#                                    affected_user VARCHAR
+user(#                                   ) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+
+user=# INSERT INTO my_schema.clickstream VALUES
+user-#   ('Max', TIMESTAMP '2013-Aug-23 04:57:02.15', 'Max'),
+user-#   ('Tori', TIMESTAMP '2013-Aug-23 04:59:17.83', 'Max'),
+user-#   ('Max', TIMESTAMP '2013-Aug-23 05:03:01.42', 'Tori'),
+user-#   ('Tori', TIMESTAMP '2013-Aug-23 17:32:37.08', 'Tori');
+INSERT 0 4
+
+user=# SELECT DSTOOLS_SCHEMA.create_anonymization_table(
+user(#                               'my_schema.clickstream',
+user(#                               'my_schema.anonymization_table', 
+user(#                               'userid');
+ create_anonymization_table 
+----------------------------
+ 
+(1 row)
+
+user=# SELECT * FROM my_schema.anonymization_table;
+  id  |             anon_id              
+------+----------------------------------
+ Tori | f7c2d7d11f9d74c7d2dffb87a452b2bb
+ Max  | 6e62042ed0f29c01a2b4ea261db01bae
+(2 rows)
+
+user=# SELECT DSTOOLS_SCHEMA.anonymize('my_schema','clickstream',
+user(#                          'my_schema.anonymized_clickstream',
+user(#                          array['userid','affected_user'],
+user(#                          'my_schema.anonymization_table');
+ anonymize 
+-----------
+ 
+(1 row)
+
+user=# SELECT * FROM my_schema.anonymized_clickstream
+user(#                                           ORDER BY time_stamp;
+              userid              |       time_stamp       |          affected_user           
+----------------------------------+------------------------+----------------------------------
+ 6e62042ed0f29c01a2b4ea261db01bae | 2013-08-23 04:57:02.15 | 6e62042ed0f29c01a2b4ea261db01bae
+ f7c2d7d11f9d74c7d2dffb87a452b2bb | 2013-08-23 04:59:17.83 | 6e62042ed0f29c01a2b4ea261db01bae
+ 6e62042ed0f29c01a2b4ea261db01bae | 2013-08-23 05:03:01.42 | f7c2d7d11f9d74c7d2dffb87a452b2bb
+ f7c2d7d11f9d74c7d2dffb87a452b2bb | 2013-08-23 17:32:37.08 | f7c2d7d11f9d74c7d2dffb87a452b2bb
+(4 rows)
+
+user=# SELECT DSTOOLS_SCHEMA.deanonymize('my_schema','anonymized_clickstream',
+user(#                            'my_schema.deanonymized_clickstream',
+user(#                            array['userid','affected_user'],
+user(#                            'my_schema.anonymization_table');
+ deanonymize 
+-------------
+ 
+(1 row)
+
+user=# SELECT * FROM my_schema.deanonymized_clickstream
+user(#                                            ORDER BY time_stamp;
+ userid |       time_stamp       | affected_user 
+--------+------------------------+---------------
+ Max    | 2013-08-23 04:57:02.15 | Max
+ Tori   | 2013-08-23 04:59:17.83 | Max
+ Max    | 2013-08-23 05:03:01.42 | Tori
+ Tori   | 2013-08-23 17:32:37.08 | Tori
+(4 rows)
+
+The anonymization process maps the original table values to random values.
+However, anyone who has the anonymization table can use the
+deanonymization process to map back to the original values.
+
+Prerequisites
+=============
+Requires PL/PythonU
+$ABC$
+END;
+$$;
+
+

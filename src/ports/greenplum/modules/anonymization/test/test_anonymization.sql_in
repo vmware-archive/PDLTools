@@ -1,0 +1,68 @@
+-- File: test_anonymization.sql
+-- Unit test for anonymization utility.
+
+CREATE SCHEMA dstools_test_schema;
+
+CREATE TABLE dstools_test_schema.clickstream(
+                                           userid VARCHAR,
+                                           time_stamp TIMESTAMP,
+                                           affected_user VARCHAR
+                                          ) DISTRIBUTED RANDOMLY;
+
+INSERT INTO dstools_test_schema.clickstream VALUES
+  ('Max', TIMESTAMP '2013-Aug-23 04:57:02.15', 'Max'),
+  ('Tori', TIMESTAMP '2013-Aug-23 04:59:17.83', 'Max'),
+  ('Max', TIMESTAMP '2013-Aug-23 05:03:01.42', 'Tori'),
+  ('Tori', TIMESTAMP '2013-Aug-23 17:32:37.08', 'Tori');
+
+SELECT create_anonymization_table('dstools_test_schema.clickstream',
+                              'dstools_test_schema.anonymization_table',
+                              'userid');
+
+SELECT assert((SELECT count(*) 
+               FROM dstools_test_schema.anonymization_table)::TEXT,'2');
+
+SELECT assert((SELECT count(DISTINCT id)
+               FROM dstools_test_schema.anonymization_table)::TEXT,'2');
+
+SELECT assert((SELECT count(DISTINCT anon_id)
+               FROM dstools_test_schema.anonymization_table)::TEXT,'2');
+
+SELECT assert((SELECT CASE WHEN min(length(anon_id))>25 THEN 't' ELSE 'f' END
+               FROM dstools_test_schema.anonymization_table),'t');
+
+SELECT anonymize('dstools_test_schema','clickstream',
+                 'dstools_test_schema.anonymized_clickstream',
+                 array['userid','affected_user'],
+                 'dstools_test_schema.anonymization_table');
+
+SELECT assert((SELECT sum((au=anon)::INTEGER) FROM
+(SELECT a.userid au,t.anon_id anon
+   FROM dstools_test_schema.clickstream o,
+        dstools_test_schema.anonymized_clickstream a,
+        dstools_test_schema.anonymization_table t
+   WHERE o.time_stamp=a.time_stamp AND o.userid=t.id
+ UNION
+ SELECT a.affected_user,t.anon_id
+   FROM dstools_test_schema.clickstream o,
+        dstools_test_schema.anonymized_clickstream a,
+        dstools_test_schema.anonymization_table t
+   WHERE o.time_stamp=a.time_stamp AND o.affected_user=t.id) x)::TEXT,'2');
+
+SELECT deanonymize('dstools_test_schema','anonymized_clickstream',
+                   'dstools_test_schema.deanonymized_clickstream',
+                   array['userid','affected_user'],
+                   'dstools_test_schema.anonymization_table');
+
+SELECT assert((SELECT sum((ou=du)::INTEGER) FROM
+(SELECT o.userid ou,d.userid du
+   FROM dstools_test_schema.clickstream o,
+        dstools_test_schema.deanonymized_clickstream d
+   WHERE o.time_stamp=d.time_stamp
+ UNION
+ SELECT o.affected_user,d.affected_user
+   FROM dstools_test_schema.clickstream o,
+        dstools_test_schema.deanonymized_clickstream d
+   WHERE o.time_stamp=d.time_stamp) x)::TEXT,'2');
+
+DROP SCHEMA dstools_test_schema CASCADE;

@@ -7,3 +7,5 @@ modules:
       depends: ['common']
     - name: edit_distance 
       depends: ['common']
+    - name: anonymization 
+      depends: ['common']
