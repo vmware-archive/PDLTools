@@ -293,12 +293,12 @@ for envfile in ${ENVIRONMENT_FILES}; do
 	cat <<-EOF
 		
 		======================================================================
-		Executing: ${DSPACK} --verbose --conn ${DSTOOLSUSER}/${DSTOOLSUSERPWD}@localhost:${PGPORT}/${DBNAME} ${SCHEMA_CMD} install-check
+		Executing: ${DSPACK} --verbose --conn ${DSTOOLSUSER}/${DSTOOLSUSERPWD}@localhost:${PGPORT}/${DBNAME} ${SCHEMA_CMD} --tmpdir ${BASEDIR} install-check
 		----------------------------------------------------------------------
 		
 	EOF
 		
-    ${DSPACK} --verbose --conn ${DSTOOLSUSER}/${DSTOOLSUSERPWD}@localhost:${PGPORT}/${DBNAME} ${SCHEMA_CMD} install-check 2>&1 | tee dstools_install-check.out
+    ${DSPACK} --verbose --conn ${DSTOOLSUSER}/${DSTOOLSUSERPWD}@localhost:${PGPORT}/${DBNAME} ${SCHEMA_CMD} --tmpdir ${BASEDIR} install-check 2>&1 | tee dstools_install-check.out
     RETURN=${PIPESTATUS[0]}
 	if [ "$RETURN" != 0 ]; then
 		cat <<-EOF
