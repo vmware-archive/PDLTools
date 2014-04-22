@@ -9,3 +9,5 @@ modules:
       depends: ['common']
     - name: anonymization 
       depends: ['common']
+    - name: session
+      depends: ['common']

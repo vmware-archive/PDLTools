@@ -1,0 +1,225 @@
+-- File: session.sql
+-- Implementation of sessionization utility.
+
+/**
+ * @internal
+ * @brief sessionization_imp: Add session indication.
+ *
+ * @about
+ * An internal function, providing a backend for "session_split".
+ * A table is given with an "id" column and a "time_stamp" column.
+ * A "session" is a set of rows all associated with the same "id" and all
+ * having consecutive time_stamps no more than "time_out" apart.
+ *
+ * The function creates a new table, copying the original data and adding
+ * two new columns:
+ * is_session_start - An indication of whether this is the first row
+ *                    in a new session.
+ * session_no - An identifier for the session, such that (session_no,id) is
+ *              a unique identifier.
+ * 
+ * @prereq PL/Perl
+ *
+ * @usage
+ * in_tab - Name of input table
+ * out_tab - Name of output table
+ * id - Column to split by
+ * time_stamp - Column of time stamps associated with row
+ * time_out - Time interval for session split.
+ */
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.__session_sessionization_imp(in_tab VARCHAR,
+                                          out_tab VARCHAR,
+                                          id VARCHAR,
+                                          time_stamp VARCHAR,
+                                          time_out VARCHAR)
+RETURNS VOID
+VOLATILE
+STRICT
+LANGUAGE plperl
+AS
+$$
+  my ($in_tab,$out_tab,$id,$time_stamp,$time_out)=@_;
+  spi_exec_query(<<"EOT"
+    CREATE TABLE $out_tab AS
+      SELECT *,
+             (sum(is_session_start) OVER (PARTITION BY $id ORDER BY $time_stamp)
+             )-1
+               AS session_no
+        FROM (
+          SELECT *,
+                 ((coalesce($time_stamp-lag($time_stamp,1)
+                   OVER (PARTITION BY $id ORDER BY $time_stamp)
+                   > '$time_out', true)
+                   )::INT) AS is_session_start FROM $in_tab) foo
+    DISTRIBUTED RANDOMLY;
+EOT
+  );
+$$;
+
+/**
+ * @brief session_split: Add session indication.
+ *
+ * @about
+ * A table is given with an "id" column and a "time_stamp" column.
+ * A "session" is a set of rows all associated with the same "id" and all
+ * having consecutive time_stamps no more than "time_out" apart.
+ *
+ * The function creates a new table, copying the original data and adding
+ * two new columns:
+ * is_session_start - An indication of whether this is the first row
+ *                    in a new session.
+ * session_no - An identifier for the session, such that (session_no,id) is
+ *              a unique identifier.
+ * 
+ * @prereq PL/Perl
+ *
+ * @usage
+ * in_tab - Name of input table
+ * out_tab - Name of output table
+ * id - Column to split by
+ * time_stamp - Column of time stamps associated with row
+ * time_out - Time interval for session split
+ *
+ * @examp
+ * user=# CREATE TABLE clickstream(
+ *                                 userid VARCHAR,
+ *                                 time_stamp TIMESTAMP,
+ *                                 action_type VARCHAR
+ *                                ) DISTRIBUTED RANDOMLY;
+ * CREATE TABLE
+ *
+ * user=# INSERT INTO clickstream VALUES
+ *          ('Max', TIMESTAMP '2013-Aug-23 04:57:02.15', 'LINK'),
+ *          ('Tori', TIMESTAMP '2013-Aug-23 04:59:17.83', 'BID'),
+ *          ('Max', TIMESTAMP '2013-Aug-23 05:03:01.42', 'BID'),
+ *          ('Max', TIMESTAMP '2013-Aug-23 17:32:37.08', 'BUY');
+ * INSERT 0 4
+ *
+ * user=# SELECT DSTOOLS_SCHEMA.session_split('clickstream','tagged_clickstream',
+ *                 'userid', 'time_stamp','10 MINUTES'::INTERVAL);
+ *  session_split
+ * ---------------
+ *
+ * (1 row)
+ *
+ * user=# SELECT * FROM tagged_clickstream ORDER BY time_stamp;
+ *  userid |       time_stamp       | action_type | is_session_start | session_no
+ * --------+------------------------+-------------+------------------+------------
+ *  Max    | 2013-08-23 04:57:02.15 | LINK        |                1 |          0
+ *  Tori   | 2013-08-23 04:59:17.83 | BID         |                1 |          0
+ *  Max    | 2013-08-23 05:03:01.42 | BID         |                0 |          0
+ *  Max    | 2013-08-23 17:32:37.08 | BUY         |                1 |          1
+ * (4 rows)
+ *
+ *
+ * In this example, session_split successfully recognized 3 distinct sessions
+ * within the clickstream: (Max,0), (Tori,0) and (Max,1).
+ */
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.session_split(in_tab VARCHAR,
+                                         out_tab VARCHAR,
+                                         id VARCHAR,
+                                         time_stamp VARCHAR,
+                                         time_out INTERVAL)
+RETURNS VOID
+VOLATILE
+STRICT
+LANGUAGE SQL
+AS
+$$
+SELECT DSTOOLS_SCHEMA.__session_sessionization_imp($1,$2,$3,$4,$5::VARCHAR);
+$$;
+
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.session_split()
+RETURNS VARCHAR
+IMMUTABLE
+LANGUAGE SQL
+AS
+$$
+SELECT '
+session_split: Add session indication.
+
+A table is given with an "id" column and a "time_stamp" column.
+A "session" is a set of rows all associated with the same "id" and all
+having consecutive time_stamps no more than "time_out" apart.
+
+For full usage instructions, run "DSTOOLS_SCHEMA.session_split(''usage'')".
+'::VARCHAR;
+$$;
+
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.session_split(option VARCHAR)
+RETURNS VARCHAR
+IMMUTABLE
+LANGUAGE SQL
+AS
+$$
+SELECT CASE WHEN $1!='usage' THEN DSTOOLS_SCHEMA.session_split() ELSE '
+session_split: Add session indication.
+
+A table is given with an "id" column and a "time_stamp" column.
+A "session" is a set of rows all associated with the same "id" and all
+having consecutive time_stamps no more than "time_out" apart.
+
+Synopsis
+========
+DSTOOLS_SCHEMA.session_split(in_tab VARCHAR, out_tab VARCHAR, id VARCHAR,
+                       time_stamp VARCHAR, time_out INTERVAL)
+RETURNS VOID
+
+in_tab - Name of input table
+out_tab - Name of output table
+id - Column to split by
+time_stamp - Column of time stamps associated with row
+time_out - Time interval for session split
+
+Usage
+=====
+The function creates a new table, copying the original data and adding
+two new columns:
+
+is_session_start - An indication of whether this is the first row
+                   in a new session.
+session_no - An identifier for the session, such that (session_no,id) is
+             a unique identifier.
+
+Example
+=======
+user=# CREATE TABLE clickstream(
+                                userid VARCHAR,
+                                time_stamp TIMESTAMP,
+                                action_type VARCHAR
+                               ) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+
+user=# INSERT INTO clickstream VALUES
+         (''Max'', TIMESTAMP ''2013-Aug-23 04:57:02.15'', ''LINK''),
+         (''Tori'', TIMESTAMP ''2013-Aug-23 04:59:17.83'', ''BID''),
+         (''Max'', TIMESTAMP ''2013-Aug-23 05:03:01.42'', ''BID''),
+         (''Max'', TIMESTAMP ''2013-Aug-23 17:32:37.08'', ''BUY'');
+INSERT 0 4
+
+user=# SELECT DSTOOLS_SCHEMA.session_split(''clickstream'',''tagged_clickstream'',
+                ''userid'', ''time_stamp'',''10 MINUTES''::INTERVAL);
+ session_split
+---------------
+
+(1 row)
+
+user=# SELECT * FROM tagged_clickstream ORDER BY time_stamp;
+ userid |       time_stamp       | action_type | is_session_start | session_no
+--------+------------------------+-------------+------------------+------------
+ Max    | 2013-08-23 04:57:02.15 | LINK        |                1 |          0
+ Tori   | 2013-08-23 04:59:17.83 | BID         |                1 |          0
+ Max    | 2013-08-23 05:03:01.42 | BID         |                0 |          0
+ Max    | 2013-08-23 17:32:37.08 | BUY         |                1 |          1
+(4 rows)
+
+
+In this example, session_split successfully recognized 3 distinct sessions
+within the clickstream: (Max,0), (Tori,0) and (Max,1).
+
+Prerequisites
+=============
+Requires PL/Perl
+' END;
+$$;
+

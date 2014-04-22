@@ -1,0 +1,39 @@
+-- File: test_session.sql
+-- Unit test for sessionization utility.
+
+CREATE TABLE __temp_clickstream(
+                                           userid VARCHAR,
+                                           time_stamp TIMESTAMP,
+                                           action_type VARCHAR
+                                          ) DISTRIBUTED RANDOMLY;
+
+INSERT INTO __temp_clickstream VALUES
+  ('Max', TIMESTAMP '2013-Aug-23 04:57:02.15', 'LINK'),
+  ('Tori', TIMESTAMP '2013-Aug-23 04:59:17.83', 'BID'),
+  ('Max', TIMESTAMP '2013-Aug-23 05:03:01.42', 'BID'),
+  ('Max', TIMESTAMP '2013-Aug-23 17:32:37.08', 'BUY');
+
+SELECT session_split('__temp_clickstream','__temp_tagged_clickstream',
+                              'userid','time_stamp','10 MINUTES'::INTERVAL);
+
+SELECT assert((SELECT sum(a.x) FROM
+  (SELECT CASE
+    WHEN (userid='Max' and action_type='LINK'
+          and is_session_start=1 and session_no=0)
+      THEN 1001
+    WHEN (userid='Tori' and action_type='BID'
+          and is_session_start=1 and session_no=0)
+      THEN 1002
+    WHEN (userid='Max' and action_type='BID'
+          and is_session_start=0 and session_no=0)
+      THEN 1004
+    WHEN (userid='Max' and action_type='BUY'
+          and is_session_start=1 and session_no=1)
+      THEN 1008
+    ELSE 1000
+  END as x
+  FROM __temp_tagged_clickstream) a)::TEXT,'4015');
+
+DROP TABLE __temp_clickstream;
+
+DROP TABLE __temp_tagged_clickstream;

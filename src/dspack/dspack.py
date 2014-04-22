@@ -19,6 +19,8 @@ dstoolsdir_conf = None
 rev = None
 this = None
 py_min_ver = None
+perl_min_ver = 5.008
+perl_max_ver = 6.0
 con_args={}
 verbose=False
 testcase=None
@@ -39,6 +41,7 @@ def init():
         Initialize some variables, do some sanity testing of the environment
     '''
     global dstoolsdir, dstoolsdir_conf, rev, this, con_args, py_min_ver
+    global perl_min_ver,perl_max_ver
     checkPythonVersion()
     dstoolsdir = os.path.abspath(os.path.dirname(os.path.realpath(__file__)) + "/..")
     dstoolsdir_conf = dstoolsdir+'/config'
@@ -287,6 +290,55 @@ def __plpy_check(py_min_ver):
         raise Exception
 
     __info("> PL/Python environment OK (version: %s)" % python, True)
+
+def __plperl_check(perl_min_ver,perl_max_ver):
+    """
+    Check pl/perl existence and version
+        @param perl_min_ver min Perl version to run DS Tools
+        @param perl_max_ver max Perl version to run DS Tools
+    """
+
+    __info("Testing PL/Perl environment...", True)
+
+    # Check PL/Perl existence
+    rv = __run_sql_query("SELECT count(*) AS CNT FROM pg_language "
+                         "WHERE lanname = 'plperl'", True)
+
+    if int(rv[0]['cnt']) > 0:
+        __info("> PL/Perl already installed", verbose)
+    else:
+        __info("> PL/Perl not installed", verbose)
+        __info("> Creating language PL/Perl...", True)
+        try:
+            __run_sql_query("CREATE LANGUAGE plperl;", True)
+        except:
+            __error('Cannot create language plperl. Stopping installation...', False)
+            raise Exception
+
+    # Check PL/Perl version
+    __run_sql_query("DROP FUNCTION IF EXISTS plperl_version_for_dstools();", False)
+    __run_sql_query("""
+        CREATE OR REPLACE FUNCTION plperl_version_for_dstools()
+        RETURNS TEXT STABLE AS
+        $$
+          $];
+        $$
+        LANGUAGE plperl;
+    """, True)
+    rv = __run_sql_query("SELECT plperl_version_for_dstools() AS ver;", True)
+    perl_cur_ver = float(rv[0]['ver'])
+    if perl_cur_ver <= perl_min_ver:
+        __error("PL/Perl version too old: %s. You need %s or greater"
+                % (str(perl_cur_ver),str(perl_min_ver)), False)
+        raise Exception
+    elif perl_cur_ver >= perl_max_ver:
+        __error("PL/Perl version too new: %s. You need %s or less"
+                % (str(perl_cur_ver),str(perl_max_ver)), False)
+        raise Exception
+    else:
+        __info("> PL/Perl version: %s" % str(perl_cur_ver), verbose)
+
+    __info("> PL/Perl environment OK (version: %s)" % str(perl_cur_ver), True)
 
 def __error(msg, stop):
     """
@@ -712,17 +764,18 @@ def main():
     portspecs = configyml.get_modules(dstoolsdir_conf)
 
     if(args.command[0]=='install'):
-        install(py_min_ver, schema, args)
+        install(py_min_ver, perl_min_ver, perl_max_ver, schema, args)
     elif(args.command[0]=='install-check'):
         install_check(schema, rev, args)
 
-def install(py_min_ver, schema, args):
+def install(py_min_ver, perl_min_ver, perl_max_ver, schema, args):
     '''
         Install dspack
     '''
     # Run installation
     try:
         __plpy_check(py_min_ver)
+        __plperl_check(perl_min_ver,perl_max_ver)
         __db_install(schema, None, args.testcase)
     except:
         __error("DSTools installation failed.", True)
