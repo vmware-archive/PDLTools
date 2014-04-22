@@ -54,6 +54,7 @@ $$
     DISTRIBUTED RANDOMLY;
 EOT
   );
+  return undef;
 $$;
 
 /**
