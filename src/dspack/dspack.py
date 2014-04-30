@@ -155,6 +155,7 @@ def __run_sql_file(schema, dsdir_mod_py, module, sqlfile,
             @param upgrade are we upgrading as part of this sql run
             @param sc object of ScriptCleaner
     """
+    global rev
     # Check if the SQL file exists
     if not os.path.isfile(sqlfile):
         __error("Missing module SQL file (%s)" % sqlfile, False)
@@ -174,10 +175,10 @@ def __run_sql_file(schema, dsdir_mod_py, module, sqlfile,
         else:
             dstoolsdir_dspack = dstoolsdir + "/dspack"
 
-
         m4args = ['m4',
                   '-P',
                   '-DDSTOOLS_SCHEMA=' + schema,
+                  '-DDSTOOLS_VERSION=' + rev,
                   '-DPLPYTHON_LIBDIR=' + dsdir_mod_py,
                   '-DMODULE_PATHNAME=' + dstoolsdir_lib,
                   '-DMODULE_NAME=' + module,
