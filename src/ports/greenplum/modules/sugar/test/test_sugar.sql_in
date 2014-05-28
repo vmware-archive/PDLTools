@@ -1,0 +1,312 @@
+-- File: test_sugar.sql
+-- Unit test for the SUgAR library.
+
+-- Testing the '@' operator.
+
+CREATE TABLE test_data
+(fyear integer,firm integer, eps float8) DISTRIBUTED BY (firm);
+
+INSERT INTO test_data
+SELECT (b.f + 1) % 10 + 2000 AS fyear,
+floor((b.f+1)/10) + 50 AS firm,
+f::float8/100 + (f::float8/500)*(f::float8/50) AS eps
+FROM generate_series(-500,499,1) b(f);
+
+-- find slope of the linear model regression line
+CREATE OR REPLACE FUNCTION perl_regr_slope(x float8[], y float8[])
+RETURNS float8 AS $BODY$
+my @x = split /,/,substr $_[0],1,length($_[0])-2;
+my @y = split /,/,substr $_[1],1,length($_[1])-2;
+my $nx = @x;
+my $ny = @y;
+
+return undef if (($nx!=$ny)||($nx!=9));
+my ($sx, $sy, $sxx, $sxy);
+
+$sx += $_ for @x;
+$sy += $_ for @y;
+$sxx += $_ * $_ for @x;
+$sxy += $_ for map {$x[$_] * $y[$_]} (0..$#x);
+
+my $num = $sxy*$nx-$sx*$sy;
+my $denom = $sxx*$nx-$sx*$sx;
+
+return undef if ($denom==0);
+
+return $num/$denom;
+
+$BODY$ LANGUAGE plperl;
+
+-- Use the function as follows
+SELECT sugar($SUGAR$
+  CREATE TABLE outtable AS
+    SELECT *, perl_regr_slope(@eps, @lag_eps) AS slope_R FROM (
+      SELECT firm, fyear, eps,
+             lag(eps) OVER (PARTITION BY firm ORDER BY firm, fyear) AS lag_eps
+      FROM test_data
+    ) AS a
+    WHERE eps IS NOT NULL AND lag_eps IS NOT NULL
+    WINDOW default_window AS (
+      PARTITION BY firm ORDER BY firm, fyear ROWS 8 PRECEDING
+    )
+    DISTRIBUTED BY (fyear);
+$SUGAR$);
+
+CREATE TABLE correct_result
+(firm integer, fyear integer, eps float8, lag_eps float8, slope_R float8)
+DISTRIBUTED BY (firm);
+
+INSERT INTO correct_result VALUES
+(50,  2000, -0.00996, -0.01984, 0.991667409270239),
+(50,  2001,        0, -0.00996, 0.991736261534802),
+(50,  2002,  0.01004,        0, 0.991803985368099),
+(50,  2003,  0.02016,  0.01004, 0.991870608283387),
+(50,  2004,  0.03036,  0.02016, 0.991936156906779),
+(50,  2005,  0.04064,  0.03036, 0.992000657012704),
+(50,  2006,    0.051,  0.04064, 0.992064133557693),
+(50,  2007,  0.06144,    0.051, 0.992126610712562),
+(50,  2008,  0.07196,  0.06144, 0.992188111893091),
+(50,  2009,  0.08256,  0.07196, 0.992248659789272);
+
+
+CREATE TABLE result_comp AS
+SELECT c.firm, c.fyear,
+  assert(CASE WHEN (abs(o.eps-c.eps)<1e-10) THEN 't' ELSE 'f' END,'t')
+    aa,
+  assert(CASE WHEN (abs(o.lag_eps-c.lag_eps)<1e-10) THEN 't' ELSE 'f' END,'t')
+    ab,
+  assert(CASE WHEN (abs(o.slope_r-c.slope_r)<1e-10) THEN 't' ELSE 'f' END,'t')
+    ac,
+  assert(CASE WHEN NOT (c.firm IS NULL) THEN 't' ELSE 'f' END,'t') ad,
+  assert(CASE WHEN NOT (c.fyear IS NULL) THEN 't' ELSE 'f' END,'t') ae
+FROM (SELECT * FROM outtable
+      WHERE slope_r IS NOT NULL AND firm=50) o
+     LEFT OUTER JOIN correct_result c
+     ON (o.firm=c.firm AND o.fyear=c.fyear)
+DISTRIBUTED BY (firm,fyear);
+
+SELECT assert(count(*),10) FROM result_comp;
+SELECT DISTINCT assert(count(*),10) FROM result_comp;
+
+DROP TABLE test_data;
+DROP TABLE outtable;
+DROP TABLE correct_result;
+DROP TABLE result_comp;
+
+-- Testing pivot01
+
+CREATE TABLE wiki_table
+(region text, gender text, style text, ship_date date, units integer,
+price float8, cost float8, row_num integer) DISTRIBUTED BY (row_num);
+
+INSERT INTO wiki_table VALUES
+('East', 'Girl', 'Tee', '1/31/05', 12, 11.04, 10.42, 1),
+('East', 'Boy', 'Golf', '4/30/05', 12, 13, 12.6, 2),
+(NULL , 'Boy', 'Tee', '3/31/05', 10, 11.96, 11.74, 3),
+('West', 'Girl', 'Tee', '4/30/05', 12, 11.27, 10.56, 4),
+('West', 'Girl', 'Fancy', '6/30/05', 11, 12.12, 11.95, 5),
+('South', 'Boy', 'Fancy', '5/31/05', 15, 13.47, 13.33, 6),
+('South', 'Girl', 'Golf', '1/31/05', 15, 11.44, 10.94, 7),
+('North', 'Girl', 'Golf', '2/28/05', 12, 12.63, 11.73, 8),
+('South', 'Girl', 'Fancy', '6/30/05', 10, 12.06, 11.51, 9),
+('West', 'Boy', 'Tee', '2/28/05', 12, 13.42, 13.29, 10),
+('East', 'Boy', 'Tee', '1/31/05', 11, 11.48, 10.67, 11)
+;
+
+SELECT sugar($$
+  CREATE TABLE outtable AS SELECT price,units,cost,row_num,pivot01(region,wiki_table WHERE style='Tee') FROM wiki_table
+    WHERE style='Tee'
+  DISTRIBUTED BY (row_num);
+$$);
+
+CREATE TABLE correct_result
+(price float8, units integer, cost float8, row_num integer, region_east integer,
+region_west integer, region_none integer) DISTRIBUTED BY (row_num);
+
+INSERT INTO correct_result VALUES
+(11.04, 12, 10.42, 1, 1, 0, 0),
+(11.96, 10, 11.74, 3, 0, 0, 1),
+(11.27, 12, 10.56, 4, 0, 1, 0),
+(13.42, 12, 13.29, 10, 0, 1, 0),
+(11.48, 11, 10.67, 11, 1, 0, 0);
+
+CREATE TABLE result_comp AS
+SELECT c.row_num,
+  assert(CASE WHEN (abs(o.price-c.price)<1e-10) THEN 't' ELSE 'f' END,'t')
+    aa,
+  assert(CASE WHEN (o.units=c.units) THEN 't' ELSE 'f' END,'t')
+    ab,
+  assert(CASE WHEN (abs(o.cost-c.cost)<1e-10) THEN 't' ELSE 'f' END,'t')
+    ac,
+  assert(CASE WHEN (o.region_east=c.region_east) THEN 't' ELSE 'f' END,'t')
+    ad,
+  assert(CASE WHEN (o.region_west=c.region_west) THEN 't' ELSE 'f' END,'t')
+    ae,
+  assert(CASE WHEN (o.region_none=c.region_none) THEN 't' ELSE 'f' END,'t')
+    af,
+  assert(CASE WHEN NOT (c.row_num IS NULL) THEN 't' ELSE 'f' END,'t') ag
+FROM outtable o
+     LEFT OUTER JOIN correct_result c
+     ON (o.row_num=c.row_num)
+DISTRIBUTED BY (row_num);
+
+SELECT assert(count(*),5) FROM result_comp;
+SELECT DISTINCT assert(count(*),5) FROM result_comp;
+
+DROP TABLE outtable;
+DROP TABLE correct_result;
+DROP TABLE result_comp;
+
+-- Testing pivot
+
+CREATE TABLE patient_table
+(patient_id INTEGER, name TEXT, from_date DATE, diagnosis_code TEXT)
+DISTRIBUTED BY (patient_id);
+
+INSERT INTO patient_table VALUES
+(1, 'John Smith', '2012/2/5', 'ICD9-CM-845.0'),
+(1, 'John Smith', '2001/12/23', 'ICD9-CM-785.2'),
+(2, 'Jane Smith', '2010/12/6', 'ICD9-CM-785.2'),
+(3, 'Ben Franklin', '1785/4/17', 'ICD9-CM-274.9'),
+(4, 'Hillary Clinton', '2012/1/1', 'ICD9-CM-434.0')
+;
+
+SELECT sugar($$
+  CREATE TABLE outtable AS
+    SELECT patient_id, name, pivot(diagnosis_code, patient_table, from_date)
+      FROM patient_table GROUP BY (patient_id,name)
+  DISTRIBUTED BY (patient_id);
+$$);
+
+CREATE TABLE correct_result
+(patient_id INTEGER, name TEXT, "diagnosis_code_icd9-cm-274.9" DATE,
+"diagnosis_code_icd9-cm-434.0" DATE, "diagnosis_code_icd9-cm-785.2" DATE,
+"diagnosis_code_icd9-cm-845.0" DATE)
+DISTRIBUTED BY (patient_id);
+
+INSERT INTO correct_result VALUES
+(1, 'John Smith', NULL, NULL, '2001/12/23', '2012/02/05'),
+(2, 'Jane Smith', NULL, NULL, '2010/12/06', NULL),
+(3, 'Ben Franklin', '1785/04/17', NULL ,NULL, NULL),
+(4, 'Hillary Clinton', NULL ,'2012/01/01', NULL, NULL);
+
+CREATE TABLE result_comp AS
+SELECT c.patient_id,
+  assert(o.name,c.name)
+    aa,
+  assert(CASE WHEN (((o."diagnosis_code_icd9-cm-274.9" IS NULL) AND
+                     (c."diagnosis_code_icd9-cm-274.9" IS NULL)) OR
+           (o."diagnosis_code_icd9-cm-274.9"=c."diagnosis_code_icd9-cm-274.9"))
+         THEN 't' ELSE 'f' END,'t') ab,
+  assert(CASE WHEN (((o."diagnosis_code_icd9-cm-434.0" IS NULL) AND
+                     (c."diagnosis_code_icd9-cm-434.0" IS NULL)) OR
+           (o."diagnosis_code_icd9-cm-434.0"=c."diagnosis_code_icd9-cm-434.0"))
+         THEN 't' ELSE 'f' END,'t') ac,
+  assert(CASE WHEN (((o."diagnosis_code_icd9-cm-785.2" IS NULL) AND
+                     (c."diagnosis_code_icd9-cm-785.2" IS NULL)) OR
+           (o."diagnosis_code_icd9-cm-785.2"=c."diagnosis_code_icd9-cm-785.2"))
+         THEN 't' ELSE 'f' END,'t') ad,
+  assert(CASE WHEN (((o."diagnosis_code_icd9-cm-845.0" IS NULL) AND
+                     (c."diagnosis_code_icd9-cm-845.0" IS NULL)) OR
+           (o."diagnosis_code_icd9-cm-845.0"=c."diagnosis_code_icd9-cm-845.0"))
+         THEN 't' ELSE 'f' END,'t') ae
+FROM outtable o
+     LEFT OUTER JOIN correct_result c
+     ON (o.patient_id=c.patient_id)
+DISTRIBUTED BY (patient_id);
+
+SELECT assert(count(*),4) FROM result_comp;
+SELECT DISTINCT assert(count(*),4) FROM result_comp;
+
+DROP TABLE outtable;
+DROP TABLE correct_result;
+DROP TABLE result_comp;
+
+-- testing freq_vals
+
+SELECT sugar($$
+  CREATE TABLE outtable AS
+    SELECT patient_id, name, pivot(diagnosis_code, patient_table, from_date, unique_element, NULL, NULL, '{V}',FREQ_VALS(1))
+      FROM patient_table GROUP BY (patient_id,name)
+  DISTRIBUTED BY (patient_id);
+$$);
+
+CREATE TABLE correct_result
+(patient_id INTEGER, name TEXT, "ICD9-CM-785.2" DATE)
+DISTRIBUTED BY (patient_id);
+
+INSERT INTO correct_result VALUES
+(1, 'John Smith', '2001/12/23'),
+(2, 'Jane Smith', '2010/12/06'),
+(3, 'Ben Franklin', NULL),
+(4, 'Hillary Clinton', NULL);
+
+CREATE TABLE result_comp AS
+SELECT c.patient_id,
+  assert(o.name,c.name)
+    aa,
+  assert(CASE WHEN (((o."ICD9-CM-785.2" IS NULL) AND
+                     (c."ICD9-CM-785.2" IS NULL)) OR
+           (o."ICD9-CM-785.2"=c."ICD9-CM-785.2"))
+         THEN 't' ELSE 'f' END,'t') ab
+FROM outtable o
+     LEFT OUTER JOIN correct_result c
+     ON (o.patient_id=c.patient_id)
+DISTRIBUTED BY (patient_id);
+
+SELECT assert(count(*),4) FROM result_comp;
+SELECT DISTINCT assert(count(*),4) FROM result_comp;
+
+DROP TABLE patient_table;
+DROP TABLE outtable;
+DROP TABLE correct_result;
+DROP TABLE result_comp;
+
+-- Testing aggregation and user-defined name-mangling function
+
+CREATE OR REPLACE FUNCTION to_upper(name TEXT, value TEXT)
+RETURNS TEXT
+IMMUTABLE
+LANGUAGE SQL
+AS $$
+  select upper($2) || ' ' || substring($1 FROM 1 FOR 1);
+$$;
+
+SELECT sugar($$
+  CREATE TABLE outtable AS
+    SELECT region, pivot(gender, wiki_table, units, sum, 0, gender, to_upper)
+      FROM wiki_table GROUP BY (region)
+  DISTRIBUTED BY (region);
+$$);
+
+CREATE TABLE correct_result
+(region TEXT, "BOY g" INTEGER, "GIRL g" INTEGER)
+DISTRIBUTED BY (region);
+
+INSERT INTO correct_result VALUES
+('South', 15, 25),
+('West', 12, 23),
+('North', 0, 12),
+('East', 23, 12),
+(NULL, 10, 0);
+
+
+CREATE TABLE result_comp AS
+SELECT c.region,
+  assert(CASE WHEN (o."BOY g"=c."BOY g")
+         THEN 't' ELSE 'f' END,'t') aa,
+  assert(CASE WHEN (o."GIRL g"=c."GIRL g")
+         THEN 't' ELSE 'f' END,'t') ab
+FROM outtable o
+     LEFT OUTER JOIN correct_result c
+     ON (o.region=c.region OR ((o.region IS NULL) AND (c.region IS NULL)))
+DISTRIBUTED BY (region);
+
+SELECT assert(count(*),5) FROM result_comp;
+SELECT DISTINCT assert(count(*),5) FROM result_comp;
+
+DROP TABLE wiki_table;
+DROP TABLE outtable;
+DROP TABLE correct_result;
+DROP TABLE result_comp;
+

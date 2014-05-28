@@ -13,4 +13,5 @@ modules:
       depends: ['common']
     - name: connected_components
       depends: ['common']
-
+    - name: sugar
+      depends: ['common']
