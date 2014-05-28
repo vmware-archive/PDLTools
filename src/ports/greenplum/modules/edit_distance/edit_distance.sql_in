@@ -909,7 +909,7 @@ A row function, taking two strings and calculating their
 Optimal Alignment distance.
 
 For full usage instructions, run
-"DSTOOLS_SCHEMA.optimal_alignment_distance(''usage'')".
+"DSTOOLS_SCHEMA.optimal_alignment_distance(''usage'');".
 '::VARCHAR;
 $$;
 
