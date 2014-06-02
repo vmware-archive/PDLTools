@@ -1,13 +1,13 @@
 -- File: sugar.sql
 -- The SUgAR library: Syntactic Up-grades for Analytic Routines
 -- by Michael Brand
--- v0.4, Mar 3, 2013
+-- Mar 3, 2013
 
 /*
   The SUgAR library
   Syntactic Up-grade for Analytics Routines
   by Michael Brand
-  v0.4, Mar 3, 2013
+  Mar 3, 2013
 
   The SUgAR library is a tool for providing second-order parsing of your SQL
   command-line, a capability that is much-needed for analytics. With this
@@ -2361,7 +2361,7 @@ AS $FUNCBODY$
   The SUgAR library
   Syntactic Up-grade for Analytics Routines
   by Michael Brand
-  v0.4, Mar 3, 2013
+  ver. SUGAR_VERSION, Mar 3, 2013
 
   The SUgAR library is a tool for providing second-order parsing of your SQL
   command-line, a capability that is much-needed for analytics. With this
@@ -2994,5 +2994,5 @@ STABLE
 STRICT
 LANGUAGE SQL
 AS $$
-SELECT '0.4'::VARCHAR;
+SELECT 'SUGAR_VERSION'::VARCHAR;
 $$;

@@ -17,6 +17,7 @@ import argparse, configyml
 dstoolsdir = None
 dstoolsdir_conf = None
 rev = None
+sugar_rev = None
 this = None
 py_min_ver = None
 perl_min_ver = 5.008
@@ -40,12 +41,14 @@ def init():
     '''
         Initialize some variables, do some sanity testing of the environment
     '''
-    global dstoolsdir, dstoolsdir_conf, rev, this, con_args, py_min_ver
+    global dstoolsdir, dstoolsdir_conf, rev, sugar_rev
+    global this, con_args, py_min_ver
     global perl_min_ver,perl_max_ver
     checkPythonVersion()
     dstoolsdir = os.path.abspath(os.path.dirname(os.path.realpath(__file__)) + "/..")
     dstoolsdir_conf = dstoolsdir+'/config'
     rev = configyml.get_version(dstoolsdir_conf)
+    sugar_rev = configyml.get_sugar_version(dstoolsdir_conf)
     this = os.path.basename(sys.argv[0])    # name of this script
     sys.path.append(dstoolsdir + "/dspack")
 
@@ -65,6 +68,13 @@ def __get_rev_num(rev):
             return ['0']
     except:
         return ['0']
+
+def __get_rev_string(rev):
+    """
+    Convert version string into valid schema name suffix
+        @param rev version text
+    """
+    return re.sub(r'\.','_',rev)
 
 def unescape(string):
     """
@@ -142,8 +152,7 @@ def ____run_sql_query(sql, show_error):
 	return results
 
 def __run_sql_file(schema, sugar_schema, dsdir_mod_py, module, sqlfile,
-                   tmpfile, logfile, pre_sql, upgrade=False,
-                   sc=None):
+                   tmpfile, logfile, pre_sql):
     """Run SQL file
             @param schema name of the target schema
             @param sugar_schema name of SUgARlib schema
@@ -153,8 +162,6 @@ def __run_sql_file(schema, sugar_schema, dsdir_mod_py, module, sqlfile,
             @param tmpfile name of the temp file to run
             @param logfile name of the log file (stdout)
             @param pre_sql optional SQL to run before executing the file
-            @param upgrade are we upgrading as part of this sql run
-            @param sc object of ScriptCleaner
     """
     global rev
     # Check if the SQL file exists
@@ -181,6 +188,7 @@ def __run_sql_file(schema, sugar_schema, dsdir_mod_py, module, sqlfile,
                   '-DDSTOOLS_SCHEMA=' + schema,
                   '-DSUGAR_SCHEMA=' + sugar_schema,
                   '-DDSTOOLS_VERSION=' + rev,
+                  '-DSUGAR_VERSION=' + sugar_rev,
                   '-DPLPYTHON_LIBDIR=' + dsdir_mod_py,
                   '-DMODULE_PATHNAME=' + dstoolsdir_lib,
                   '-DMODULE_NAME=' + module,
@@ -195,20 +203,20 @@ def __run_sql_file(schema, sugar_schema, dsdir_mod_py, module, sqlfile,
         __error("Failed executing m4 on %s" % sqlfile, False)
         raise Exception
 
-    # Only update function definition
-    sub_module = ''
-    if upgrade:
-        # get filename from complete path without the extension
-        sub_module = os.path.splitext(os.path.basename(sqlfile))[0]
-        __info(sub_module, False)
-
-        # Special treatment for new module and 'svec' module
-        if ((sub_module not in sc.get_change_handler().newmodule) and
-                not (sub_module == 'svec' and
-                     'svec' in sc.get_change_handler().udt)):
-            sql = open(tmpfile).read()
-            sql = sc.cleanup(sql)
-            open(tmpfile, 'w').write(sql)
+#     # Only update function definition
+#     sub_module = ''
+#     if upgrade:
+#         # get filename from complete path without the extension
+#         sub_module = os.path.splitext(os.path.basename(sqlfile))[0]
+#         __info(sub_module, False)
+# 
+#         # Special treatment for new module and 'svec' module
+#         if ((sub_module not in sc.get_change_handler().newmodule) and
+#                 not (sub_module == 'svec' and
+#                      'svec' in sc.get_change_handler().udt)):
+#             sql = open(tmpfile).read()
+#             sql = sc.cleanup(sql)
+#             open(tmpfile, 'w').write(sql)
 
     # Run the SQL using DB command-line utility
     sqlcmd = 'psql'
@@ -365,21 +373,29 @@ def __info(msg, verbose=True):
     if verbose:
         print this + ' : INFO : ' + msg
 
-def __print_revs(rev, dbrev, con_args, schema):
+def __print_revs(rev, dbrev, sugar_dbrev, con_args, schema, sugar_schema):
     """
     Print version information
         @param rev OS-level DSTools version
-        @param dbrev DB-level DSTools version
+        @param dbrev DSTools version installed in DB
+        @param sugar_dbrev SUgAR version installed in DB
         @param con_args database connection arguments
         @param schema DS Tools schema name
     """
     __info("DS Tools version    = %s (%s)" % (rev, sys.argv[0]), True)
+    __info("SUgAR version    = %s" % sugar_rev, True)
     if con_args:
         try:
             __info("DSTools database version = %s (host=%s, db=%s, schema=%s)"
                    % (dbrev, con_args['host'], con_args['database'], schema), True)
         except:
             __info("DSTools database version = [Unknown] (host=%s, db=%s, schema=%s)"
+                   % (con_args['host'], con_args['database'], schema), True)
+        try:
+            __info("SUgAR database version = %s (host=%s, db=%s, schema=%s)"
+                   % (sugar_dbrev, con_args['host'], con_args['database'], schema), True)
+        except:
+            __info("SUgAR database version = [Unknown] (host=%s, db=%s, schema=%s)"
                    % (con_args['host'], con_args['database'], schema), True)
     return
 
@@ -419,72 +435,91 @@ def __db_create_schema(schema):
     try:
         __run_sql_query("CREATE SCHEMA %s;" % schema, True)
     except:
-        __info('Cannot create new schema. Rolling back installation...', True)
-        pass
+        __Error('Cannot create new schema. Rolling back installation...', False)
+        raise Exception
 
-
-def __db_create_objects(schema, sugar_schema, old_schema, upgrade=False, sc=None, testcase="",
-                        hawq_debug=False, hawq_fresh=False):
+def __db_update_migration_history(schema,backup_schema,curr_rev,
+                                  old_sugar=False):
     """
-    Create DS Tools DB objects in the schema
+    Create MigrationTable
         @param schema Name of the target schema
-        @param sugar_schema Name of SUgARlib schema
-        @param sc ScriptCleaner object
-        @param testcase Command-line args for modules to install
+        @param backup_schema Name of backup schema
     """
-    if not upgrade and not hawq_debug:
-        # Create MigrationHistory table
+    # Create MigrationHistory table
+    try:
+        __info("> Creating %s.MigrationHistory table" % schema.upper(), True)
+        sql = """CREATE TABLE %s.migrationhistory
+               (id serial, version varchar(255),
+                applied timestamp default current_timestamp);""" % schema
+        __run_sql_query(sql, True)
+    except:
+        __error("Cannot create MigrationHistory table in schema %s."
+                % schema.upper(), False)
+        raise Exception
+
+    # Copy MigrationHistory table for record keeping purposes
+    if old_sugar:
+      __info("> Old version of SUgAR does not have a MigrationHistory table.",verbose)
+      try:
+        sql = """INSERT INTO %s.migrationhistory (version,applied)
+                 VALUES ('0.4',NULL);""" % schema
+        __run_sql_query(sql,True)
+      except:
+        __error("Cannot insert data into MigrationHistory table.", False)
+        raise Exception
+    elif backup_schema:
         try:
-            __info("> Creating %s.MigrationHistory table" % schema.upper(), True)
-            __run_sql_query("DROP TABLE IF EXISTS %s.migrationhistory;" % schema, True)
-            sql = """CREATE TABLE %s.migrationhistory
-                   (id serial, version varchar(255),
-                    applied timestamp default current_timestamp);""" % schema
+            __info("> Saving data from %s.MigrationHistory table" % backup_schema.upper(), True)
+            sql = """INSERT INTO %s.migrationhistory (version, applied)
+                   SELECT version, applied FROM %s.migrationhistory
+                   ORDER BY id;""" % (schema, backup_schema)
             __run_sql_query(sql, True)
         except:
-            __error("Cannot create MigrationHistory table", False)
-            raise Exception
-
-        # Copy MigrationHistory table for record keeping purposes
-        if old_schema:
-            try:
-                __info("> Saving data from %s.MigrationHistory table" % old_schema.upper(), True)
-                sql = """INSERT INTO %s.migrationhistory (version, applied)
-                       SELECT version, applied FROM %s.migrationhistory
-                       ORDER BY id;""" % (schema, old_schema)
-                __run_sql_query(sql, True)
-            except:
-                __error("Cannot copy MigrationHistory table", False)
-                raise Exception
+              __error("Cannot copy MigrationHistory table", False)
+              raise Exception
 
     # Stamp the DB installation
     try:
-        __info("> Writing version info in MigrationHistory table", True)
+        __info("> Writing version info in %s.MigrationHistory table"
+               % schema.upper(), True)
         __run_sql_query("INSERT INTO %s.migrationhistory(version) "
-                        "VALUES('%s')" % (schema, rev), True)
+                        "VALUES('%s')" % (schema, curr_rev), True)
     except:
-        __error("Cannot insert data into %s.migrationhistory table" % schema, False)
+        __error("Cannot insert data into %s.migrationhistory table"
+                % schema.upper(), False)
         raise Exception
 
-    # Run migration SQLs
-    if upgrade:
-        __info("> Creating/Updating objects for modules:", True)
-    else:
-        __info("> Creating objects for modules:", True)
+def __db_create_objects(schema, sugar_schema,
+                        backup_schema, backup_sugar_schema,old_sugar):
+    """
+    Create DS Tools DB objects in the schema
+        @param schema Name of the target DSTools schema
+        @param sugar_schema Name of the target SUgARlib schema
+        @param backup_schema Name of backup schema of latest DSTools
+        @param backup_sugar_schema Name of backup schema of latest SUgAR
+    """
+    __info("> Updating DS Tools migration history.",True)
+    __db_update_migration_history(schema,backup_schema,rev)
+    __info("> Updating SUgAR migration history.",True)
+    __db_update_migration_history(sugar_schema,backup_sugar_schema,
+                                  sugar_rev,old_sugar)
 
-    caseset = (set([test.strip() for test in testcase.split(',')])
-               if testcase != "" else set())
 
-    modset = {}
-    for case in caseset:
-        if case.find('/') > -1:
-            [mod, algo] = case.split('/')
-            if mod not in modset:
-                modset[mod] = []
-            if algo not in modset[mod]:
-                modset[mod].append(algo)
-        else:
-            modset[case] = []
+    __info("> Creating objects for modules:", True)
+
+#     caseset = (set([test.strip() for test in testcase.split(',')])
+#                if testcase != "" else set())
+# 
+#     modset = {}
+#     for case in caseset:
+#         if case.find('/') > -1:
+#             [mod, algo] = case.split('/')
+#             if mod not in modset:
+#                 modset[mod] = []
+#             if algo not in modset[mod]:
+#                 modset[mod].append(algo)
+#         else:
+#             modset[case] = []
 
     # Loop through all modules/modules
     ## portspecs is a global variable
@@ -495,8 +530,8 @@ def __db_create_objects(schema, sugar_schema, old_schema, upgrade=False, sc=None
         module = moduleinfo['name']
 
         # Skip if doesn't meet specified modules
-        if modset is not None and len(modset) > 0 and module not in modset:
-            continue
+#         if modset is not None and len(modset) > 0 and module not in modset:
+#             continue
 
         __info("> - %s" % module, True)
  
@@ -531,16 +566,15 @@ def __db_create_objects(schema, sugar_schema, old_schema, upgrade=False, sc=None
         for sqlfile in sql_files:
             algoname = os.path.basename(sqlfile).split('.')[0]
 
-            if module in modset and len(modset[module]) > 0 and algoname not in modset[module]:
-                continue
+#             if module in modset and len(modset[module]) > 0 and algoname not in modset[module]:
+#                 continue
 
              # Set file names
             tmpfile = cur_tmpdir + '/' + os.path.basename(sqlfile) + '.tmp'
             logfile = cur_tmpdir + '/' + os.path.basename(sqlfile) + '.log'
 
             retval = __run_sql_file(schema, sugar_schema, dsdir_mod_py, module,
-                                    sqlfile, tmpfile, logfile, None, upgrade,
-                                    sc)
+                                    sqlfile, tmpfile, logfile, None)
             # Check the exit status
             if retval != 0:
                 __error("Failed executing %s" % tmpfile, False)
@@ -571,20 +605,55 @@ def __db_rollback(drop_schema, keep_schema):
         __db_rename_schema(keep_schema, drop_schema)
 
     __info("Rollback finished successfully.", True)
-    raise Exception
 
+## # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Read version from MigrationHistory table in database
+# @param schema schema-name in which to look for table
+## # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+def __get_installed_ver(schema):
+    try:
+        row = __run_sql_query("""SELECT count(*) AS cnt FROM pg_tables
+            WHERE schemaname='%s' AND tablename='migrationhistory'""" % (schema), True)
+        if int(row[0]['cnt']) > 0:
+            row = __run_sql_query("""SELECT version FROM %s.migrationhistory
+                WHERE applied IS NOT NULL
+                ORDER BY applied DESC LIMIT 1""" % schema, True)
+            if row:
+                return row[0]['version']
+    except:
+        pass
 
-def __db_install(schema, sugar_schema, dbrev, testcase):
-    """
-    Install DS Tools
-        @param schema dstools schema name
-        @param sugar_schema name of SUgARlib schema
-        @param dbrev DB-level dstools version
-        @param testcase command-line args for a subset of modules
-    """
-    __info("Installing dstools into %s schema and SUgAR into %s schema..."
-           % (schema.upper(),sugar_schema.upper()), True)
-#    temp_schema = schema + '_v' + ''.join(__get_rev_num(dbrev))
+    return None
+
+## # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Rename schema
+# @param from_schema name of the schema to rename
+# @param to_schema new name for the schema
+## # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+def __db_rename_schema(from_schema, to_schema):
+
+    __info("> Renaming schema %s to %s" % (from_schema.upper(), to_schema.upper()), True)
+    try:
+        __run_sql_query("ALTER SCHEMA %s RENAME TO %s;" % (from_schema, to_schema), True)
+    except:
+        __error('Cannot rename schema. Stopping installation...', False)
+        raise Exception
+
+def __cmp_versions(ver_a,ver_b):
+  a_list=[int(x) for x in ver_a.split('.')]
+  b_list=[int(x) for x in ver_b.split('.')]
+  return cmp(a_list,b_list)
+
+def __check_prev_install(schema,current_rev,is_sugar=False):
+    # is_newer can take the following values:
+    # -1 -- current version is older than db version
+    # 0 -- current version is the same as db version
+    # 1 -- current version is newer than db version
+    # 2 -- schema for current version exists, but library not installed
+    # 3 -- current installation is for an old version of SUgAR that did not
+    #      have a migration table and is older than the current version.
+    backup_schema = None
+    is_newer = 1
 
     schema_writable = None
     # Test if schema is writable
@@ -595,61 +664,147 @@ def __db_install(schema, sugar_schema, dbrev, testcase):
     except:
         schema_writable = False
 
-    sugar_schema_writable = None
-    # Test if sugar_schema is writable
-    try:
-        __run_sql_query("CREATE TABLE %s.__dstools_test_table (A INT);" % sugar_schema, False)
-        __run_sql_query("DROP TABLE %s.__dstools_test_table;" % sugar_schema, False)
-        sugar_schema_writable = True
-    except:
-        sugar_schema_writable = False
+    ##
+    # CASE #1: Target schema exists with library objects:
+    ##
+    rc=0
+    if schema_writable:
+      dbrev=__get_installed_ver(schema)
+      if is_sugar and dbrev==None:
+        try:
+          rc=__run_sql_query("select count(*) AS cnt from pg_catalog.pg_proc p, pg_catalog.pg_namespace ns where ns.nspname='%s' and pronamespace=ns.oid and p.proname='sugar_version';" % schema.lower(),True)[0]['cnt']
+        except:
+          rc=0
+        if rc>0:
+          dbrev='0.4' # SUgAR's v0.4 came without a migration table.
+      if dbrev!=None:
+        dbrev_string=__get_rev_string(dbrev)
+        backup_schema = schema + '_v' + dbrev_string
+        is_newer = __cmp_versions(current_rev,dbrev)
+        if is_newer==1:
+          if rc>0:
+            is_newer=3
+          __info("***************************************************************************", True)
+          __info("* Schema %s already exists and includes library objects." % schema.upper(), True)
+          __info("* Installed version is %s." % dbrev, True)
+          __info("* Installer will rename it to %s and will upgrade to version %s." % (backup_schema.upper(),current_rev), True)
+          __info("***************************************************************************", True)
+        elif is_newer==0:
+          __info("> Schema %s already exists and includes latst version of the library (%s)." % (schema.upper(),dbrev), verbose)
+          __info("> Installer will rename it temporarily to %s, will reinstall," % backup_schema.upper(),verbose)
+          __info("> and will remove old copy upon successfully re-install.", verbose)
+        else:
+          __info("> Schema %s already exists and is at newer version." % schema.upper(), True)
+          __info("> Installed version is %s." % dbrev, True)
+          __info("> Installer version is %s." % current_rev, True)
+          __info("> Halting installation.",True)
+          __info("Before retrying: drop %s schema OR install into a different schema." % schema.upper(), True)
+        return (backup_schema,is_newer)
 
-    if schema_writable or sugar_schema_writable:
-#        # Create dstools schema
-#        try:
-#             __db_create_schema(schema)
-#        except:
-#             __db_rollback(schema, temp_schema)
-# 
-#        # Create DS Tools objects
-#        try:
-#             __db_create_objects(schema, temp_schema, testcase=testcase)
-#        except:
-#             __db_rollback(schema, temp_schema)
-        if schema_writable:
-          __info("Schema %s already exists." % schema,True)
-        if sugar_schema_writable:
-          __info("Schema %s already exists." % sugar_schema,True)
-        __error("""Installation will not overwrite existing schematta.
-Drop schema and install again. Stopping installation...""", False)
+    ##
+    # CASE #2: Target schema exists w/o library objects:
+    ##
+      else:
+        __info("> Schema %s already exists but does not include library objects." % schema.upper(), True)
+        __info("> Installation stopped.", True)
+        __info("> Before retrying: drop %s schema OR install into a different schema." % schema.upper(), True)
+        is_newer=2
+        return (backup_schema,is_newer)
+
+    ##
+    # CASE #3: Target schema does not exist:
+    ##
+    else:
+      __info("> Schema %s does not exist." % schema.upper(), verbose)
+
+    return (backup_schema,is_newer)
+
+def __db_drop_backup_schema(backup_schema,is_newer):
+  if (is_newer==1 or is_newer==3) and backup_schema!=None:
+    __info("Keep old schema %s? [Y/N]" % backup_schema.upper(), True)
+    go = raw_input('>>> ').upper()
+    while go =='' or go[0] not in 'YN':
+        go = raw_input('Yes or No >>> ').upper()
+    if go[0] == 'Y':
+        return
+  if backup_schema!=None:
+    __info("> Dropping old schema %s." % backup_schema.upper(),verbose)
+    try:
+      __run_sql_query("DROP SCHEMA %s CASCADE;" % backup_schema, True)
+    except:
+      __info("Unable to drop schema %s." % backup_schema.upper(),True)
+
+def __db_install(schema, sugar_schema):
+    """
+    Install DS Tools
+        @param schema dstools schema name
+        @param sugar_schema name of SUgARlib schema
+    """
+    __info("Installing dstools into %s schema and SUgAR into %s schema..."
+           % (schema.upper(),sugar_schema.upper()), True)
+
+    (backup_schema,dstools_newer)=__check_prev_install(schema,rev)
+    if dstools_newer==-1 or dstools_newer==2:
+      return
+
+    (backup_sugar_schema,sugar_newer)=__check_prev_install(sugar_schema,sugar_rev,True)
+    if sugar_newer==-1 or sugar_newer==2:
+      return
+
+    if dstools_newer==0 and sugar_newer==0:
+      __info("**********************************************************************",True)
+      __info("* NOTE:",True)
+      __info("* Both DS Tools and SUgAR installations are already at latest version.",True)
+      __info("**********************************************************************",True)
+  
+    if backup_schema or backup_sugar_schema or (dstools_newer==0 and suger_newer==0):
+          __info("Would you like to continue?", True)
+          go = raw_input('>>> ').upper()
+          while go =='' or go[0] not in 'YN':
+              go = raw_input('Yes or No >>> ').upper()
+          if go[0] == 'N':
+              __info('Installation stopped.', True)
+              return
+  
+    if backup_schema:
+          # Rename DSTools schema
+          __db_rename_schema(schema, backup_schema)
+  
+    if backup_sugar_schema:
+          # Rename SUgAR schema
+          __db_rename_schema(sugar_schema, backup_sugar_schema)
+
+    # Create DS Tools schema
+    try:
+        __db_create_schema(schema)
+    except:
+        __db_rollback(schema, backup_schema)
         raise Exception
 
-    else:
-        __info("> Schema %s does not exist" % schema.upper(), verbose)
+    # Create SUgARlib schema
+    try:
+        __db_create_schema(sugar_schema)
+    except:
+        __db_rollback(sugar_schema, backup_sugar_schema)
+        __db_rollback(schema, backup_schema)
+        raise Exception
 
-        # Create DS Tools schema
-        try:
-            __db_create_schema(schema)
-        except:
-            __db_rollback(schema, None)
+    # Create dstools objects
+    try:
+        __db_create_objects(schema, sugar_schema,
+                            backup_schema, backup_sugar_schema,sugar_newer==3)
+    except:
+        __db_rollback(sugar_schema, backup_sugar_schema)
+        __db_rollback(schema, backup_schema)
+        raise Exception
 
-        __info("> Schema %s does not exist" % sugar_schema.upper(), verbose)
-
-        # Create SUgARlib schema
-        try:
-            __db_create_schema(sugar_schema)
-        except:
-            __db_rollback(sugar_schema, None)
-
-        # Create dstools objects
-        try:
-            __db_create_objects(schema, sugar_schema, None, testcase=testcase)
-        except:
-            __db_rollback(schema, None)
-
-    __info("SUgAR installed successfully in %s schema." % sugar_schema.upper(), True)
     __info("DSTools %s installed successfully in %s schema." % (rev, schema.upper()), True)
+    __db_drop_backup_schema(backup_schema,dstools_newer)
 
+    __info("SUgAR %s installed successfully in %s schema." % (sugar_rev, sugar_schema.upper()), True)
+    __db_drop_backup_schema(backup_sugar_schema,sugar_newer)
+
+    __info("Installation completed successfully.",True)
 
 def parseConnectionStr(connectionStr):
     """
@@ -805,12 +960,11 @@ def main():
     portspecs = configyml.get_modules(dstoolsdir_conf)
 
     if(args.command[0]=='install'):
-        install(py_min_ver, perl_min_ver, perl_max_ver, schema, sugar_schema,
-                args)
+        install(py_min_ver, perl_min_ver, perl_max_ver, schema, sugar_schema)
     elif(args.command[0]=='install-check'):
-        install_check(schema, sugar_schema, rev, args)
+        install_check(schema, sugar_schema, args)
 
-def install(py_min_ver, perl_min_ver, perl_max_ver, schema, sugar_schema, args):
+def install(py_min_ver, perl_min_ver, perl_max_ver, schema, sugar_schema):
     '''
         Install dspack
     '''
@@ -818,12 +972,12 @@ def install(py_min_ver, perl_min_ver, perl_max_ver, schema, sugar_schema, args):
     try:
         __plpy_check(py_min_ver)
         __plperl_check(perl_min_ver,perl_max_ver)
-        __db_install(schema, sugar_schema, None, args.testcase)
+        __db_install(schema, sugar_schema)
     except:
         __error("DSTools installation failed.", True)
 
 
-def install_check(schema, sugar_schema, dbrev, args):
+def install_check(schema, sugar_schema, args):
 	'''
 	Run install checks
 	'''
@@ -839,14 +993,8 @@ def install_check(schema, sugar_schema, dbrev, args):
 	    __info("{sugarlib_schema} schema does not exist. Please run install-check after installing DSTools. Install-check stopped.".format(sugarlib_schema=sugar_schema), True)
             return
 
-	# 1) Compare OS and DB versions. Continue if OS = DB.
-	if __get_rev_num(dbrev) != __get_rev_num(rev):
-	    __print_revs(rev, dbrev, con_args, schema)
-	    __info("Versions do not match. Install-check stopped.", True)
-	    return
-
 	# Create install-check user
-	test_user = 'dstools_' + rev.replace('.', '') + '_installcheck'
+	test_user = 'dstools_installcheck'
 	try:
 	    __run_sql_query("DROP USER IF EXISTS %s;" % (test_user), False)
 	except:
