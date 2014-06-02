@@ -40,6 +40,28 @@ def get_version(configdir):
         
     return str( conf['version'])
 
+## 
+# Load sugar_version string from Version.yml file.
+# Typical SUgAR_version.yml file:
+#       sugar_version: 0.01
+# @param configdir the directory where we can find SUgAR_version.yml
+##
+def get_sugar_version(configdir):
+
+    try:
+        conf = yaml.load(open(configdir + '/SUgAR_version.yml'))
+    except:
+        print "configyml : ERROR : missing or malformed Version.yml"
+        exit(2)
+
+    try:
+        conf['sugar_version']
+    except:
+        print "configyml : ERROR : malformed Version.yml"
+        exit(2)
+        
+    return str( conf['sugar_version'])
+
     
 ## 
 # Load Ports.yml file

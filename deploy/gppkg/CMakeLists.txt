@@ -2,7 +2,7 @@
 # Packaging for Greenplum's gppkg
 # ------------------------------------------------------------------------------
 
-set(DSTOOLS_GPPKG_VERSION "1.0")
+set(DSTOOLS_GPPKG_VERSION "1.1")
 set(DSTOOLS_GPPKG_RELEASE_NUMBER 1)
 set(DSTOOLS_GPPKG_RPM_SOURCE_DIR
     "${CMAKE_BINARY_DIR}/_CPack_Packages/Linux/RPM/${CPACK_PACKAGE_FILE_NAME}"
