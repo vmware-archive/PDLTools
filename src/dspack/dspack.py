@@ -427,8 +427,7 @@ def __make_dir(dir):
 def __db_create_schema(schema):
     """
     Create schema
-        @param from_schema name of the schema to rename
-        @param to_schema new name for the schema
+        @param schema name of the schema to create
     """
 
     __info("> Creating %s schema" % schema.upper(), True)
@@ -436,6 +435,19 @@ def __db_create_schema(schema):
         __run_sql_query("CREATE SCHEMA %s;" % schema, True)
     except:
         __Error('Cannot create new schema. Rolling back installation...', False)
+        raise Exception
+
+def __db_grant_usage(schema):
+    """
+    Grant usage
+        @param schema name of the schema to grant permissions to
+    """
+
+    __info("> Granting usage on %s schema" % schema.upper(), True)
+    try:
+        __run_sql_query("GRANT USAGE ON SCHEMA %s TO PUBLIC;" % schema, True)
+    except:
+        __Error('Cannot grant permissions on schema. Rolling back installation...', False)
         raise Exception
 
 def __db_update_migration_history(schema,backup_schema,curr_rev,
@@ -784,6 +796,15 @@ def __db_install(schema, sugar_schema):
     # Create SUgARlib schema
     try:
         __db_create_schema(sugar_schema)
+    except:
+        __db_rollback(sugar_schema, backup_sugar_schema)
+        __db_rollback(schema, backup_schema)
+        raise Exception
+
+    # Granting Usage on Schemas
+    try:
+        __db_grant_usage(schema)
+        __db_grant_usage(sugar_schema)
     except:
         __db_rollback(sugar_schema, backup_sugar_schema)
         __db_rollback(schema, backup_schema)
