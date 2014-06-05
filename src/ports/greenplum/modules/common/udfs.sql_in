@@ -16,7 +16,7 @@ CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.assert(actual text, expected text)
   RETURNS boolean AS
 $BODY$
 BEGIN
-   PERFORM assert(actual, expected, '');
+   PERFORM DSTOOLS_SCHEMA.assert(actual, expected, '');
    RETURN TRUE;
 END
 $BODY$ LANGUAGE plpgsql IMMUTABLE;

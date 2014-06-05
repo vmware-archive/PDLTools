@@ -667,6 +667,7 @@ $$;
  * releases. If the assumption breaks, SUgAR's '@' feature may return
  * incorrect results.
  *
+ * Note: this aggregate function should never be used on NULL inputs.
  */
  
 DROP AGGREGATE IF EXISTS SUGAR_SCHEMA.__sugar_fast_agg(ANYELEMENT) CASCADE;
@@ -1534,7 +1535,8 @@ of a procedural language call.
 
 Note that PL functions may not accept arrays with NULL values in them
 gracefully, so it is important to weed out the rows containing NULL values
-prior to aggregation.
+prior to aggregation. The '@' operator will raise an exception if applied on
+a column of inputs that includes NULLs.
 
 The operator precedence of '@' is fairly low, ensuring that '@ x+3' means the
 same thing as '@(x+3)', which is probably the correct interpretation. To
