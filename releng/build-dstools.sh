@@ -160,7 +160,7 @@ for envfile in ${ENVIRONMENT_FILES}; do
 
     mkdir build
     cd build
-    cmake ..
+    cmake .. ${CMAKE_OPTS}
     if [ $? != 0 ]; then
         echo "FATAL: cmake failed"
         exit 1
@@ -257,12 +257,12 @@ for envfile in ${ENVIRONMENT_FILES}; do
 	cat <<-EOF
 		
 		======================================================================
-		Executing: gppkg -i deploy/gppkg/4.2/dstools*.gppkg
+		Executing: gppkg -i deploy/gppkg/*/dstools*.gppkg
 		----------------------------------------------------------------------
 		
 	EOF
 	
-    gppkg -i deploy/gppkg/4.2/dstools*.gppkg
+    gppkg -i deploy/gppkg/*/dstools*.gppkg
     if [ $? != 0 ]; then
         echo "FATAL: gppkg installation failed"
         func_dbstop
@@ -327,7 +327,7 @@ if [ "${PUBLISH}" = "true" ]; then
 	EOF
 
     ssh build@build-prod.dh.greenplum.com mkdir -p ${RELEASE_DIR}
-    scp ${BASEDIR}/build/deploy/gppkg/4.2/dstools*.gppkg ${BASEDIR}/build/dstools-*Linux.rpm build@build-prod.dh.greenplum.com:${RELEASE_DIR}
+    scp ${BASEDIR}/build/deploy/gppkg/*/dstools*.gppkg ${BASEDIR}/build/dstools-*Linux.rpm build@build-prod.dh.greenplum.com:${RELEASE_DIR}
     ssh build@build-prod.dh.greenplum.com ls -al ${RELEASE_DIR}
 
 	cat <<-EOF
