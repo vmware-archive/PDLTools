@@ -158,8 +158,10 @@ for envfile in ${ENVIRONMENT_FILES}; do
 		
 	EOF
 
+    rm -rf build
     mkdir build
-    cd build
+
+    pushd build
     cmake .. ${CMAKE_OPTS}
     if [ $? != 0 ]; then
         echo "FATAL: cmake failed"
@@ -175,6 +177,11 @@ for envfile in ${ENVIRONMENT_FILES}; do
         echo "FATAL: make gppkg failed"
         exit 1
     fi
+
+    GPDB_VERSION=`basename $(ls -d deploy/gppkg/4*)`
+    RPM=$(ls dstools-*.rpm)
+    RPM_NEW_NAME=`echo ${RPM} | sed -e "s|dstools-\(.*\)-Linux.rpm|dstools-\1-gpdb${GPDB_VERSION}-Linux.rpm|g"`
+    mv -v ${RPM} ${RPM_NEW_NAME}
 
 	cat <<-EOF
 		
@@ -310,6 +317,8 @@ for envfile in ${ENVIRONMENT_FILES}; do
     fi
 
 	func_dbstop
+
+    popd
 
 done
 
