@@ -1,0 +1,14 @@
+/**
+@mainpage
+DSTools is a library for scalable in-database analytics. It provides data-parallel implementations of mathematical, statistical and machine learning methods for structured and unstructured data.
+
+Useful links:
+<ul>
+<li>DSTools project site https://stash.greenplum.com/projects/DS/repos/dstools/browse </li>
+</ul>
+
+@defgroup grp_distmetrics Distance Metric Implementations
+@{A collection of methods for computing various distance metrics @}
+    @defgroup grp_editdist Edit Distance
+    @ingroup grp_distmetrics
+*/

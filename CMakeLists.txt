@@ -65,7 +65,6 @@ install(
     COMPONENT core
 )
 
-
 # ======================================================================
 # -- Local includes
 # ======================================================================
@@ -102,6 +101,7 @@ endif()
 
 add_subdirectory(src)
 add_subdirectory(deploy)
+add_subdirectory(doc)
 
 # ======================================================================
 # -- Install path for specific dstools version
@@ -109,3 +109,12 @@ add_subdirectory(deploy)
 
 set(CMAKE_DSTOOLS_ROOT "${CMAKE_INSTALL_PREFIX}")
 set(CMAKE_INSTALL_PREFIX "${CMAKE_DSTOOLS_ROOT}/Versions/${DSTOOLS_VERSION_STRING}")
+
+# Create symlink doc
+install(CODE "
+    EXECUTE_PROCESS(COMMAND ln -nsf
+           ${CMAKE_DSTOOLS_ROOT}/Current/doc
+           ${CMAKE_DSTOOLS_ROOT}/doc
+           )
+")
+
