@@ -1,8 +1,14 @@
-/* DSTools CSS customizations (Copied from MADlib CSS) */
+/* DSTools CSS customizations (Copied from MADlib CSS + adding minor edits where required) */
 
 /* Indent paragraphs in the main text, but not in framed boxes */
 div.contents > p, div.contents > pre, div.contents > ul, div.contents > div.fragment, dd {
     margin-left: 20px;
+}
+
+/* Resize logo */
+#projectlogo img{
+    width: 250px;
+    height: 80px;
 }
 
 /* Increase spacing between titled paragraphs in the main text, but not in

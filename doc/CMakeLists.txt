@@ -19,6 +19,12 @@ configure_file(
     @ONLY
 )
 
+configure_file(
+    etc/DoxygenLayout.xml
+    "${CMAKE_CURRENT_BINARY_DIR}/etc/DoxygenLayout.xml"
+    @ONLY
+)
+
 
 file(
     COPY 

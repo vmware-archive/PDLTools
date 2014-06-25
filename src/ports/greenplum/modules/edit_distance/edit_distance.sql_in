@@ -11,21 +11,18 @@
  *
  *//* ----------------------------------------------------------------------- */
 
-m4_include(`SQLCommon.m4')
-
 /**
  * @addtogroup grp_editdist
  *
  * @brief An edit distance calculator.
- * <BR>
+
  * A row function, taking two strings and calculating their edit distance.
  * Costs for various edit operations, including the transposition of
  * characters that are adjacent in both the input and output, are user-defined.
  * This function is "unsafe" in the sense that it assumes certain qualities
- * about the user-defined costs without checking them. See "Usage" for a
+ * about the user-defined costs without checking them. Scroll below for a
  * complete list of these assumptions.
-
- * @usage
+ *
  * @param str1, str2 The two strings to be compared. Edits make str1 into str2.
  * @param ins_cost  Cost to insert a character.
  * @param del_cost  Cost to delete a character.
