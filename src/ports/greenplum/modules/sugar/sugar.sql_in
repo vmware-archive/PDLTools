@@ -201,10 +201,10 @@
 
   SELECT freq_vals(n);
 
+  SELECT all_but_one();
+
   These are convenience functions for pivot/pivot01. They can be used as the
-  "colchoice" parameter for pivoting, in which case either all pivot columns
-  or the columns relating to the n most frequent values will be created.
-  It is easy to create more such functions for other needs. See full
+  "colchoice" parameter for pivoting. See full
   documentation at these functions and with the pivot/pivot01 documentation.
 
   SELECT proportional_trans(x,a,b);
@@ -797,8 +797,8 @@ CREATE AGGREGATE SUGAR_SCHEMA.unique_element(ANYELEMENT) (
  * The option "all_vals()", which is the default, produces columns for
  * every value that appears in the original table's data.
  *
- * See also: 'freq_vals(int)' and the documentation for SUgAR's pseudofunctions
- * 'pivot' and 'pivot01'.
+ * See also: 'freq_vals(int)', 'all_but_one()' and the documentation for SUgAR's
+ * pseudofunctions 'pivot' and 'pivot01'.
  *
  * @examp
  * user=# CREATE TABLE wiki_table
@@ -891,11 +891,11 @@ every value that appears in the original table's data.
 
 Synopsis
 ========
-SUGAR_SCHEMA.all_vals(option VARCHAR)
+SUGAR_SCHEMA.all_vals()
 RETURNS VARCHAR
 
-See also: 'freq_vals(int)' and the documentation for SUgAR's pseudofunctions
-'pivot' and 'pivot01'.
+See also: 'freq_vals(int)', 'all_but_one()' and the documentation for SUgAR's
+pseudofunctions 'pivot' and 'pivot01'.
 
 Example
 =======
@@ -963,8 +963,8 @@ $FUNCBODY$;
  * most frequently in the original table's data.
  *
  * See also: 'all_vals()', which is the default option for the 'colchoice'
- * parameter, as well as the documentation for SUgAR's pseudofunctions
- * 'pivot' and 'pivot01'.
+ * parameter, as well as 'all_but_one()' and the documentation for SUgAR's
+ * pseudofunctions 'pivot' and 'pivot01'.
  *
  * @usage
  * n - the number of columns to be produced by 'pivot' and 'pivot01'.
@@ -1133,6 +1133,265 @@ $BODY$::VARCHAR END;
 $FUNCBODY$;
 
 /**
+ * @brief all_but_one: when used as 'colchoice' parameter in 'pivot' and
+ *                     'pivot01', creates a pivot table with columns for all
+ *                     values except an arbitrarily chosen one.
+ *
+ * @about
+ * A convenience function, to be used in conjunction with SUgAR's "pivot"
+ * and "pivot01" pseudofunctions. Both "pivot" and "pivot01" have a "colchoice"
+ * parameter (5th parameter in "pivot01", 8th parameter in "pivot"). This
+ * parameter determines which columns will be formed in the pivoted table.
+ * The option "all_but_one()" produces columns for all values except an
+ * arbitrarily chosen one. This is useful if one wants the output table to
+ * avoid co-linearity in the generated 0/1 columns of pivot01.
+ *
+ * Note: to avoid a specific value, v, rather than an arbitrary value, use
+ * pivot(column,table WHERE coalesce(column!=v,true),...)
+ * or
+ * pivot01(column,table WHERE coalesce(column!=v,true),...)
+ * rather than all_but_one().
+ *
+ * (The "coalesce" is needed for correct handling of NULL values in the
+ * WHERE clause.)
+ *
+ * See also: 'all_vals()', which is the default option for the 'colchoice'
+ * parameter, as well as 'freq_vals(int)' and the documentation for SUgAR's
+ * pseudofunctions 'pivot' and 'pivot01'.
+ *
+ * @examp
+ * user=# CREATE TABLE wiki_table
+ * user-# (region text, gender text, style text, ship_date date, units integer,
+ * user(# price float8, cost float8, row_num integer) DISTRIBUTED BY (row_num);
+ * CREATE TABLE
+ * user=# INSERT INTO wiki_table VALUES
+ * user-# ('East', 'Girl', 'Tee', '1/31/05', 12, 11.04, 10.42, 1),
+ * user-# ('East', 'Boy', 'Golf', '4/30/05', 12, 13, 12.6, 2),
+ * user-# (NULL , 'Boy', 'Tee', '3/31/05', 10, 11.96, 11.74, 3),
+ * user-# ('West', 'Girl', 'Tee', '4/30/05', 12, 11.27, 10.56, 4),
+ * user-# ('West', 'Girl', 'Fancy', '6/30/05', 11, 12.12, 11.95, 5),
+ * user-# ('South', 'Boy', 'Fancy', '5/31/05', 15, 13.47, 13.33, 6),
+ * user-# ('South', 'Girl', 'Golf', '1/31/05', 15, 11.44, 10.94, 7),
+ * user-# ('North', 'Girl', 'Golf', '2/28/05', 12, 12.63, 11.73, 8),
+ * user-# ('South', 'Girl', 'Fancy', '6/30/05', 10, 12.06, 11.51, 9),
+ * user-# ('West', 'Boy', 'Tee', '2/28/05', 12, 13.42, 13.29, 10),
+ * user-# ('East', 'Boy', 'Tee', '1/31/05', 11, 11.48, 10.67, 11)
+ * user-# ;
+ * INSERT 0 11
+ * user=# -- Table data from Wikipedia 'pivoting' entry.
+ * user=#
+ * user=# SELECT SUGAR_SCHEMA.sugar($$
+ * user$#   CREATE TABLE outtable AS SELECT price,units,cost,row_num,
+ * user$#     SUGAR_SCHEMA.pivot01(region,wiki_table,null,'{v}',
+ * user$#                      SUGAR_SCHEMA.all_but_one())
+ * user$#   FROM wiki_table
+ * user$#   DISTRIBUTED BY (row_num);
+ * user$# $$);
+ *  sugar 
+ * -------
+ *  
+ * (1 row)
+ * 
+ * user=# SELECT * FROM outtable;
+ *  price | units | cost  | row_num | north | south | west | none 
+ * -------+-------+-------+---------+-------+-------+------+------
+ *     13 |    12 |  12.6 |       2 |     0 |     0 |    0 |    0
+ *  11.27 |    12 | 10.56 |       4 |     0 |     0 |    1 |    0
+ *  13.47 |    15 | 13.33 |       6 |     0 |     1 |    0 |    0
+ *  12.63 |    12 | 11.73 |       8 |     1 |     0 |    0 |    0
+ *  13.42 |    12 | 13.29 |      10 |     0 |     0 |    1 |    0
+ *  11.04 |    12 | 10.42 |       1 |     0 |     0 |    0 |    0
+ *  11.96 |    10 | 11.74 |       3 |     0 |     0 |    0 |    1
+ *  12.12 |    11 | 11.95 |       5 |     0 |     0 |    1 |    0
+ *  11.44 |    15 | 10.94 |       7 |     0 |     1 |    0 |    0
+ *  12.06 |    10 | 11.51 |       9 |     0 |     1 |    0 |    0
+ *  11.48 |    11 | 10.67 |      11 |     0 |     0 |    0 |    0
+ * (11 rows)
+ *
+ * -- By comparison, this is how it is done had we wanted to omit a
+ * -- specific value, e.g. 'North':
+ *
+ * user=# drop table outtable;
+ * DROP TABLE
+ * user=# SELECT sugar($$
+ *   CREATE TABLE outtable AS SELECT price,units,cost,row_num,
+ *     pivot01(region,wiki_table
+ *                      WHERE coalesce(region!='North',true),null,'{v}')
+ *   FROM wiki_table
+ *   DISTRIBUTED BY (row_num);
+ * $$);
+ *  sugar 
+ * -------
+ *  
+ * (1 row)
+ * 
+ * michaeldb=# SELECT * FROM outtable;
+ *  price | units | cost  | row_num | east | south | west | none 
+ * -------+-------+-------+---------+------+-------+------+------
+ *  11.04 |    12 | 10.42 |       1 |    1 |     0 |    0 |    0
+ *  11.96 |    10 | 11.74 |       3 |    0 |     0 |    0 |    1
+ *  12.12 |    11 | 11.95 |       5 |    0 |     0 |    1 |    0
+ *  11.44 |    15 | 10.94 |       7 |    0 |     1 |    0 |    0
+ *  12.06 |    10 | 11.51 |       9 |    0 |     1 |    0 |    0
+ *  11.48 |    11 | 10.67 |      11 |    1 |     0 |    0 |    0
+ *     13 |    12 |  12.6 |       2 |    1 |     0 |    0 |    0
+ *  11.27 |    12 | 10.56 |       4 |    0 |     0 |    1 |    0
+ *  13.47 |    15 | 13.33 |       6 |    0 |     1 |    0 |    0
+ *  12.63 |    12 | 11.73 |       8 |    0 |     0 |    0 |    0
+ *  13.42 |    12 | 13.29 |      10 |    0 |     0 |    1 |    0
+ * (11 rows)
+ * 
+ */
+
+CREATE OR REPLACE FUNCTION SUGAR_SCHEMA.all_but_one()
+RETURNS TEXT
+IMMUTABLE
+LANGUAGE SQL
+AS $$
+  select 'SELECT DISTINCT {col} AS col_name FROM (SELECT * FROM {tabl}) __temp_table1, (SELECT SUGAR_SCHEMA.choose_any({col}) __any_val FROM {tabl}) __temp_table2 WHERE {col}!=__temp_table2.__any_val OR ({col} IS NULL AND __temp_table2.__any_val IS NOT NULL);'::TEXT;
+-- Note that this query is written so as to allow '{tabl}' to include WHERE
+-- clauses. A more robust implementation for all 'colchoice' parameters would
+-- have replaced every 'tabl' by '(SELECT * FROM {tabl}) __temp_table', but this
+-- is not how it is implemented currently.
+$$;
+
+CREATE OR REPLACE FUNCTION SUGAR_SCHEMA.all_but_one(option VARCHAR)
+RETURNS VARCHAR
+IMMUTABLE
+STRICT
+LANGUAGE sql
+AS $FUNCBODY$
+SELECT CASE WHEN $1!='usage' THEN $BODY$
+all_but_one: when used as 'colchoice' parameter in 'pivot' and
+             'pivot01', creates a pivot table with columns for all
+             values except an arbitrarily chosen one.
+
+A convenience function, to be used in conjunction with SUgAR's "pivot"
+and "pivot01" pseudofunctions. Both "pivot" and "pivot01" have a "colchoice"
+parameter (5th parameter in "pivot01", 8th parameter in "pivot"). This
+parameter determines which columns will be formed in the pivoted table.
+The option "all_but_one()" produces columns for all values except an
+arbitrarily chosen one. This is useful if one wants the output table to
+avoid co-linearity in the generated 0/1 columns of pivot01.
+
+For full usage instructions, run
+"SUGAR_SCHEMA.all_but_one('usage');".
+$BODY$::VARCHAR ELSE $BODY$
+all_but_one: when used as 'colchoice' parameter in 'pivot' and
+             'pivot01', creates a pivot table with columns for all
+             values except an arbitrarily chosen one.
+
+A convenience function, to be used in conjunction with SUgAR's "pivot"
+and "pivot01" pseudofunctions. Both "pivot" and "pivot01" have a "colchoice"
+parameter (5th parameter in "pivot01", 8th parameter in "pivot"). This
+parameter determines which columns will be formed in the pivoted table.
+The option "all_but_one()" produces columns for all values except an 
+arbitrarily chosen one. This is useful if one wants the output table to 
+avoid co-linearity in the generated 0/1 columns of pivot01.
+
+Note: to avoid a specific value, v, rather than an arbitrary value, use
+pivot(column,table WHERE coalesce(column!=v,true),...)
+or
+pivot01(column,table WHERE coalesce(column!=v,true),...)
+rather than all_but_one().
+
+(The "coalesce" is needed for correct handling of NULL values in the
+WHERE clause.)
+
+Synopsis
+========
+SUGAR_SCHEMA.all_but_one()
+RETURNS VARCHAR
+
+See also: 'freq_vals(int)', 'all_vals()' and the documentation for SUgAR's
+pseudofunctions 'pivot' and 'pivot01'.
+
+Example
+=======
+user=# CREATE TABLE wiki_table
+user-# (region text, gender text, style text, ship_date date, units integer,
+user(# price float8, cost float8, row_num integer) DISTRIBUTED BY (row_num);
+CREATE TABLE
+user=# INSERT INTO wiki_table VALUES
+user-# ('East', 'Girl', 'Tee', '1/31/05', 12, 11.04, 10.42, 1),
+user-# ('East', 'Boy', 'Golf', '4/30/05', 12, 13, 12.6, 2),
+user-# (NULL , 'Boy', 'Tee', '3/31/05', 10, 11.96, 11.74, 3),
+user-# ('West', 'Girl', 'Tee', '4/30/05', 12, 11.27, 10.56, 4),
+user-# ('West', 'Girl', 'Fancy', '6/30/05', 11, 12.12, 11.95, 5),
+user-# ('South', 'Boy', 'Fancy', '5/31/05', 15, 13.47, 13.33, 6),
+user-# ('South', 'Girl', 'Golf', '1/31/05', 15, 11.44, 10.94, 7),
+user-# ('North', 'Girl', 'Golf', '2/28/05', 12, 12.63, 11.73, 8),
+user-# ('South', 'Girl', 'Fancy', '6/30/05', 10, 12.06, 11.51, 9),
+user-# ('West', 'Boy', 'Tee', '2/28/05', 12, 13.42, 13.29, 10),
+user-# ('East', 'Boy', 'Tee', '1/31/05', 11, 11.48, 10.67, 11)
+user-# ;
+INSERT 0 11
+user=# -- Table data from Wikipedia 'pivoting' entry.
+user=#
+user=# SELECT SUGAR_SCHEMA.sugar($$
+user$#   CREATE TABLE outtable AS SELECT price,units,cost,row_num,
+user$#     SUGAR_SCHEMA.pivot01(region,wiki_table,null,'{v}',
+user$#                      SUGAR_SCHEMA.all_but_one())
+user$#   FROM wiki_table
+user$#   DISTRIBUTED BY (row_num);
+user$# $$);
+ sugar 
+-------
+ 
+(1 row)
+
+user=# SELECT * FROM outtable;
+ price | units | cost  | row_num | north | south | west | none 
+-------+-------+-------+---------+-------+-------+------+------
+    13 |    12 |  12.6 |       2 |     0 |     0 |    0 |    0
+ 11.27 |    12 | 10.56 |       4 |     0 |     0 |    1 |    0
+ 13.47 |    15 | 13.33 |       6 |     0 |     1 |    0 |    0
+ 12.63 |    12 | 11.73 |       8 |     1 |     0 |    0 |    0
+ 13.42 |    12 | 13.29 |      10 |     0 |     0 |    1 |    0
+ 11.04 |    12 | 10.42 |       1 |     0 |     0 |    0 |    0
+ 11.96 |    10 | 11.74 |       3 |     0 |     0 |    0 |    1
+ 12.12 |    11 | 11.95 |       5 |     0 |     0 |    1 |    0
+ 11.44 |    15 | 10.94 |       7 |     0 |     1 |    0 |    0
+ 12.06 |    10 | 11.51 |       9 |     0 |     1 |    0 |    0
+ 11.48 |    11 | 10.67 |      11 |     0 |     0 |    0 |    0
+(11 rows)
+
+-- By comparison, this is how it is done had we wanted to omit a
+-- specific value, e.g. 'North':
+
+user=# drop table outtable;
+DROP TABLE
+user=# SELECT sugar($$
+  CREATE TABLE outtable AS SELECT price,units,cost,row_num,
+    pivot01(region,wiki_table
+                     WHERE coalesce(region!='North',true),null,'{v}')
+  FROM wiki_table
+  DISTRIBUTED BY (row_num);
+$$);
+ sugar 
+-------
+ 
+(1 row)
+
+michaeldb=# SELECT * FROM outtable;
+ price | units | cost  | row_num | east | south | west | none 
+-------+-------+-------+---------+------+-------+------+------
+ 11.04 |    12 | 10.42 |       1 |    1 |     0 |    0 |    0
+ 11.96 |    10 | 11.74 |       3 |    0 |     0 |    0 |    1
+ 12.12 |    11 | 11.95 |       5 |    0 |     0 |    1 |    0
+ 11.44 |    15 | 10.94 |       7 |    0 |     1 |    0 |    0
+ 12.06 |    10 | 11.51 |       9 |    0 |     1 |    0 |    0
+ 11.48 |    11 | 10.67 |      11 |    1 |     0 |    0 |    0
+    13 |    12 |  12.6 |       2 |    1 |     0 |    0 |    0
+ 11.27 |    12 | 10.56 |       4 |    0 |     0 |    1 |    0
+ 13.47 |    15 | 13.33 |       6 |    0 |     1 |    0 |    0
+ 12.63 |    12 | 11.73 |       8 |    0 |     0 |    0 |    0
+ 13.42 |    12 | 13.29 |      10 |    0 |     0 |    1 |    0
+(11 rows)
+$BODY$::VARCHAR END;
+$FUNCBODY$;
+
+/**
  * @internal
  * @brief __sugar_pivot_expand: Backend function for SUgAR's pseudofunction
  *                              'pivot01'.
@@ -1165,17 +1424,18 @@ $FUNCBODY$;
  * colchoice -   Choice of columns to output in the pivot (i.e., which columns
  *               not to suppress). By default, 'pivot01' uses 'all_vals()'
  *               with this parameter, indicating that no column should be
- *               suppressed. Another choice is 'freq_vals(n)', which outputs
- *               columns for the n most frequent values only. 'colchoice' is
- *               given as a textual string with a SQL query to be executed,
- *               whose return results are the values for which columns need to
- *               be generated. Instances of '{col}' and '{tabl}' appearing in
- *               the string are replaced with the names of the 'foreign_col'
- *               and 'tabl' parameters, respectively, before the query is
- *               evaluated. (The options 'all_vals()' and 'freq_vals(n)') are
- *               SQL functions that, when evaluated, return such a query string.
- *               Either SQL functions or literal strings can be given as
- *               inputs to the function.)
+ *               suppressed. Other choices are 'freq_vals(n)', which outputs
+ *               columns for the n most frequent values only and
+ *               'all_but_one()', with outputs all values except an arbitrarily
+ *               chosen one. 'colchoice' is given as a textual string with a SQL
+ *               query to be executed, whose return results are the values for
+ *               which columns need to be generated. Instances of '{col}' and
+ *               '{tabl}' appearing in the string are replaced with the names of
+ *               the 'foreign_col' and 'tabl' parameters, respectively, before
+ *               the query is evaluated. (The options 'all_vals()' and
+ *               'freq_vals(n)') are SQL functions that, when evaluated, return
+ *               such a query string. Either SQL functions or literal strings
+ *               can be given as inputs to the function.)
  *
  */
  
@@ -1278,14 +1538,16 @@ $$;
  * colchoice -   Choice of columns to output in the pivot (i.e., which columns
  *               not to suppress). By default, 'pivot' uses 'all_vals()'
  *               with this parameter, indicating that no column should be
- *               suppressed. Another choice is 'freq_vals(n)', which outputs
- *               columns for the n most frequent values only. 'colchoice' is
+ *               suppressed. Other choices are 'freq_vals(n)', which outputs
+ *               columns for the n most frequent values only and
+ *               'all_but_one()', which outputs all columns except an
+ *               arbitrarily chosen one. 'colchoice' is
  *               given as a textual string with a SQL query to be executed,
  *               whose return results are the values for which columns need to
  *               be generated. Instances of '{col}' and '{tabl}' appearing in
  *               the string are replaced with the names of the 'foreign_col'
  *               and 'tabl' parameters, respectively, before the query is
- *               evaluated. (The options 'all_vals()' and 'freq_vals(n)') are
+ *               evaluated. (The options 'all_vals()', 'freq_vals(n)', etc.) are
  *               SQL functions that, when evaluated, return such a query string.
  *               Either SQL functions or literal strings can be given as
  *               inputs to the function.)
@@ -1936,11 +2198,13 @@ colchoice - A text parameter, allowing the caller explicit control over which
             instances of '{tabl}' are replaced by the value in parameter 't'.
             The default value for this parameter is "SELECT DISTINCT {col} AS
             col_name FROM {tabl};".
-            SUgAR provides two convenience functions, "ALL_VALS" and
-            "FREQ_VALS", which can be used to as the 'colchoice' parameter: use
-            'all_vals()' to create all columns, as is the default behavior; use
-            'freq_vals(n)', for any n value, to create columns only for the top
-            n most frequent values.
+            SUgAR provides several convenience functions, "ALL_VALS",
+            "FREQ_VALS" and "ALL_BUT_ONE", which can be used to as the
+            'colchoice' parameter: use 'all_vals()' to create all columns, as is
+            the default behavior; use 'freq_vals(n)', for any n value, to create
+            columns only for the top n most frequent values. Use 'all_but_one()'
+            to create all columns except for an arbitrarily chosen one. (This
+            last option is useful for avoiding colinearity in the output.)
 
 Usage
 =====
@@ -2086,11 +2350,12 @@ colchoice - A text parameter, allowing the caller explicit control over which
             similarly, instances of '{tabl}' are replaced by the value in
             parameter 't'.  The default value for this parameter is
             "SELECT DISTINCT {col} AS col_name FROM {tabl};".
-            SUgAR provides two convenience functions, "ALL_VALS" and
-            "FREQ_VALS", which can be used to as the 'colchoice' parameter: use
-            'all_vals()' to create all columns, as is the default behavior; use
-            'freq_vals(n)', for any n value, to create columns only for the top
-            n most frequent values.
+            SUgAR provides several convenience functions, "ALL_VALS",
+            "FREQ_VALS" and "ALL_BUT_ONE", which can be used to as the
+            'colchoice' parameter: use 'all_vals()' to create all columns, as is
+            the default behavior; use 'freq_vals(n)', for any n value, to create
+            columns only for the top n most frequent values. Use 'all_but_one()'
+            to create all columns except an arbitrarily chosen one.
 
 Usage
 =====
@@ -2558,9 +2823,10 @@ AS $FUNCBODY$
 
   SELECT freq_vals(n);
 
+  SELECT all_but_one();
+
   These are convenience functions for pivot/pivot01. They can be used as the
-  "colchoice" parameter for pivoting, in which case either all pivot columns
-  or the columns relating to the n most frequent values will be created.
+  "colchoice" parameter for pivoting.
   It is easy to create more such functions for other needs. See full
   documentation at these functions and with the pivot/pivot01 documentation.
 
