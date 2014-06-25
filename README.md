@@ -7,27 +7,27 @@ Pre-requisites
 ===============
 
    The following are the pre-requisites for building the dstools package.
-       1) The cmake compiler (version >= 2.8)
-       2) Greenplum Database (GPDB 4.2 or higher)
-       3) rpmbuild package if you want to create rpm packages of the installer
+       1. The cmake compiler (version >= 2.8)
+       2. Greenplum Database (GPDB 4.2 or higher)
+       3. rpmbuild package if you want to create rpm packages of the installer
 
 Building
 =========
 
     To build outside the source tree, follow these steps:
-        1) mkdir build
-        2) cd build
-        3) cmake ..
-        4) make
+        1. mkdir build
+        2. cd build
+        3. cmake ..
+        4. make
 
 Generating Doxygen User Docs
 =============================
 
     You can generated Doxygen docs for the project as follows:
-        1) cd build
-        2) cmake ..
-        3) make
-        4) make doc
+        1. cd build
+        2. cmake ..
+        3. make
+        4. make doc
     This will create the user docs under $BUILD/doc/user/html. You can then rsync this folder to our internal Linux box which automatically serves the documentation
     at [pdl-dstools-userdocs](http://pdl-dstools.pa.gopivotal.com:8000/)
  
