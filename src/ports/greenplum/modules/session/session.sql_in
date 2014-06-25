@@ -58,6 +58,7 @@ EOT
 $$;
 
 /**
+ * @addtogroup grp_sessionize_url
  * @brief session_split: Add session indication.
  *
  * @about

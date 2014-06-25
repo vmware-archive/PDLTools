@@ -13,6 +13,13 @@ configure_file(
     @ONLY
 )
 
+configure_file(
+    etc/dstools_extra.css
+    "${CMAKE_CURRENT_BINARY_DIR}/etc/dstools_extra.css"
+    @ONLY
+)
+
+
 file(
     COPY 
     imgs/pdl.png

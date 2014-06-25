@@ -20,6 +20,20 @@ Building
         3) cmake ..
         4) make
 
+Generating Doxygen User Docs
+=============================
+
+    You can generated Doxygen docs for the project as follows:
+        1) cd build
+        2) cmake ..
+        3) make
+        4) make doc
+    This will create the user docs under $BUILD/doc/user/html. You can then rsync this folder to our internal Linux box which automatically serves the documentation
+    at `http://10.64.7.2:8000/`
+ 
+    For example:
+        rsync $DSTOOLS/build/doc/user/html/* dstools@10.64.7.2:/home/dstools/hosting/dstools/doc/user/html/    	
+
 Packaging
 ==========
 

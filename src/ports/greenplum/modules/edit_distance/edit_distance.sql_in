@@ -12,59 +12,75 @@
  *//* ----------------------------------------------------------------------- */
 
 m4_include(`SQLCommon.m4')
+
 /**
-@addtogroup grp_editdist
+ * @addtogroup grp_editdist
+ *
+ * @brief An edit distance calculator.
+ * <BR>
+ * A row function, taking two strings and calculating their edit distance.
+ * Costs for various edit operations, including the transposition of
+ * characters that are adjacent in both the input and output, are user-defined.
+ * This function is "unsafe" in the sense that it assumes certain qualities
+ * about the user-defined costs without checking them. See "Usage" for a
+ * complete list of these assumptions.
 
-@brief edit_distance_unsafe: an edit distance calculator.
-
-@about
-A row function, taking two strings and calculating their edit distance.
-Costs for various edit operations, including the transposition of
-characters that are adjacent in both the input and output, are user-defined.
-This function is "unsafe" in the sense that it assumes certain qualities
-about the user-defined costs without checking them. See "Usage" for a
-complete list of these assumptions.
-
-@usage
-str1, str2 - the two strings to be compared. Edits make str1 into str2.
-ins_cost - cost to insert a character.
-del_cost - cost to delete a character.
-sub_cost - cost to substitute a character by another.
-tp_cost - cost to transpose two adjacent characters.
-final_tp_cost - cost to transpose two adjacent characters, on the assumption
-                 that no other transformation occurs on these characters or
-                 anything between them throughout the editing process.
-spec_sub_cost - cost for special substitution.
-spec_sub_from - string giving the "from" list for substitution of characters
-                 that receives special weighing spec_sub_cost.
-spec_sub_to - string with "to" list corresponding to the previous "from".
-
-All costs are integers.
-Returns the edit distance (integer).
-Assumptions:
-All costs are assumed to be nonnegative.
-final_tp_cost <= tp_cost
-ins_cost+del_cost <= 2*final_tp_cost
-max(sub_cost,special_sub_cost) <= final_tp_cost
-When these assumptions are voided, the result may be incorrect.
-
-Note that, even though we use the term "distance", the result is not
-necessarily a distance metric. It is only a distance metric if all of the
-following conditions hold:
-(1) final_tp_cost = tp_cost;
-(2) ins_cost = del_cost; and
-(3) the spec_sub_from and spec_sub_to lists are symmetric.
-
-@examp
-SELECT DSTOOLS_SCHEMA.edit_distance_unsafe('demerau','levenshtein',1,1,1,
-                        1,1,1,'01OIIL','OI01LI'
-                     );
-edit_distance_unsafe
-----------------------
-        9
-(1 row)
-
-*/
+ * @usage
+ * @param str1, str2 The two strings to be compared. Edits make str1 into str2.
+ * @param ins_cost  Cost to insert a character.
+ * @param del_cost  Cost to delete a character.
+ * @param sub_cost  Cost to substitute a character by another.
+ * @param tp_cost   Cost to transpose two adjacent characters.
+ * @param final_tp_cost Cost to transpose two adjacent characters, on the assumption
+ *                that no other transformation occurs on these characters or
+ *                anything between them throughout the editing process.
+ * @param spec_sub_cost Cost for special substitution.
+ * @param spec_sub_from String giving the "from" list for substitution of characters
+ *                that receives special weighing spec_sub_cost.
+ * @param spec_sub_to String with "to" list corresponding to the previous "from".
+ *
+ * All costs are integers.
+ * @returns The edit distance (integer)
+ *
+ * @par Assumptions
+ *   -# All costs are assumed to be nonnegative.
+ *   -# final_tp_cost <= tp_cost
+ *   -# ins_cost+del_cost <= 2*final_tp_cost
+ *   -# max(sub_cost,special_sub_cost) <= final_tp_cost
+ * When these assumptions are voided, the result may be incorrect.
+ *
+ * @note Even though we use the term "distance", the result is not
+ * necessarily a distance metric. It is only a distance metric if all of the
+ * following conditions hold:
+ *    -# final_tp_cost = tp_cost;
+ *    -# ins_cost = del_cost; and
+ *    -# the spec_sub_from and spec_sub_to lists are symmetric.
+ *
+ * @par Examples
+ * <pre class="example">
+ * SELECT DSTOOLS_SCHEMA.edit_distance_unsafe(
+ *                           'demerau',
+ *                           'levenshtein',
+ *                           1,
+ *                           1,
+ *                           1,
+ *                           1,
+ *                           1,
+ *                           1,
+ *                           '01OIIL',
+ *                           'OI01LI'
+ *                       );
+ * </pre>
+ *
+ * @par Results
+ * <pre class="results">
+ * edit_distance_unsafe
+ * \----------------------
+ *       9
+ * (1 row)
+ * </pre>
+ *
+ */
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance_unsafe(
            str1 text, str2 text,
@@ -109,10 +125,9 @@ LANGUAGE C IMMUTABLE STRICT;
  * final_tp_cost <= tp_cost
  * ins_cost+del_cost <= 2*final_tp_cost
  * max(sub_cost,special_sub_cost) <= final_tp_cost
- *
  * When these assumptions are voided, an exception is thrown.
  *
- * Note that, even though we use the term "distance", the result is not
+ * Note that even though we use the term "distance", the result is not
  * necessarily a distance metric. It is only a distance metric if all of the
  * following conditions hold:
  * (1) final_tp_cost = tp_cost;
