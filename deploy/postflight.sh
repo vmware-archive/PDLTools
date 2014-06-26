@@ -2,7 +2,7 @@
 
 # $0 - Script Path, $1 - Package Path, $2 - Target Location, and $3 - Target Volumn
 
-DSTOOLS_VERSION=1.1.1
+DSTOOLS_VERSION=1.1.2
 
 find /usr/local/dstools/bin -type d -exec cp -RPf {} /usr/local/dstools/old_bin \; 2>/dev/null
 find /usr/local/dstools/bin -depth -type d -exec rm -r {} \; 2>/dev/null
