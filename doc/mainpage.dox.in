@@ -1,11 +1,6 @@
 /**
 @mainpage
-DS Tools is a library of reusable tools, for use by Data Scientists.
-
-Useful links:
-<ul>
-<li>DSTools project site https://stash.greenplum.com/projects/DS/repos/dstools/browse </li>
-</ul>
+DS Tools is a library of reusable tools for use by Data Scientists. We at Pivotal Data Labs often supplement the functionality provided by [MADlib](http://madlib.net) - our opensource library of in-database machine learning algorithms, by writing `UDFs` in procedural languages such as <B>PL/Python</B>, <B>PL/R</B> and <B>PL/PERL</B>, to solve data science problems for our customers. <B>DSTools</B> is a collection of such libraries packaged for re-usability.
 
 @defgroup grp_distmetrics Distance Metric Implementations
 @{A collection of methods for computing various distance metrics @}

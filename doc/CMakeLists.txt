@@ -7,6 +7,8 @@ set(DOXYGEN_README_FILE "../README.md" CACHE STRING
 set(DOXYGEN_LICENSE_DIR "../../license" CACHE STRING
     "Path to license directory relative to the doc directory after installation")
 
+set(DOXYGEN_PROJECT_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+
 configure_file(
     mainpage.dox.in
     "${CMAKE_CURRENT_BINARY_DIR}/mainpage.dox"

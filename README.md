@@ -32,7 +32,12 @@ Generating Doxygen User Docs
     at [pdl-dstools-userdocs](http://pdl-dstools.pa.gopivotal.com:8000/)
  
     For example:
-        rsync $DSTOOLS/build/doc/user/html/* dstools@pdl-dstools.pa.gopivotal.com:/home/dstools/hosting/dstools/doc/user/html/    	
+        rsync $DSTOOLS/build/doc/user/html/* dstools@pdl-dstools.pa.gopivotal.com:/home/dstools/hosting/dstools/doc/user/html/    
+
+    You can also generate a PDF of the user doc by running
+         * cd build/doc/user/latext && make pdf
+    This will generate a PDF titled `refman.pdf` in $DSTOOLS/build/doc/user/latex
+	
 
 Packaging
 ==========
