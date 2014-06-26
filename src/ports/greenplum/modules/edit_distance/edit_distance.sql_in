@@ -526,12 +526,14 @@ LANGUAGE C IMMUTABLE STRICT;
  * (1 row)
  */
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.optimal_alignment_distance
-                                                        (str1 text, str2 text)
+------------------------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.optimal_alignment_distance(str1 text, str2 text)
 RETURNS integer
-AS 'MODULE_PATHNAME',
-   'optimal_alignment_distance'
+AS 'MODULE_PATHNAME','optimal_alignment_distance'
 LANGUAGE C IMMUTABLE STRICT;
+
+------------------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance_unsafe()
 RETURNS VARCHAR
@@ -551,6 +553,8 @@ about the user-defined costs without checking them.
 For full usage instructions, run "DSTOOLS_SCHEMA.edit_distance_unsafe(''usage'')".
 '::VARCHAR;
 $$;
+
+------------------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance_unsafe(option VARCHAR)
 RETURNS VARCHAR

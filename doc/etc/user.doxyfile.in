@@ -136,7 +136,7 @@ ABBREVIATE_BRIEF       = "The $name class" \
 # description.
 # The default value is: NO.
 
-ALWAYS_DETAILED_SEC    = YES
+ALWAYS_DETAILED_SEC    = NO
 
 # If the INLINE_INHERITED_MEMB tag is set to YES, doxygen will show all
 # inherited members of a class in the documentation of that class as if those
@@ -894,7 +894,10 @@ INPUT_FILTER           =
 # filters are used. If the FILTER_PATTERNS tag is empty or if none of the
 # patterns match the file name, INPUT_FILTER is applied.
 
-FILTER_PATTERNS        = 
+FILTER_PATTERNS        = "*.py=../bin/doxypy.py" \
+                         "*.py_in=../bin/py_filter.sh" \
+                         "*.sql=../bin/doxysql" \
+                         "*.sql_in=../bin/sql_filter.sh"
 
 
 # If the FILTER_SOURCE_FILES tag is set to YES, the input filter (if set using

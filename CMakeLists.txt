@@ -49,6 +49,29 @@ message ("     DSTOOLS_VERSION_MINOR ... : ${DSTOOLS_VERSION_MINOR}")
 message ("     DSTOOLS_VERSION_PATCH ... : ${DSTOOLS_VERSION_PATCH}")
 message ("   ------------------------------------------------------------")
 
+
+# ------------------------------------------------------------------
+# Find M4 binary (we need this for  doxygen docs pre-processing)
+# ------------------------------------------------------------------
+if(SOLARIS)
+    # Solaris ships GNU m4 as gm4, so we want to use that
+    find_program(M4_BINARY gm4
+        PATHS /usr/sfw/bin
+        DOC "Path to the GNU m4 preprocessor."
+    )
+else()
+    find_program(M4_BINARY m4
+        PATHS /usr/local/bin /usr/bin /bin /opt/local/bin
+        DOC "Path to the GNU m4 preprocessor."
+    )
+endif()
+
+if(NOT M4_BINARY)
+    message(FATAL_ERROR "Cannot find the m4 preprocessor.")
+endif(NOT M4_BINARY)
+
+
+
 # ===============================================================
 # -- Install Read-me files and license directory
 # ===============================================================
