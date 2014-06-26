@@ -1,0 +1,188 @@
+/**
+
+@page installpage
+
+## Getting DS Tools
+
+The latest GPPKG version of the DS Tools library can be found in the following places:
++ [GPPKG for GPDB 4.2](http://build-prod.dh.greenplum.com/releases/dstools/1.1.2-61/dstools-1.1.2-gpdb4.2-rhel5-x86_64.gppkg)
++ [GPPKG for GPDB 4.3](http://build-prod.dh.greenplum.com/releases/dstools/1.1.2-60/dstools-1.1.2-gpdb4.3-rhel5-x86_64.gppkg)
+
+Alternatively, DS Tools can be installed from its RPM:
++ [RPM for GPDB 4.2](http://build-prod.dh.greenplum.com/releases/dstools/1.1.2-61/dstools-1.1.2-gpdb4.2-Linux.rpm)
++ [RPM for GPDB 4.3](http://build-prod.dh.greenplum.com/releases/dstools/1.1.2-60/dstools-1.1.2-gpdb4.3-Linux.rpm)
+
+Simply download the gppkg file, while connected to the VPN.
+
+____
+
+## Installation of DS Tools
+
+### Prerequisites
+
+DS Tools should be installed on a GPDB 4.2 or 4.3. It requires `PL/pgSQL`, `PL/C`, `PL/Python` and `PL/Perl`.
+The `Python` version should be at least 2.6, and the `Perl` version should be at least 5.008 but lower than 6.0.
+
+<pre class="example">
+gppkg -i dstools-1.1.2-gpdb4.2-rhel5-x86_64.gppkg
+</pre>
+
+For GPDB 4.2 or the equivalent for GPDB 4.3. Run this as gpadmin.
+
+<pre class="example">
+$ gppkg -i dstools-1.1.2-gpdb4.2-rhel5-x86_64.gppkg
+20140605:06:24:14:005063 gppkg:gp-single-host:gpadmin-[INFO]:-Starting gppkg with args: -i deploy/gppkg/4.2/dstool
+s-1.1.2-gpdb4.2-rhel5-x86_64.gppkg
+20140605:06:24:14:005063 gppkg:gp-single-host:gpadmin-[INFO]:-Installing package dstools-1.1.2-gpdb4.2-rhel5-x86_6
+4.gppkg
+20140605:06:24:14:005063 gppkg:gp-single-host:gpadmin-[INFO]:-Validating rpm installation cmdStr='rpm --test -i /u
+sr/local/greenplum-db-4.2.1.0/.tmp/dstools-1.1.2-1.x86_64.rpm --dbpath /usr/local/greenplum-db-4.2.1.0/share/packa
+ges/database --prefix /usr/local/greenplum-db-4.2.1.0'
+20140605:06:24:14:005063 gppkg:gp-single-host:gpadmin-[INFO]:-Installing dstools-1.1.2-gpdb4.2-rhel5-x86_64.gppkg 
+locally
+20140605:06:24:14:005063 gppkg:gp-single-host:gpadmin-[INFO]:-Validating rpm installation cmdStr='rpm --test -i /u
+sr/local/greenplum-db-4.2.1.0/.tmp/dstools-1.1.2-1.x86_64.rpm --dbpath /usr/local/greenplum-db-4.2.1.0/share/packa
+ges/database --prefix /usr/local/greenplum-db-4.2.1.0'
+20140605:06:24:14:005063 gppkg:gp-single-host:gpadmin-[INFO]:-Installing rpms cmdStr='rpm -i /usr/local/greenplum-
+db-4.2.1.0/.tmp/dstools-1.1.2-1.x86_64.rpm --dbpath /usr/local/greenplum-db-4.2.1.0/share/packages/database --pref
+ix=/usr/local/greenplum-db-4.2.1.0'
+20140605:06:24:14:005063 gppkg:gp-single-host:gpadmin-[INFO]:-Completed local installation of dstools-1.1.2-gpdb4.
+2-rhel5-x86_64.gppkg.
+20140605:06:24:14:005063 gppkg:gp-single-host:gpadmin-[INFO]:-Please run the following command to deploy DS Tools
+usage:  dspack install [-s schema_name] [-S sugar_schema_name]
+                       -c user@host:port/database
+Example:
+   $ $GPHOME/dstools/bin/dspack install -s dstools -c gpadmin@mdw:5432/testdb
+   This will install DSTools objects into a Greenplum database named "testdb"
+   running on server "mdw" on port 5432. Installer will try to login as
+   "gpadmin" and will prompt for password. The target schema for the main
+   library will be "dstools" (specified here explicitly) and the target
+   schema for the SUgAR library, packaged with it, will be "sugarlib"
+   (specified here implicitly). In both cases, these schema choices are
+   the default options.
+To uninstall the package, run: gppkg -r
+For additional options run: dspack --help
+Release notes and additional documentation can be found at
+https://sites.google.com/a/gopivotal.com/global-data-science/ds-tools,
+accessible through the Pivotal VPN.
+20140605:06:24:14:005063 gppkg:gp-single-host:gpadmin-[INFO]:-dstools-1.1.2-gpdb4.2-rhel5-x86_64.gppkg successfull
+y installed.
+</pre>
+
+### Installing DS Tools onto a target database
+
+<pre class="example">
+/usr/local/greenplum-db/dstools/bin/dspack install [-s <schema name>] [-S <SUgAR schema name>] -c <user>@<host>:<port>/<database name>
+</pre>
+
+where `<database name>` should be replaced by the name of the database you wish to install to, `<schema name>` is the schema to install to and `<SUgAR schema name>` is the schema in which to install the `SUgAR `library. By default, `<schema name>` would be "dstools" and `<SUgAR schema name>` would be "sugarlib". Typically, `<user>@<host>:<port>` is chosen to be "gpadmin@localhost:5433", as in the example below.
+Run this command as gpadmin.
+
+<pre class="example">
+$ /usr/local/greenplum-db/dstools/bin/dspack install -s dstools -c gpadmin@localhost:5433/exampledb
+dspack.py : INFO : Detected greenplum version 4.2.
+dspack.py : INFO : Testing PL/Python environment...
+dspack.py : INFO : > PL/Python environment OK (version: 2.6.2)
+dspack.py : INFO : Testing PL/Perl environment...
+dspack.py : INFO : > PL/Perl environment OK (version: 5.008008)
+dspack.py : INFO : Installing dstools into DSTOOLS schema and SUgAR into SUGARLIB schema...
+dspack.py : INFO : ***************************************************************************
+dspack.py : INFO : * Schema DSTOOLS already exists and includes library objects.
+dspack.py : INFO : * Installed version is 1.0.
+dspack.py : INFO : * Installer will rename it to DSTOOLS_V1_0 and will upgrade to version 1.1.2.
+dspack.py : INFO : ***************************************************************************
+dspack.py : INFO : ***************************************************************************
+dspack.py : INFO : * Schema SUGARLIB already exists and includes library objects.
+dspack.py : INFO : * Installed version is 0.4.
+dspack.py : INFO : * Installer will rename it to SUGARLIB_V0_4 and will upgrade to version 0.4.3.
+dspack.py : INFO : ***************************************************************************
+dspack.py : INFO : Would you like to continue?
+\>>> y
+dspack.py : INFO : > Renaming schema DSTOOLS to DSTOOLS_V1_0
+dspack.py : INFO : > Renaming schema SUGARLIB to SUGARLIB_V0_4
+dspack.py : INFO : > Creating DSTOOLS schema
+dspack.py : INFO : > Creating SUGARLIB schema
+dspack.py : INFO : > Granting usage on DSTOOLS schema
+dspack.py : INFO : > Granting usage on SUGARLIB schema
+dspack.py : INFO : > Updating DS Tools migration history.
+dspack.py : INFO : > Creating DSTOOLS.MigrationHistory table
+dspack.py : INFO : > Saving data from DSTOOLS_V1_0.MigrationHistory table
+dspack.py : INFO : > Writing version info in DSTOOLS.MigrationHistory table
+dspack.py : INFO : > Updating SUgAR migration history.
+dspack.py : INFO : > Creating SUGARLIB.MigrationHistory table
+dspack.py : INFO : > Writing version info in SUGARLIB.MigrationHistory table
+dspack.py : INFO : > Creating objects for modules:
+dspack.py : INFO : > - common
+dspack.py : INFO : > - uri_utils
+dspack.py : INFO : > - edit_distance
+dspack.py : INFO : > - anonymization
+dspack.py : INFO : > - session
+dspack.py : INFO : > - connected_components
+dspack.py : INFO : > - sugar
+dspack.py : INFO : DSTools 1.1.2 installed successfully in DSTOOLS schema.
+dspack.py : INFO : Keep old schema DSTOOLS_V1_0? [Y/N]
+\>>> n
+dspack.py : INFO : SUgAR 0.4.3 installed successfully in SUGARLIB schema.
+dspack.py : INFO : Keep old schema SUGARLIB_V0_4? [Y/N]
+\>>> n
+dspack.py : INFO : Installation completed successfully.
+</pre>
+
+Note that this installation may be interactive, asking yes/no questions.
+
+### Checking that the installation was successful (optional)
+
+Once you've installed the package onto your database, you may want to check that the installation was successful. The `install-check` option give you a method to do so.
+
+<pre class="example">
+/usr/local/greenplum-db/dstools/bin/dspack install-check [-s <schema name>] [-S <SUgAR schema name>] -c <user>@<host>:<port>/<database name>
+</pre>
+
+where `<database name>` should be replaced by the name of the database you installed to, and `<schema name>` and `<SUgAR schema name>` are the schemas (with the same defaults as in the installation command).
+
+Run this command as gpadmin.
+
+<pre class="example">
+$ /usr/local/greenplum-db/dstools/bin/dspack install-check -s dstools -c gpadmin@localhost:5433/exampledb
+dspack.py : INFO : Detected greenplum version 4.2.
+TEST CASE RESULT|Module: uri_utils|test_uri_utils.sql_in|PASS|Time: 27 milliseconds
+TEST CASE RESULT|Module: edit_distance|test_edit_distance.sql_in|PASS|Time: 31 milliseconds
+TEST CASE RESULT|Module: anonymization|test_anonymization.sql_in|PASS|Time: 534 milliseconds
+TEST CASE RESULT|Module: session|test_session.sql_in|PASS|Time: 289 milliseconds
+TEST CASE RESULT|Module: connected_components|test_connected_components.sql_in|PASS|Time: 1454 milliseconds
+TEST CASE RESULT|Module: sugar|test_sugar.sql_in|PASS|Time: 2975 milliseconds
+</pre>
+
+
+____
+
+
+## Upgrading
+
+Starting with version 1.1 of DS Tools, upgrading is done using exactly the same commands as a fresh installation. The program will automatically detect the existing version and offer to back it up as part of the upgrade. If the upgrade is unsuccessful for any reason, the system will properly roll back the database to its prior state.
+The DS Tools installer will warn when installing a version that is already installed and will correctly detect and stop the installation when the new version is lower than the target version. If you really want to downgrade to an earlier version of DS Tools, you will want to uninstall and reinstall, as explained below.
+
+___
+
+
+## Uninstalling
+
+It is not necessary to uninstall DS Tools as part of a regular upgrade process. However, if you wish to uninstall the library, this section describes how to do so.
+First, uninstall the library from your computer.
+
+<pre class="example">
+gppkg -r dstools-1.1.2
+</pre>
+
+Then, drop the schemas from your database. Assuming the library was installed into the dstools and sugarlib schemas, the `psql` command line is
+
+<pre class="example">
+DROP SCHEMA IF EXISTS dstools CASCADE;
+DROP SCHEMA IF EXISTS sugarlib CASCADE;
+</pre>
+
+
+____
+
+
+*/

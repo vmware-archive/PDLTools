@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# MADlib Documentation
+# DSTools Documentation
 # ------------------------------------------------------------------------------
 
 set(DOXYGEN_README_FILE "../README.md" CACHE STRING
@@ -10,6 +10,14 @@ set(DOXYGEN_LICENSE_DIR "../../license" CACHE STRING
 configure_file(
     mainpage.dox.in
     "${CMAKE_CURRENT_BINARY_DIR}/mainpage.dox"
+    @ONLY
+)
+
+#Installation instructions
+
+configure_file(
+    installpage.dox.in
+    "${CMAKE_CURRENT_BINARY_DIR}/installpage.dox"
     @ONLY
 )
 
@@ -34,6 +42,7 @@ file(
 
 set(_DOXYGEN_INPUT_USER
     "\"${CMAKE_CURRENT_BINARY_DIR}/mainpage.dox\""
+    "\"${CMAKE_CURRENT_BINARY_DIR}/installpage.dox\""
     "\"${CMAKE_SOURCE_DIR}/src/modules\""
     "\"${CMAKE_SOURCE_DIR}/src/ports\""
 )
