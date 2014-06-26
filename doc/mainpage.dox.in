@@ -1,6 +1,6 @@
 /**
 @mainpage
-DSTools is a library for scalable in-database analytics. It provides data-parallel implementations of mathematical, statistical and machine learning methods for structured and unstructured data.
+DS Tools is a library of reusable tools, for use by Data Scientists.
 
 Useful links:
 <ul>
