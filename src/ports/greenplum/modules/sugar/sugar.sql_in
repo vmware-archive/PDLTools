@@ -60,12 +60,13 @@
   or pseudofunctions.
 
   The currently supported pseudofunctions are:
-  zscore -- calculate the z-score (i.e. the standardized variable)
-  pvalue -- calculate the pvalue (i.e. the cdf of the z-score)
+  zscore -- Calculate the z-score (i.e. the standardized variable)
+  pvalue -- Calculate the pvalue (i.e. the cdf of the z-score)
   normalize -- Translate column values to the range [0,1]
   proportion -- Normalize the column values to sum to 1
   pivot01 -- Make 0/1 columns out of a categorical column
-  pivot -- cross-tabulate one column according to another
+  pivot -- Cross-tabulate one column according to another
+  glob -- Glob column names by pattern
 
   Importantly, however, the function 'sugar' itself is unaware of any of these
   extension functions. All 'sugar' does is some shallow parsing of the SQL
@@ -274,6 +275,61 @@
                     Get the version-string describing the version number of
                     the SUgAR library.
 */
+
+/**
+ * @internal
+ * @brief __sugar_get_col_names: Backend function for SUgAR's pseudofunction
+ *                               'glob'.
+ *
+ * @about
+ * A backend function for SUgAR's pseudofunction 'glob'.
+ * See also "glob"'s documentation.
+ *
+ * @usage
+ * tablename    - Table whose columns are to be globbed.
+ * schemaname   - Schema of table to be globbed.
+ * include_cols - columns to be included (PostgreSQL SIMILAR TO regex)
+ * exclude_cols - columns of which to exclude (PostgreSQL SIMILAR TO regex)
+ * separator    - separator string to put between column names.
+ *
+ * The return value is a string containing all the names of the requested
+ * columns, in the order in which they appear in the original table, separated
+ * by the separator string.
+ * If nothing matches, the original "include_cols" expression is returned.
+ *
+**/
+
+CREATE OR REPLACE FUNCTION SUGAR_SCHEMA.__sugar_get_col_names(
+  tablename TEXT,
+  schemaname TEXT,
+  include_cols TEXT,
+  exclude_cols TEXT,
+  separator TEXT
+)
+RETURNS TEXT
+STABLE
+STRICT
+LANGUAGE plpythonu
+AS $$
+  params=dict(tablename=tablename,schemaname=schemaname,
+              include_cols=include_cols,exclude_cols=exclude_cols,
+              separator=separator)
+  cols=plpy.execute("""SELECT attname,{separator} AS sep
+                         FROM pg_attribute, pg_class, pg_namespace
+                         WHERE nspname={schemaname} AND relname={tablename}
+                           AND relnamespace=pg_namespace.oid
+                           AND attrelid=pg_class.oid AND attnum>0
+                           AND attname SIMILAR TO {include_cols}
+                           AND attname NOT SIMILAR TO {exclude_cols}
+                         ORDER BY attnum;""".format(**params))
+  if len(cols)!=0:
+    rc=cols[0]['sep'].join([x['attname'] for x in cols])
+  else:
+    rc=plpy.execute("""SELECT {include_cols} AS incl;"""
+        .format(**params))[0]['incl']
+    # Doing the Unix thing: if nothing matches, return original pattern.
+  return rc
+$$;
 
 /**
  * @brief proportional_trans: a simple linear transformation.
@@ -1407,6 +1463,7 @@ $FUNCBODY$;
  *               the pivot table. Use NULL to indicate that 'col1' should be
  *               used.
  * formatspec -  Format to give pivot-table column names. By default,
+ *               or if formatspec is sent a NULL,
  *               'pivot01' uses '{c}_{v}' with this parameter. This means,
  *               "lowercase name of the column to pivot, followed by an
  *               underscore, followed by the lowercased column value".
@@ -1455,16 +1512,19 @@ AS $$
     fcol=col1
   else:
     fcol=foreign_col
-  # This "if" will become needed once positional parameters are implemented.
+  if formatspec.lower()=='null':
+    nformatspec="'{c}_{v}'"
+  else:
+    nformatspec=formatspec
 
-  params=dict(col1=col1, tabl=tabl, fcol=fcol, formatspec=formatspec)
+  params=dict(col1=col1, tabl=tabl, fcol=fcol, nformatspec=nformatspec)
   simple_params=dict(col=fcol,tabl=tabl)
   colchoicestring=plpy.execute('select '+colchoice+' as ccs;')[0]['ccs']
   values=plpy.execute( \
          colchoicestring.format(**simple_params))
   rc=[]
   format_as_text=re.match(r'^\s*(\'(?:[^\']|\'\')*\'|"(?:[^"]|"")*")\s*$',
-                          formatspec)
+                          nformatspec)
   if format_as_text:
     format_as_text=format_as_text.group(1)
     if format_as_text[0]=="'":
@@ -1482,7 +1542,7 @@ AS $$
       name_dict=dict(C=params["col1"], c=params["col1"].lower(), V=params["val"],v=params["val"].lower())
       col_name=format_as_text.format(**name_dict)
     else:
-      col_name=plpy.execute("SELECT {formatspec}({litcol1},{litval}) as col_name;".format(**params))[0]['col_name']
+      col_name=plpy.execute("SELECT {nformatspec}({litcol1},{litval}) as col_name;".format(**params))[0]['col_name']
     col_name='"'+identifierescape.sub('""',col_name)+'"'
     rc.append("coalesce((({col1})={litval})::integer,(({col1}) IS NULL AND {litval}='None')::integer) as ".format(**params)+col_name)
   return ','.join(rc)
@@ -1521,6 +1581,7 @@ $$;
  *               the pivot table. Use NULL to indicate that 'col1' should be
  *               used.
  * formatspec -  Format to give pivot-table column names. By default,
+ *               or if formatspec is sent a NULL,
  *               'pivot' uses '{c}_{v}' with this parameter. This means,
  *               "lowercase name of the column to pivot, followed by an
  *               underscore, followed by the lowercased column value".
@@ -1572,9 +1633,13 @@ AS $$
     fcol=col1
   else:
     fcol=foreign_col
-  # This "if" will become needed once positional parameters are implemented.
+  if formatspec.lower()=='null':
+    nformatspec="'{c}_{v}'"
+  else:
+    nformatspec=formatspec
+
   params=dict(col1=col1, tabl=tabl, fcol=fcol, col2=col2,
-        default=defaultval, agg=agg, formatspec=formatspec)
+        default=defaultval, agg=agg, nformatspec=nformatspec)
   simple_params=dict(col=fcol,tabl=tabl)
   colchoicestring=plpy.execute('select '+colchoice+' as ccs;')[0]['ccs']
   values=plpy.execute( \
@@ -1582,7 +1647,7 @@ AS $$
   # "SELECT DISTINCT {col} AS col_name FROM {tabl}".format(**simple_params))
   rc=[]
   format_as_text=re.match(r'^\s*(\'(?:[^\']|\'\')*\'|"(?:[^"]|"")*")\s*$',
-                          formatspec)
+                          nformatspec)
   if format_as_text:
     format_as_text=format_as_text.group(1)
     if format_as_text[0]=="'":
@@ -1597,7 +1662,7 @@ AS $$
       name_dict=dict(C=params["col1"], c=params["col1"].lower(), V=params["val"],v=params["val"].lower())
       col_name=format_as_text.format(**name_dict)
     else:
-      col_name=plpy.execute("SELECT {formatspec}({litcol1},{litval}) as col_name;".format(**params))[0]['col_name']
+      col_name=plpy.execute("SELECT {nformatspec}({litcol1},{litval}) as col_name;".format(**params))[0]['col_name']
     col_name='"'+identifierescape.sub('""',col_name)+'"'
     rc.append("coalesce({agg}(case when ({col1})={litval} then {col2} end), {default}) as ".format(**params)+col_name)
   return ','.join(rc)
@@ -1672,7 +1737,11 @@ INSERT INTO SUGAR_SCHEMA.sugar_db VALUES
   ('pivot',5,$$SUGAR_SCHEMA.__sugar_pivot_expand_compress({1},{2},{3},{4},{5},{1},'''{{c}}_{{v}}''','''SELECT DISTINCT {{col}} AS col_name FROM {{tabl}};''')$$,true),
   ('pivot',6,$$SUGAR_SCHEMA.__sugar_pivot_expand_compress({1},{2},{3},{4},{5},{6},'''{{c}}_{{v}}''','''SELECT DISTINCT {{col}} AS col_name FROM {{tabl}};''')$$,true),
   ('pivot',7,$$SUGAR_SCHEMA.__sugar_pivot_expand_compress({1},{2},{3},{4},{5},{6},{7},'''SELECT DISTINCT {{col}} AS col_name FROM {{tabl}};''')$$,true),
-  ('pivot',8,$$SUGAR_SCHEMA.__sugar_pivot_expand_compress({1},{2},{3},{4},{5},{6},{7},{8})$$,true)
+  ('pivot',8,$$SUGAR_SCHEMA.__sugar_pivot_expand_compress({1},{2},{3},{4},{5},{6},{7},{8})$$,true),
+  ('glob',2,$$SUGAR_SCHEMA.__sugar_get_col_names({1},{2},'''%''','''''',''', ''')$$,true),
+  ('glob',3,$$SUGAR_SCHEMA.__sugar_get_col_names({1},{2},{3},'''''',''', ''')$$,true),
+  ('glob',4,$$SUGAR_SCHEMA.__sugar_get_col_names({1},{2},{3},{4},''', ''')$$,true),
+  ('glob',5,$$SUGAR_SCHEMA.__sugar_get_col_names({1},{2},{3},{4},{5})$$,true)
 ;
 
 /**
@@ -2172,7 +2241,8 @@ t - A table. The columns to be generated correspond to the values of column t.x.
 c - When used, columns are generated based on t.c rather than t.x.
     To revert to t.x, use the value 'NULL' for c.
 formatspec - Specification of the method by which to generate names for the
-             0/1 column. By default, the value of formatspec is the string
+             0/1 column. By default, or if given a NULL, the value of
+             formatspec is taken to be the string
              '{c}_{v}'. This specifies that the names of columns generated is
              the lowercase original column name followed by an underscore,
              followed by the lowercase value associated with the column. Any
@@ -2324,7 +2394,8 @@ default - The value given to a cell for which no colv values are assigned.
 fcolx - If present (and not NULL), the values of t.fcolx are used generate
         the list of pivot columns, rather than t.colx.
 formatspec - Specification of the method by which to generate names for the
-             pivot-table column. By default, the value of formatspec is the
+             pivot-table column. By default, or if given a NULL, the value of
+             formatspec is taken to be the
              string '{c}_{v}'. This specifies that the names of columns
              generated is the lowercase original column name followed by an
              underscore, followed by the lowercase value associated with the
@@ -2421,6 +2492,153 @@ user=# SELECT * FROM outtable;
   1 | John Smith      |            |            | 2001-12-23 | 2012-02-05
   3 | Ben Franklin    | 1785-04-17 |            |            | 
 (4 rows)
+$SUGARDOC$),
+('glob','Glob the names of table columns.',$SUGARDOC$
+Given a table, this SUgAR pseudofunction returns a list of its column names.
+This can be used for easily selecting multiple columns using a pattern.
+
+Synopsis
+========
+glob(table,schema) - Return a comma-separated list of all the table's columns.
+glob(table,schema,incl_pat) - Same, but return only columns matching pattern.
+glob(table,schema,incl_pat,excl_pat) - Same, but futher exclude second pattern.
+glob(table,schema,incl_pat,excl_pat,sep) - Same, but use sep as the string
+                                           separator, instead of a comma.
+
+Usage
+=====
+This SUgAR pseudofunction is used to fetch the names of multiple table columns
+at once by use of patterns. Columns can also be excluded by a second pattern.
+This is especially important in analytics, where machine-learning training
+functions may require a large number of independent variable columns to be
+given as inputs.
+
+Notes:
+1. Patterns are matched accoring to PostgreSQL "SIMILAR TO" rules.
+2. Similar to the Unix method, if nothing matches, returns the original pattern.
+3. The columns are fetched in the order that they would appear in a 'SELECT *'
+   from the original table.
+
+Example
+=======
+user=# CREATE TABLE wiki_table (region text, gender text, style text,
+user(#                          ship_date date, units integer,
+user(#                          price float8, cost float8, row_num integer)
+user-# DISTRIBUTED BY (row_num);
+CREATE TABLE
+user=#
+user=# INSERT INTO wiki_table VALUES
+user-# ('East', 'Girl', 'Tee', '1/31/05', 12, 11.04, 10.42, 1),
+user-# ('East', 'Boy', 'Golf', '4/30/05', 12, 13, 12.6, 2),
+user-# (NULL , 'Boy', 'Tee', '3/31/05', 10, 11.96, 11.74, 3),
+user-# ('West', 'Girl', 'Tee', '4/30/05', 12, 11.27, 10.56, 4),
+user-# ('West', 'Girl', 'Fancy', '6/30/05', 11, 12.12, 11.95, 5),
+user-# ('South', 'Boy', 'Fancy', '5/31/05', 15, 13.47, 13.33, 6),
+user-# ('South', 'Girl', 'Golf', '1/31/05', 15, 11.44, 10.94, 7),
+user-# ('North', 'Girl', 'Golf', '2/28/05', 12, 12.63, 11.73, 8),
+user-# ('South', 'Girl', 'Fancy', '6/30/05', 10, 12.06, 11.51, 9),
+user-# ('West', 'Boy', 'Tee', '2/28/05', 12, 13.42, 13.29, 10),
+user-# ('East', 'Boy', 'Tee', '1/31/05', 11, 11.48, 10.67, 11)
+user-# ;
+INSERT 0 11
+user=# -- Table data from Wikipedia 'pivoting' entry.
+user=#
+user=# SELECT SUGAR_SCHEMA.sugar($$
+user$#   CREATE TABLE pivot_table AS SELECT price,units,cost,row_num,
+user$#     SUGAR_SCHEMA.pivot01(region,wiki_table,null,null,
+user$#                                             SUGAR_SCHEMA.all_but_one()),
+user$#     SUGAR_SCHEMA.pivot01(gender,wiki_table,null,null,
+user$#                                             SUGAR_SCHEMA.all_but_one()),
+user$#     SUGAR_SCHEMA.pivot01(style,wiki_table,null,null,
+user$#                                             SUGAR_SCHEMA.all_but_one())
+user$#   FROM wiki_table
+user$#   DISTRIBUTED BY (row_num);
+user$# $$);
+ sugar 
+-------
+ 
+(1 row)
+
+user=# -- Note the use of 'all_but_one' to avoid colinear expressions.
+user=#
+user=# \x
+Expanded display is on.
+user=# SELECT * FROM pivot_table LIMIT 1;
+-[ RECORD 1 ]+------
+price        | 11.04
+units        | 12
+cost         | 10.42
+row_num      | 1
+region_north | 0
+region_south | 0
+region_west  | 0
+region_none  | 0
+gender_girl  | 1
+style_fancy  | 0
+style_tee    | 1
+
+user=# \x
+Expanded display is off.
+user=#
+user=# -- We now build a model based on the pivot-column dummy variables.
+user=#
+user=# SELECT SUGAR_SCHEMA.sugar($$
+user$#   CREATE TABLE model_table AS SELECT
+user$#     (madlib.linregr(price,array[
+user$#       SUGAR_SCHEMA.glob('pivot_table','myschema',
+user$#                         '(region|gender|style)_%')])).*
+user$#     FROM pivot_table
+user$#   DISTRIBUTED RANDOMLY;
+user$# $$);
+ sugar 
+-------
+ 
+(1 row)
+
+user=# \x
+Expanded display is on.
+user=# SELECT * FROM model_table;
+-[ RECORD 1 ]+--------------------------------------------------------------------------------------------------------------------------------------
+coef         | {11.6213333333333,8.08933333333334,3.42699999999999,2.37533333333333,1.00866666666667,5.34233333333334,9.58466666666667}
+r2           | 0
+std_err      | {1.63689950821671,1.25829466125607,1.20893040629839,1.63689950821671,0.923335849466016,1.25829466125607,0.923335849466016}
+t_stats      | {7.09960096817058,6.42880684660802,2.83473720418124,1.45111738467139,1.09241579567175,4.24569339585408,10.3804771278075}
+p_values     | {0.0020789843832798,0.00301045859193261,0.0471181875122522,0.22037157387082,0.33603325906707,0.0132033739658328,0.000486271930582483}
+condition_no | 21.9542172021876
+
+user=# \x
+Expanded display is off.
+user=#
+user=# -- We now build a model based on all columns except the dependent
+user=# -- variable and the row number.
+user=#
+user=# SELECT SUGAR_SCHEMA.sugar($$
+user$#   CREATE TABLE model_table2 AS SELECT
+user$#     (madlib.linregr(price,array[
+user$#       SUGAR_SCHEMA.glob('pivot_table','myschema',
+user$#                         '%','price|row_num')])).*
+user$#     FROM pivot_table
+user$#   DISTRIBUTED RANDOMLY;
+user$# $$);
+ sugar 
+-------
+ 
+(1 row)
+
+user=# \x
+Expanded display is on.
+user=# select * from model_table2;
+-[ RECORD 1 ]+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+coef         | {-0.0142837123125565,1.04130957661233,0.281204444710959,-0.0352315827156531,-0.352943629685487,-0.417010262886446,0.305638769377028,-0.111145474650055,0.294872956587369}
+r2           | 0.973378808315947
+std_err      | {0.0889950892127067,0.0919474625974511,0.458282603978408,0.402657364267115,0.291754108465693,0.417006883129105,0.230365118396282,0.382395764497836,0.296857342046528}
+t_stats      | {-0.160500005549937,11.3250496228615,0.613604885434856,-0.0874976738095398,-1.20972976710279,-1.00000810479989,1.32675802441261,-0.290655611199072,0.993315356644109}
+p_values     | {0.887233259077507,0.0077068431068974,0.60196716636129,0.938247879753775,0.349968878299479,0.422646611284083,0.315802891138953,0.798683313344773,0.425231263503929}
+condition_no | 9683.22896325205
+
+Note that the order in which the columns appear in the glob (and therefore also
+the order of the coefficients) is the same as their order in the original
+table (the order they will appear in, in a 'SELECT *').
 $SUGARDOC$)
 ;
 
@@ -2681,12 +2899,13 @@ AS $FUNCBODY$
   or pseudofunctions.
 
   The currently supported pseudofunctions are:
-  zscore -- calculate the z-score (i.e. the standardized variable)
-  pvalue -- calculate the pvalue (i.e. the cdf of the z-score)
+  zscore -- Calculate the z-score (i.e. the standardized variable)
+  pvalue -- Calculate the pvalue (i.e. the cdf of the z-score)
   normalize -- Translate column values to the range [0,1]
   proportion -- Normalize the column values to sum to 1
   pivot01 -- Make 0/1 columns out of a categorical column
-  pivot -- cross-tabulate one column according to another
+  pivot -- Cross-tabulate one column according to another
+  glob -- Glob column names by a pattern
 
   Importantly, however, the function 'sugar' itself is unaware of any of these
   extension functions. All 'sugar' does is some shallow parsing of the SQL
