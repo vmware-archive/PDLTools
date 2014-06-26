@@ -2505,6 +2505,16 @@ glob(table,schema,incl_pat,excl_pat) - Same, but futher exclude second pattern.
 glob(table,schema,incl_pat,excl_pat,sep) - Same, but use sep as the string
                                            separator, instead of a comma.
 
+table    - The name of the table to glob from.
+schema   - The name of the schema the table resides in.
+incl_pat - A string denoting a 'SIMILAR TO' regex pattern to match.
+           Defaults to '%' ("match every column").
+excl_pat - A string denoting a 'SIMILAR TO' regex pattern to exclude.
+           Defaults to '' ("exclude nothing").
+           Column names returned will match incl_pat but not excl_pat.
+sep      - A separator string to appear between column names. Defaults to
+           comma separation.
+
 Usage
 =====
 This SUgAR pseudofunction is used to fetch the names of multiple table columns
