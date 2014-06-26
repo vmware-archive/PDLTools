@@ -16,7 +16,7 @@
       <tab type="hierarchy" visible="yes" title="" intro=""/>
       <tab type="classmembers" visible="yes" title="" intro=""/>
     </tab>
-    <tab type="files" visible="yes" title="">
+    <tab type="files" visible="no" title="">
       <tab type="filelist" visible="no" title="" intro=""/>
       <tab type="globals" visible="no" title="" intro=""/>
     </tab>
@@ -115,23 +115,12 @@
     <sourcelink visible="yes"/>
     <memberdecl>
       <classes visible="yes" title=""/>
-      <namespaces visible="yes" title=""/>
-      <constantgroups visible="yes" title=""/>
-      <defines title=""/>
-      <typedefs title=""/>
-      <enums title=""/>
       <functions title=""/>
-      <variables visible="no" title=""/>
       <membergroups visible="yes"/>
     </memberdecl>
     <detaileddescription title=""/>
     <memberdef>
-      <inlineclasses title=""/>
-      <defines title=""/>
-      <typedefs title=""/>
-      <enums title=""/>
       <functions title=""/>
-      <variables visible="no" title=""/>
     </memberdef>
     <authorsection/>
   </file>
@@ -170,7 +159,7 @@
       <enums title=""/>
       <enumvalues title=""/>
       <functions title=""/>
-      <variables visible="no" title=""/>
+      <variables title=""/>
       <signals title=""/>
       <publicslots title=""/>
       <protectedslots title=""/>

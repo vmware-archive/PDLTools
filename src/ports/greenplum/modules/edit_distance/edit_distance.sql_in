@@ -79,15 +79,25 @@
  *
  */
 
+------------------------------------------------------------------------
+
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance_unsafe(
-           str1 text, str2 text,
-           ins_cost integer, del_cost integer, sub_cost integer,
-           tp_cost integer, final_tp_cost integer,
-           spec_sub_cost integer, spec_sub_from text, spec_sub_to text)
+           str1 text, 
+           str2 text,
+           ins_cost integer, 
+           del_cost integer, 
+           sub_cost integer,
+           tp_cost integer, 
+           final_tp_cost integer,
+           spec_sub_cost integer, 
+           spec_sub_from text, 
+           spec_sub_to text
+         )
 RETURNS integer
-AS 'MODULE_PATHNAME',
-   'edit_distance_unsafe13'
+AS 'MODULE_PATHNAME', 'edit_distance_unsafe13'
 LANGUAGE C IMMUTABLE STRICT;
+
+------------------------------------------------------------------------
 
 /**
  * @brief edit_distance: an edit distance calculator.
