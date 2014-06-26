@@ -894,7 +894,8 @@ INPUT_FILTER           =
 # filters are used. If the FILTER_PATTERNS tag is empty or if none of the
 # patterns match the file name, INPUT_FILTER is applied.
 
-FILTER_PATTERNS        =
+FILTER_PATTERNS        = 
+
 
 # If the FILTER_SOURCE_FILES tag is set to YES, the input filter (if set using
 # INPUT_FILTER ) will also be used to filter the input files that are used for
@@ -1987,7 +1988,7 @@ INCLUDE_FILE_PATTERNS  =
 # recursively expanded use the := operator instead of the = operator.
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
-PREDEFINED             = "DECLARE_UDF(_module,_name)=namespace madlib { namespace modules { namespace _module { struct _name : public dbconnector::postgres::UDF { _name(FunctionCallInfo fcinfo) : dbconnector::postgres::UDF(fcinfo) { } AnyType run(AnyType &args); }; } } }"
+PREDEFINED             = "DECLARE_UDF(_module,_name)=namespace dstools { namespace modules { namespace _module { struct _name : public dbconnector::postgres::UDF { _name(FunctionCallInfo fcinfo) : dbconnector::postgres::UDF(fcinfo) { } AnyType run(AnyType &args); }; } } }"
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then this
 # tag can be used to specify a list of macro names that should be expanded. The
