@@ -16,7 +16,6 @@ configure_file(
 )
 
 #Installation instructions
-
 configure_file(
     installpage.dox.in
     "${CMAKE_CURRENT_BINARY_DIR}/installpage.dox"
@@ -34,6 +33,13 @@ configure_file(
     "${CMAKE_CURRENT_BINARY_DIR}/etc/DoxygenLayout.xml"
     @ONLY
 )
+
+configure_file(
+    etc/header.html
+    "${CMAKE_CURRENT_BINARY_DIR}/etc/header.html"
+    @ONLY
+)
+
 
 
 file(
