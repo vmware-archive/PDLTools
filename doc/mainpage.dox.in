@@ -7,6 +7,15 @@ DS Tools is a library of reusable tools for use by Data Scientists. We at Pivota
     @defgroup grp_editdist Edit Distance
     @ingroup grp_distmetrics
 
+    @defgroup grp_levendist Levenshtein Distance
+    @ingroup grp_distmetrics
+
+    @defgroup grp_demaraulevdist Demarau Levenshtein Distance
+    @ingroup grp_distmetrics
+
+    @defgroup grp_optimaligndist Optimal Alignment Distance
+    @ingroup grp_distmetrics
+
 @defgroup grp_ccomp Connected Components Implementation
 @{A collection of methods for computing the connected components in a graph @}
     @defgroup grp_ccomp_hawq Connected Components in HAWQ
@@ -18,5 +27,6 @@ DS Tools is a library of reusable tools for use by Data Scientists. We at Pivota
 @{A collection of methods for Sessionization of Webserver Logs @}
     @defgroup grp_sessionize_url Sessionization
     @ingroup grp_sessionize
+
 
 */

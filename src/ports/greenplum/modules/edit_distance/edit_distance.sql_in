@@ -23,20 +23,19 @@
  * about the user-defined costs without checking them. Scroll below for a
  * complete list of these assumptions.
  *
- * @param str1, str2 The two strings to be compared. Edits make str1 into str2.
- * @param ins_cost  Cost to insert a character.
- * @param del_cost  Cost to delete a character.
- * @param sub_cost  Cost to substitute a character by another.
- * @param tp_cost   Cost to transpose two adjacent characters.
- * @param final_tp_cost Cost to transpose two adjacent characters, on the assumption
+ * @param str1, str2 (text) The two strings to be compared. Edits make str1 into str2.
+ * @param ins_cost  (int) Cost to insert a character.
+ * @param del_cost  (int) Cost to delete a character.
+ * @param sub_cost  (int) Cost to substitute a character by another.
+ * @param tp_cost   (int) Cost to transpose two adjacent characters.
+ * @param final_tp_cost (int) Cost to transpose two adjacent characters, on the assumption
  *                that no other transformation occurs on these characters or
  *                anything between them throughout the editing process.
- * @param spec_sub_cost Cost for special substitution.
- * @param spec_sub_from String giving the "from" list for substitution of characters
+ * @param spec_sub_cost (int) Cost for special substitution.
+ * @param spec_sub_from (text) String giving the "from" list for substitution of characters
  *                that receives special weighing spec_sub_cost.
- * @param spec_sub_to String with "to" list corresponding to the previous "from".
+ * @param spec_sub_to (text) String with "to" list corresponding to the previous "from".
  *
- * All costs are integers.
  * @returns The edit distance (integer)
  *
  * @par Assumptions
@@ -76,6 +75,9 @@
  *       9
  * (1 row)
  * </pre>
+ * @par Related Topics
+ *
+ * File edit_distance.sql_in, source file for the SQL functions
  *
  */
 
@@ -98,115 +100,26 @@ AS 'MODULE_PATHNAME', 'edit_distance_unsafe13'
 LANGUAGE C IMMUTABLE STRICT;
 
 ------------------------------------------------------------------------
+-- Overloaded functions
+------------------------------------------------------------------------
 
-/**
- * @brief edit_distance: an edit distance calculator.
- *
- * @about
- * A row function, taking two strings and calculating their edit distance.
- * Costs for various edit operations, including the transposition of
- * characters that are adjacent in both the input and output, are user-defined.
- * This function is "safe" in the sense that it checks certain qualities
- * about the user-defined costs in order to ascertain them. See "Usage" for a
- * complete list of these assumptions.
- *
- * @usage
- * str1, str2 - the two strings to be compared. Edits make str1 into str2.
- * ins_cost - cost to insert a character.
- * del_cost - cost to delete a character.
- * sub_cost - cost to substitute a character by another.
- * tp_cost - cost to transpose two adjacent characters.
- * final_tp_cost - cost to transpose two adjacent characters, on the assumption
- *                 that no other transformation occurs on these characters or
- *                 anything between them throughout the editing process.
- * spec_sub_cost - cost for special substitution.
- * spec_sub_from - string giving the "from" list for substitution of characters
- *                 that receives special weighing spec_sub_cost.
- * spec_sub_to - string with "to" list corresponding to the previous "from".
- *
- * All costs are integers.
- * Returns the edit distance (integer).
- *
- * Assumptions:
- * All costs are assumed to be nonnegative.
- * final_tp_cost <= tp_cost
- * ins_cost+del_cost <= 2*final_tp_cost
- * max(sub_cost,special_sub_cost) <= final_tp_cost
- * When these assumptions are voided, an exception is thrown.
- *
- * Note that even though we use the term "distance", the result is not
- * necessarily a distance metric. It is only a distance metric if all of the
- * following conditions hold:
- * (1) final_tp_cost = tp_cost;
- * (2) ins_cost = del_cost; and
- * (3) the spec_sub_from and spec_sub_to lists are symmetric.
- *
- * @examp
- * SELECT DSTOOLS_SCHEMA.edit_distance('demerau','levenshtein',1,1,1,1,1,
- *                                      1,'01OIIL','OI01LI');
- *  edit_distance
- * ---------------
- *              9
- * (1 row)
- *
- */
-
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance(str1 text, str2 text,
-           ins_cost integer, del_cost integer, sub_cost integer,
-           tp_cost integer, final_tp_cost integer,
-           spec_sub_cost integer, spec_sub_from text, spec_sub_to text)
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance(
+	   str1 text, 
+           str2 text,
+           ins_cost integer, 
+           del_cost integer, 
+           sub_cost integer,
+           tp_cost integer, 
+           final_tp_cost integer,
+           spec_sub_cost integer, 
+           spec_sub_from text, 
+           spec_sub_to text
+          )
 RETURNS integer
-AS 'MODULE_PATHNAME',
-   'edit_distance13'
+AS 'MODULE_PATHNAME','edit_distance13'
 LANGUAGE C IMMUTABLE STRICT;
 
-/**
- * @brief edit_distance_unsafe: an edit distance calculator.
- *
- * @about
- * A row function, taking two strings and calculating their edit distance.
- * Costs for various edit operations, including the transposition of
- * characters that are adjacent in both the input and output, are user-defined.
- * This function is "unsafe" in the sense that it assumes certain qualities
- * about the user-defined costs without checking them. See "Usage" for a
- * complete list of these assumptions.
- *
- * @usage
- * str1, str2 - the two strings to be compared. Edits make str1 into str2.
- * ins_cost - cost to insert a character.
- * del_cost - cost to delete a character.
- * sub_cost - cost to substitute a character by another.
- * tp_cost - cost to transpose two adjacent characters.
- * final_tp_cost - cost to transpose two adjacent characters, on the assumption
- *                 that no other transformation occurs on these characters or
- *                 anything between them throughout the editing process.
- *
- * All costs are integers.
- * Returns the edit distance (integer).
- *
- * Assumptions:
- * All costs are assumed to be nonnegative.
- * final_tp_cost <= tp_cost
- * ins_cost+del_cost <= 2*final_tp_cost
- * sub_cost <= final_tp_cost
- *
- * When these assumptions are voided, the result may be incorrect.
- *
- * Note that, even though we use the term "distance", the result is not
- * necessarily a distance metric. It is only a distance metric if all of the
- * following conditions hold:
- * (1) final_tp_cost = tp_cost; and
- * (2) ins_cost = del_cost.
- *
- * @examp
- * SELECT DSTOOLS_SCHEMA.edit_distance_unsafe('demerau','levenshtein',1,1,1,
- *                                            1,1);
- *  edit_distance_unsafe
- * ----------------------
- *                     9
- * (1 row)
- *
- */
+------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance_unsafe(
            str1 text, str2 text,
@@ -217,53 +130,7 @@ AS 'MODULE_PATHNAME',
    'edit_distance_unsafe9'
 LANGUAGE C IMMUTABLE STRICT;
 
-/**
- * @brief edit_distance: an edit distance calculator.
- *
- * @about
- * A row function, taking two strings and calculating their edit distance.
- * Costs for various edit operations, including the transposition of
- * characters that are adjacent in both the input and output, are user-defined.
- * This function is "safe" in the sense that it checks certain qualities
- * about the user-defined costs in order to ascertain them. See "Usage" for a
- * complete list of these assumptions.
- *
- * @usage
- * str1, str2 - the two strings to be compared. Edits make str1 into str2.
- * ins_cost - cost to insert a character.
- * del_cost - cost to delete a character.
- * sub_cost - cost to substitute a character by another.
- * tp_cost - cost to transpose two adjacent characters.
- * final_tp_cost - cost to transpose two adjacent characters, on the assumption
- *                 that no other transformation occurs on these characters or
- *                 anything between them throughout the editing process.
- *
- * All costs are integers.
- * Returns the edit distance (integer).
- *
- * Assumptions:
- * All costs are assumed to be nonnegative.
- * final_tp_cost <= tp_cost
- * ins_cost+del_cost <= 2*final_tp_cost
- * sub_cost <= final_tp_cost
- *
- * When these assumptions are voided, an exception is thrown.
- *
- * Note that, even though we use the term "distance", the result is not
- * necessarily a distance metric. It is only a distance metric if all of the
- * following conditions hold:
- * (1) final_tp_cost = tp_cost; and
- * (2) ins_cost = del_cost.
- *
- * @examp
- * SELECT DSTOOLS_SCHEMA.edit_distance('demerau','levenshtein',1,1,1,1,1);
- *
- *  edit_distance
- * ---------------
- *              9
- * (1 row)
- *
- */
+------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance(str1 text, str2 text,
            ins_cost integer, del_cost integer, sub_cost integer,
@@ -273,47 +140,8 @@ AS 'MODULE_PATHNAME',
    'edit_distance9'
 LANGUAGE C IMMUTABLE STRICT;
 
-/**
- * @brief edit_distance_unsafe: an edit distance calculator.
- *
- * @about
- * A row function, taking two strings and calculating their edit distance.
- * Costs for various edit operations, including the transposition of
- * characters that are adjacent in both the input and output, are user-defined.
- * This function is "unsafe" in the sense that it assumes certain qualities
- * about the user-defined costs without checking them. See "Usage" for a
- * complete list of these assumptions.
- *
- * @usage
- * str1, str2 - the two strings to be compared. Edits make str1 into str2.
- * ins_cost - cost to insert a character.
- * del_cost - cost to delete a character.
- * sub_cost - cost to substitute a character by another.
- * tp_cost - cost to transpose two adjacent characters.
- *
- * All costs are integers.
- * Returns the edit distance (integer).
- *
- * Assumptions:
- * All costs are assumed to be nonnegative.
- * ins_cost+del_cost <= 2*tp_cost
- * sub_cost <= tp_cost
- *
- * When these assumptions are voided, the result may be incorrect.
- *
- * Note that, even though we use the term "distance", the result is not
- * necessarily a distance metric. It is only a distance metric if
- * ins_cost = del_cost.
- *
- * @examp
- * SELECT DSTOOLS_SCHEMA.edit_distance_unsafe('demerau','levenshtein',1,1,1,1);
- * 
- *  edit_distance_unsafe
- * ----------------------
- *                     9
- * (1 row)
- *
- */
+------------------------------------------------------------------------
+
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance_unsafe(
            str1 text, str2 text,
@@ -324,46 +152,8 @@ AS 'MODULE_PATHNAME',
    'edit_distance_unsafe8'
 LANGUAGE C IMMUTABLE STRICT;
 
-/**
- * @brief edit_distance: an edit distance calculator.
- *
- * @about
- * A row function, taking two strings and calculating their edit distance.
- * Costs for various edit operations, including the transposition of
- * characters that are adjacent in both the input and output, are user-defined.
- * This function is "safe" in the sense that it checks certain qualities
- * about the user-defined costs in order to ascertain them. See "Usage" for a
- * complete list of these assumptions.
- *
- * @usage
- * str1, str2 - the two strings to be compared. Edits make str1 into str2.
- * ins_cost - cost to insert a character.
- * del_cost - cost to delete a character.
- * sub_cost - cost to substitute a character by another.
- * tp_cost - cost to transpose two adjacent characters.
- *
- * All costs are integers.
- * Returns the edit distance (integer).
- *
- * Assumptions:
- * All costs are assumed to be nonnegative.
- * ins_cost+del_cost <= 2*tp_cost
- * sub_cost <= tp_cost
- *
- * When these assumptions are voided, an exception is thrown.
- *
- * Note that, even though we use the term "distance", the result is not
- * necessarily a distance metric. It is only a distance metric if
- * ins_cost = del_cost.
- *
- * @examp
- * SELECT DSTOOLS_SCHEMA.edit_distance('demerau','levenshtein',1,1,1,1);
- *
- *  edit_distance
- * ---------------
- *              9
- * (1 row)
- */
+------------------------------------------------------------------------
+
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance(str1 text, str2 text,
            ins_cost integer, del_cost integer, sub_cost integer,
@@ -373,34 +163,7 @@ AS 'MODULE_PATHNAME',
    'edit_distance8'
 LANGUAGE C IMMUTABLE STRICT;
 
-/**
- * @brief edit_distance: an edit distance calculator.
- *
- * @about
- * A row function, taking two strings and calculating their edit distance.
- * Costs for insertion, deletion and substitution operations are user-defined.
- *
- * @usage
- * str1, str2 - the two strings to be compared. Edits make str1 into str2.
- * ins_cost - cost to insert a character.
- * del_cost - cost to delete a character.
- * sub_cost - cost to substitute a character by another.
- *
- * All costs are integers.
- * Returns the edit distance (integer).
- *
- * Note that, even though we use the term "distance", the result is not
- * necessarily a distance metric. It is only a distance metric if
- * ins_cost = del_cost.
- *
- * @examp
- * SELECT DSTOOLS_SCHEMA.edit_distance('demerau','levenshtein',1,1,1);
- *
- *  edit_distance
- * ---------------
- *              9
- * (1 row)
- */
+------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance(str1 text, str2 text,
            ins_cost integer, del_cost integer, sub_cost integer)
@@ -409,38 +172,22 @@ AS 'MODULE_PATHNAME',
    'edit_distance7'
 LANGUAGE C IMMUTABLE STRICT;
 
-/**
- * @brief edit_distance: an edit distance calculator.
- *
- * @about
- * A row function, taking two strings and calculating their edit distance by
- * insertion and deletion operations, costs of which are user-defined.
- *
- * @usage
- * str1, str2 - the two strings to be compared. Edits make str1 into str2.
- * ins_cost - cost to insert a character.
- * del_cost - cost to delete a character.
- *
- * All costs are integers.
- * Returns the edit distance (integer).
- *
- * @examp
- * SELECT DSTOOLS_SCHEMA.edit_distance('demerau','levenshtein',1,1);
- *
- *  edit_distance
- * ---------------
- *             14
- * (1 row)
- */
+------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance(str1 text, str2 text,
-           ins_cost integer, del_cost integer)
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance(
+            str1 text, 
+            str2 text,
+            ins_cost integer, 
+            del_cost integer
+          )
 RETURNS integer
-AS 'MODULE_PATHNAME',
-   'edit_distance6'
+AS 'MODULE_PATHNAME','edit_distance6'
 LANGUAGE C IMMUTABLE STRICT;
 
+------------------------------------------------------------------------
+
 /**
+ * @addtogroup grp_levendist
  * @brief levenshtein_distance: a Levenshtein distance calculator.
  *
  * @about
@@ -467,13 +214,15 @@ LANGUAGE C IMMUTABLE STRICT;
  */
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.levenshtein_distance(
-                                                         str1 text, str2 text)
+         str1 text, 
+         str2 text
+       )
 RETURNS integer
-AS 'MODULE_PATHNAME',
-   'levenshtein_distance'
+AS 'MODULE_PATHNAME','levenshtein_distance'
 LANGUAGE C IMMUTABLE STRICT;
 
 /**
+ * @addtogroup grp_demaraulevdist
  * @brief demerau_levenshtein_distance: Demerau-Levenshtein distance calculator.
  *
  * @about
@@ -495,14 +244,16 @@ LANGUAGE C IMMUTABLE STRICT;
  * (1 row)
  */
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.demerau_levenshtein_distance
-                                                        (str1 text, str2 text)
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.demerau_levenshtein_distance(
+         str1 text, 
+         str2 text
+       )
 RETURNS integer
-AS 'MODULE_PATHNAME',
-   'demerau_levenshtein_distance'
+AS 'MODULE_PATHNAME','demerau_levenshtein_distance'
 LANGUAGE C IMMUTABLE STRICT;
 
 /**
+ * @addtogroup grp_optimaligndist
  * @brief optimal_alignment_distance: an optimal alignment distance calculator.
  *
  * @about
