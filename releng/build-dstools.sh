@@ -25,6 +25,7 @@ export PATH=.:~/bin:$PATH
 export DBNAME=dstoolsdbtest
 export DSTOOLSUSER=dstoolsuser
 export DSTOOLSUSERPWD=123
+DSTOOLS_VERSION=$( awk '{print $2}' ${BASEDIR}/src/config/Version.yml )
 
 if [ -n "${SCHEMA}" ]; then
     export SCHEMA_CMD="--schema ${SCHEMA}"
@@ -178,6 +179,24 @@ for envfile in ${ENVIRONMENT_FILES}; do
         exit 1
     fi
 
+    make doc
+    if [ $? != 0 ]; then
+        echo "FATAL: make doc failed"
+        exit 1
+    fi
+    pushd doc/user
+    tar zcf dstools-${DSTOOLS_VERSION}-html.tgz html
+    ln -s dstools-${DSTOOLS_VERSION}-html.tgz dstools-html.tgz
+    popd
+
+    pushd doc/user/latex
+    make pdf
+    if [ $? != 0 ]; then
+        echo "FATAL: make pdf failed"
+        exit 1
+    fi
+    popd
+
     GPDB_VERSION=`basename $(ls -d deploy/gppkg/4*)`
     RPM=$(ls dstools-*.rpm)
     RPM_NEW_NAME=`echo ${RPM} | sed -e "s|dstools-\(.*\)-Linux.rpm|dstools-\1-gpdb${GPDB_VERSION}-Linux.rpm|g"`
@@ -324,7 +343,6 @@ done
 
 if [ "${PUBLISH}" = "true" ]; then
 
-    DSTOOLS_VERSION=$( awk '{print $2}' ${BASEDIR}/src/config/Version.yml )
     RELEASE_DIR=/var/www/html/releases/dstools/${DSTOOLS_VERSION}-${PULSE_BUILD_NUMBER}
 
 	cat <<-EOF
