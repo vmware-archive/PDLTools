@@ -185,8 +185,8 @@ for envfile in ${ENVIRONMENT_FILES}; do
         exit 1
     fi
     pushd doc/user
-    tar zcf dstools-${DSTOOLS_VERSION}-html.tgz html
-    ln -s dstools-${DSTOOLS_VERSION}-html.tgz dstools-html.tgz
+    tar zcf dstools-${DSTOOLS_VERSION}-${PULSE_BUILD_NUMBER}-html.tgz html
+    ln -s dstools-${DSTOOLS_VERSION}-${PULSE_BUILD_NUMBER}-html.tgz dstools-html.tgz
     popd
 
     pushd doc/user/latex
@@ -355,6 +355,7 @@ if [ "${PUBLISH}" = "true" ]; then
 
     ssh build@build-prod.dh.greenplum.com mkdir -p ${RELEASE_DIR}
     scp ${BASEDIR}/build/deploy/gppkg/*/dstools*.gppkg ${BASEDIR}/build/dstools-*Linux.rpm build@build-prod.dh.greenplum.com:${RELEASE_DIR}
+    scp ${BASEDIR}/build/doc/user/dstools-${DSTOOLS_VERSION}-${PULSE_BUILD_NUMBER}-html.tgz build@build-prod.dh.greenplum.com:${RELEASE_DIR}
     ssh build@build-prod.dh.greenplum.com ls -al ${RELEASE_DIR}
 
 	cat <<-EOF
