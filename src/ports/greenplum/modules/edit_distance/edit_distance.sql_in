@@ -77,7 +77,7 @@
  * </pre>
  * @par Related Topics
  *
- * File edit_distance.sql_in, source file for the SQL functions
+ * File edit_distance.sql_in, source file for all overloaded forms of the SQL functions
  *
  */
 
