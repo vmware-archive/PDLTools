@@ -4,15 +4,10 @@
 
 ## Getting DS Tools
 
-The latest GPPKG version of the DS Tools library can be found in the following places:
-+ [GPPKG for GPDB 4.2](http://build-prod.dh.greenplum.com/releases/dstools/1.1.2-61/dstools-1.1.2-gpdb4.2-rhel5-x86_64.gppkg)
-+ [GPPKG for GPDB 4.3](http://build-prod.dh.greenplum.com/releases/dstools/1.1.2-60/dstools-1.1.2-gpdb4.3-rhel5-x86_64.gppkg)
+The latest GPPKG version of the DS Tools library can be found here:
++ [GPPKGs and RPMs for DSTools](http://build-prod.dh.greenplum.com/releases/dstools/)
 
-Alternatively, DS Tools can be installed from its RPM:
-+ [RPM for GPDB 4.2](http://build-prod.dh.greenplum.com/releases/dstools/1.1.2-61/dstools-1.1.2-gpdb4.2-Linux.rpm)
-+ [RPM for GPDB 4.3](http://build-prod.dh.greenplum.com/releases/dstools/1.1.2-60/dstools-1.1.2-gpdb4.3-Linux.rpm)
-
-Simply download the gppkg file, while connected to the VPN.
+Navigate to the most recentbuild to download the GPPKG or RPM for your version of GPDB (4.2 or 4.3).
 
 ____
 
