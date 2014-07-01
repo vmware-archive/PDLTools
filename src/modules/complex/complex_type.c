@@ -164,8 +164,9 @@ complex_decode_double(char **num)
  *				  where <sp> is a space, digit is 0-9,
  *				  <exp> is "e" or "E" followed by an integer.
  */
-Datum
-complex_in(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_in);
+Datum complex_in(PG_FUNCTION_ARGS);
+Datum complex_in(PG_FUNCTION_ARGS)
 {
 	char	   *num = PG_GETARG_CSTRING(0);
 	double		val = 0;
@@ -287,8 +288,9 @@ complex_part_out(char **p, char *limit, double part)
  * complex_out		- converts complex number to a string
  *					  with format x +/- yi
  */
-Datum
-complex_out(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_out);
+Datum complex_out(PG_FUNCTION_ARGS);
+Datum complex_out(PG_FUNCTION_ARGS)
 {
 	Complex    *num = PG_GETARG_COMPLEX_P(0);
 	char	   *ascii = (char *) palloc(MAXCOMPLEXWIDTH + 1);
@@ -316,8 +318,9 @@ complex_out(PG_FUNCTION_ARGS)
  *		This rule is not perfect but it gives us portability across
  *		most IEEE-float-using architectures.
  */
-Datum
-complex_recv(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_recv);
+Datum complex_recv(PG_FUNCTION_ARGS);
+Datum complex_recv(PG_FUNCTION_ARGS)
 {
 	StringInfo	buf = (StringInfo) PG_GETARG_POINTER(0);
 	Complex    *num = (Complex *) palloc(sizeof(Complex));
@@ -332,8 +335,9 @@ complex_recv(PG_FUNCTION_ARGS)
 /*
  *		complex_send			- converts complex to binary format
  */
-Datum
-complex_send(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_send);
+Datum complex_send(PG_FUNCTION_ARGS);
+Datum complex_send(PG_FUNCTION_ARGS)
 {
 	StringInfoData buf;
 	Complex    *num = PG_GETARG_COMPLEX_P(0);
@@ -347,10 +351,9 @@ complex_send(PG_FUNCTION_ARGS)
 static Complex *
 construct_complex_in(double re, double im)
 {
+
 	Complex    *num = (Complex *) palloc(sizeof(Complex));
-
 	INIT_COMPLEX(num, re, im);
-
 	return num;
 }
 
@@ -358,20 +361,22 @@ construct_complex_in(double re, double im)
  *		construct_complex		- construct a complex number with two double,
  *								  returns arg1 + arg2i
  */
-Datum
-construct_complex(PG_FUNCTION_ARGS)
+
+PG_FUNCTION_INFO_V1(construct_complex);
+Datum construct_complex(PG_FUNCTION_ARGS);
+Datum construct_complex(PG_FUNCTION_ARGS)
 {
 	double		re = PG_GETARG_FLOAT8(0);
 	double		im = PG_GETARG_FLOAT8(1);
-
 	PG_RETURN_COMPLEX_P(construct_complex_in(re, im));
 }
 
 /*
  *		construct_complex_trig	- returns arg1*cos(arg2) + arg1*sin(arg2)i
  */
-extern Datum
-construct_complex_trig(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(construct_complex_trig);
+Datum construct_complex_trig(PG_FUNCTION_ARGS);
+extern Datum construct_complex_trig(PG_FUNCTION_ARGS)
 {
 	double		mag = PG_GETARG_FLOAT8(0);
 	double		arg = PG_GETARG_FLOAT8(1);
@@ -385,8 +390,9 @@ construct_complex_trig(PG_FUNCTION_ARGS)
 /*
  *		complex_re				- get the real part of arg1
  */
-Datum
-complex_re(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_re);
+Datum construct_complex_re(PG_FUNCTION_ARGS);
+Datum complex_re(PG_FUNCTION_ARGS)
 {
 	Complex    *num = PG_GETARG_COMPLEX_P(0);
 
@@ -396,8 +402,9 @@ complex_re(PG_FUNCTION_ARGS)
 /*
  *		complex_im				- get the imaginary part of arg1
  */
-Datum
-complex_im(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_im);
+Datum complex_im(PG_FUNCTION_ARGS);
+Datum complex_im(PG_FUNCTION_ARGS)
 {
 	Complex    *num = PG_GETARG_COMPLEX_P(0);
 
@@ -407,28 +414,26 @@ complex_im(PG_FUNCTION_ARGS)
 /*
  *		complex_arg				- returns the phase of arg1
  */
-Datum
-complex_arg(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_arg);
+Datum complex_arg(PG_FUNCTION_ARGS);
+Datum complex_arg(PG_FUNCTION_ARGS)
 {
 	Complex    *comp = PG_GETARG_COMPLEX_P(0);
 	double		result = 0;
-
 	result = dp_atan2(im(comp), re(comp));
-
 	PG_RETURN_FLOAT8(result);
 }
 
 /*
  *		complex_mag				- returns magnitude of arg1
  */
-Datum
-complex_mag(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_mag);
+Datum complex_mag(PG_FUNCTION_ARGS);
+Datum complex_mag(PG_FUNCTION_ARGS)
 {
 	Complex    *comp = PG_GETARG_COMPLEX_P(0);
 	double		result = 0;
-
 	result = hypot(re(comp), im(comp));
-
 	CHECKFLOATVAL(result, isinf(re(comp)) || isinf(im(comp)),
 				  0 == re(comp) && 0 == im(comp));
 	PG_RETURN_FLOAT8(result);
@@ -437,15 +442,13 @@ complex_mag(PG_FUNCTION_ARGS)
 /*
  *		complex_conj			- return conjunction of arg1
  */
-Datum
-complex_conj(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_conj);
+Datum complex_conj(PG_FUNCTION_ARGS);
+Datum complex_conj(PG_FUNCTION_ARGS)
 {
 	Complex    *comp = PG_GETARG_COMPLEX_P(0);
-
 	Complex    *c = (Complex *) palloc(sizeof(Complex));
-
 	INIT_COMPLEX(c, re(comp), -1 * im(comp));
-
 	PG_RETURN_COMPLEX_P(c);
 }
 
@@ -453,37 +456,37 @@ complex_conj(PG_FUNCTION_ARGS)
 /*
  *		complex_eq				- checks whether arg1 equals arg2
  */
-Datum
-complex_eq(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_eq);
+Datum complex_eq(PG_FUNCTION_ARGS);
+Datum complex_eq(PG_FUNCTION_ARGS)
 {
 	Complex    *a = PG_GETARG_COMPLEX_P(0);
 	Complex    *b = PG_GETARG_COMPLEX_P(1);
 	bool		re_eq = (isnan(re(a)) && isnan(re(a))) || (re(a) == re(b));
 	bool		im_eq = (isnan(im(a)) && isnan(im(b))) || (im(b) == im(a));
-
 	PG_RETURN_BOOL(re_eq && im_eq);
 }
 
 /*
  *		complex_ne				- checks whether arg1 not equals arg2
  */
-Datum
-complex_ne(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_ne);
+Datum complex_ne(PG_FUNCTION_ARGS);
+Datum complex_ne(PG_FUNCTION_ARGS)
 {
 	Complex    *a = PG_GETARG_COMPLEX_P(0);
 	Complex    *b = PG_GETARG_COMPLEX_P(1);
-
 	bool		re_eq = (isnan(re(a)) && isnan(re(a))) || (re(a) == re(b));
 	bool		im_eq = (isnan(im(a)) && isnan(im(b))) || (im(b) == im(a));
-
 	PG_RETURN_BOOL(!re_eq || !im_eq);
 }
 
 /*
  *		complex_pl				- returns arg1 + arg2
  */
-Datum
-complex_pl(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_pl);
+Datum complex_pl(PG_FUNCTION_ARGS);
+Datum complex_pl(PG_FUNCTION_ARGS)
 {
 	Complex    *a = PG_GETARG_COMPLEX_P(0);
 	Complex    *b = PG_GETARG_COMPLEX_P(1);
@@ -499,8 +502,9 @@ complex_pl(PG_FUNCTION_ARGS)
 /*
  *		complex_mi				- returns arg1 - arg2
  */
-Datum
-complex_mi(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_mi);
+Datum complex_mi(PG_FUNCTION_ARGS);
+Datum complex_mi(PG_FUNCTION_ARGS)
 {
 	Complex    *a = PG_GETARG_COMPLEX_P(0);
 	Complex    *b = PG_GETARG_COMPLEX_P(1);
@@ -517,8 +521,9 @@ complex_mi(PG_FUNCTION_ARGS)
 /*
  *		complex_mul				- returns arg1 * arg2
  */
-Datum
-complex_mul(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_mul);
+Datum complex_mul(PG_FUNCTION_ARGS);
+Datum complex_mul(PG_FUNCTION_ARGS)
 {
 	Complex    *a = PG_GETARG_COMPLEX_P(0);
 	Complex    *b = PG_GETARG_COMPLEX_P(1);
@@ -540,8 +545,9 @@ complex_mul(PG_FUNCTION_ARGS)
 /*
  *		complex_div				- returns arg1/arg2
  */
-Datum
-complex_div(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_div);
+Datum complex_div(PG_FUNCTION_ARGS);
+Datum complex_div(PG_FUNCTION_ARGS)
 {
 	Complex    *a = PG_GETARG_COMPLEX_P(0);
 	Complex    *b = PG_GETARG_COMPLEX_P(1);
@@ -566,8 +572,9 @@ complex_div(PG_FUNCTION_ARGS)
 /*
  *		complex_up				- returns +arg1
  */
-Datum
-complex_up(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_up);
+Datum complex_up(PG_FUNCTION_ARGS);
+Datum complex_up(PG_FUNCTION_ARGS)
 {
 	Complex    *a = PG_GETARG_COMPLEX_P(0);
 	Complex    *c = (Complex *) palloc(sizeof(Complex));
@@ -580,8 +587,9 @@ complex_up(PG_FUNCTION_ARGS)
 /*
  *		complex_um				- returns -arg1
  */
-Datum
-complex_um(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_um);
+Datum complex_um(PG_FUNCTION_ARGS);
+Datum complex_um(PG_FUNCTION_ARGS)
 {
 	Complex    *a = PG_GETARG_COMPLEX_P(0);
 	Complex    *c = (Complex *) palloc(sizeof(Complex));
@@ -754,8 +762,9 @@ pg_cpow(Complex x, Complex y)
 /*
  *		complex_pow				- return arg1^arg2
  */
-Datum
-complex_pow(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_pow);
+Datum complex_pow(PG_FUNCTION_ARGS);
+Datum complex_pow(PG_FUNCTION_ARGS)
 {
 	Complex    *a = PG_GETARG_COMPLEX_P(0);
 	Complex    *b = PG_GETARG_COMPLEX_P(1);
@@ -770,8 +779,9 @@ complex_pow(PG_FUNCTION_ARGS)
 /*
  *		complex_sqrt			- returns sqrt(arg1)
  */
-Datum
-complex_sqrt(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_sqrt);
+Datum complex_sqrt(PG_FUNCTION_ARGS);
+Datum complex_sqrt(PG_FUNCTION_ARGS)
 {
 	Complex    *a = PG_GETARG_COMPLEX_P(0);
 	Complex		b = {0.5, 0};
@@ -785,8 +795,9 @@ complex_sqrt(PG_FUNCTION_ARGS)
 /*
  *		complex_cbrt			- returns cbrt(arg1)
  */
-Datum
-complex_cbrt(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_cbrt);
+Datum complex_cbrt(PG_FUNCTION_ARGS);
+Datum complex_cbrt(PG_FUNCTION_ARGS)
 {
 	Complex    *a = PG_GETARG_COMPLEX_P(0);
 	Complex		b = {1.0 / 3, 0};
@@ -800,8 +811,9 @@ complex_cbrt(PG_FUNCTION_ARGS)
 /*
  *		complex_degrees			- returns degrees(arg(arg1))
  */
-Datum
-complex_degrees(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_degrees);
+Datum complex_degrees(PG_FUNCTION_ARGS);
+Datum complex_degrees(PG_FUNCTION_ARGS)
 {
 	float8		arg_a = 0;
 	float8		result = 0;
@@ -816,15 +828,15 @@ complex_degrees(PG_FUNCTION_ARGS)
 /*
  *		complex_exp				- returns exp(arg1)
  */
-Datum
-complex_exp(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_exp);
+Datum complex_exp(PG_FUNCTION_ARGS);
+Datum complex_exp(PG_FUNCTION_ARGS)
 {
 	Complex    *a = PG_GETARG_COMPLEX_P(0);
 	Complex    *c = (Complex *) palloc(sizeof(Complex));
 	double		exp_ar = 0;
 	double		ai = im(a);
-	double		cr,
-				ci;
+	double		cr,ci;
 
 	exp_ar = dp_exp(re(a));
 
@@ -838,14 +850,13 @@ complex_exp(PG_FUNCTION_ARGS)
 /*
  *		complex_ln				- returns ln(arg1)
  */
-Datum
-complex_ln(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_ln);
+Datum complex_ln(PG_FUNCTION_ARGS);
+Datum complex_ln(PG_FUNCTION_ARGS)
 {
 	Complex    *a = PG_GETARG_COMPLEX_P(0);
 	Complex    *c = (Complex *) palloc(sizeof(Complex));
-	double		mag,
-				ci,
-				cr;
+	double		mag,ci,cr;
 
 	if (0 == re(a) && 0 == im(a))
 	{
@@ -866,8 +877,9 @@ complex_ln(PG_FUNCTION_ARGS)
 /*
  *		complex_log10			- returns log10(arg1)
  */
-Datum
-complex_log10(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_log10);
+Datum complex_log10(PG_FUNCTION_ARGS);
+Datum complex_log10(PG_FUNCTION_ARGS)
 {
 	Complex    *c = NULL;
 	Complex    *ln_a = NULL;
@@ -875,7 +887,7 @@ complex_log10(PG_FUNCTION_ARGS)
 
 	ln_a = DatumGetComplexP(DirectFunctionCall1(complex_ln, PG_GETARG_DATUM(0)));
 	c = DatumGetComplexP(DirectFunctionCall2(complex_div, ComplexPGetDatum(ln_a),
-											 ComplexPGetDatum(&ln_10)));
+									 ComplexPGetDatum(&ln_10)));
 
 	PG_RETURN_COMPLEX_P(c);
 }
@@ -883,8 +895,9 @@ complex_log10(PG_FUNCTION_ARGS)
 /*
  *		complex_log				- returns log(arg1, arg2), where arg1 is the base
  */
-Datum
-complex_log(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_log);
+Datum complex_log(PG_FUNCTION_ARGS);
+Datum complex_log(PG_FUNCTION_ARGS)
 {
 	Complex    *c,
 			   *ln_a,
@@ -901,8 +914,9 @@ complex_log(PG_FUNCTION_ARGS)
 /*
  *		complex_acos			- returns acos(arg1)
  */
-Datum
-complex_acos(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_acos);
+Datum complex_acos(PG_FUNCTION_ARGS);
+Datum complex_acos(PG_FUNCTION_ARGS)
 {
 	Complex    *c = NULL;
 	Complex    *asin_a = NULL;
@@ -911,15 +925,15 @@ complex_acos(PG_FUNCTION_ARGS)
 	asin_a = DatumGetComplexP(DirectFunctionCall1(complex_asin, PG_GETARG_DATUM(0)));
 	c = DatumGetComplexP(DirectFunctionCall2(complex_mi, ComplexPGetDatum(&C_M_PI_2),
 											 ComplexPGetDatum(asin_a)));
-
 	PG_RETURN_COMPLEX_P(c);
 }
 
 /*
  *		complex_asin			- returns asin(arg1)
  */
-Datum
-complex_asin(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_asin);
+Datum complex_asin(PG_FUNCTION_ARGS);
+Datum complex_asin(PG_FUNCTION_ARGS)
 {
 	Complex    *a = PG_GETARG_COMPLEX_P(0);
 	Complex    *c = (Complex *) palloc(sizeof(Complex));
@@ -975,8 +989,9 @@ complex_asin(PG_FUNCTION_ARGS)
 /*
  *		complex_atan			- returns atan(arg1)
  */
-Datum
-complex_atan(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_atan);
+Datum complex_atan(PG_FUNCTION_ARGS);
+Datum complex_atan(PG_FUNCTION_ARGS)
 {
 	Complex    *a = PG_GETARG_COMPLEX_P(0);
 	Complex    *c = (Complex *) palloc(sizeof(Complex));
@@ -1024,8 +1039,9 @@ complex_atan(PG_FUNCTION_ARGS)
 /*
  *		complex_cos				- returns cos(arg1)
  */
-Datum
-complex_cos(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_cos);
+Datum complex_cos(PG_FUNCTION_ARGS);
+Datum complex_cos(PG_FUNCTION_ARGS)
 {
 	Complex    *a = PG_GETARG_COMPLEX_P(0);
 	Complex    *c = (Complex *) palloc(sizeof(Complex));
@@ -1039,8 +1055,9 @@ complex_cos(PG_FUNCTION_ARGS)
 /*
  *		complex_cot				- returns cot(arg1)
  */
-Datum
-complex_cot(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_cot);
+Datum complex_cot(PG_FUNCTION_ARGS);
+Datum complex_cot(PG_FUNCTION_ARGS)
 {
 	Complex    *c = NULL;
 	Complex		one = {1, 0};
@@ -1056,8 +1073,9 @@ complex_cot(PG_FUNCTION_ARGS)
 /*
  *		complex_sin				- returns sin(arg1)
  */
-Datum
-complex_sin(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_sin);
+Datum complex_sin(PG_FUNCTION_ARGS);
+Datum complex_sin(PG_FUNCTION_ARGS)
 {
 	Complex    *a = PG_GETARG_COMPLEX_P(0);
 	Complex    *c = (Complex *) palloc(sizeof(Complex));
@@ -1071,8 +1089,9 @@ complex_sin(PG_FUNCTION_ARGS)
 /*
  *		complex_tan				- returns tan(arg1)
  */
-Datum
-complex_tan(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_tan);
+Datum complex_tan(PG_FUNCTION_ARGS);
+Datum complex_tan(PG_FUNCTION_ARGS)
 {
 	Complex    *a = PG_GETARG_COMPLEX_P(0);
 	Complex    *c = (Complex *) palloc(sizeof(Complex));
@@ -1104,16 +1123,17 @@ complex_tan(PG_FUNCTION_ARGS)
  *		So sqrt(-4::complex) will get 0 - 2i, and sqrt(complex(-4,0))
  *		will get 0 + 2i.
  */
-Datum
-float82complex(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(float82complex);
+Datum float82complex(PG_FUNCTION_ARGS);
+Datum float82complex(PG_FUNCTION_ARGS)
 {
 	float8		a = PG_GETARG_FLOAT8(0);
-
 	PG_RETURN_COMPLEX_P(construct_complex_in(a, 0));
 }
 
-Datum
-float42complex(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(float42complex);
+Datum float42complex(PG_FUNCTION_ARGS);
+Datum float42complex(PG_FUNCTION_ARGS)
 {
 	float4		a = PG_GETARG_FLOAT4(0);
 
@@ -1123,32 +1143,38 @@ float42complex(PG_FUNCTION_ARGS)
 /*
  *		float2complex			- returns complex(arg1, 0)
  */
-Datum
-int82complex(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(int82complex);
+Datum int82complex(PG_FUNCTION_ARGS);
+Datum int82complex(PG_FUNCTION_ARGS)
 {
 	int8		a = PG_GETARG_INT64(0);
 
 	PG_RETURN_COMPLEX_P(construct_complex_in(a, 0));
 }
 
-Datum
-int42complex(PG_FUNCTION_ARGS)
+
+PG_FUNCTION_INFO_V1(int42complex);
+Datum int42complex(PG_FUNCTION_ARGS);
+Datum int42complex(PG_FUNCTION_ARGS)
 {
 	int4		a = PG_GETARG_INT32(0);
 
 	PG_RETURN_COMPLEX_P(construct_complex_in(a, 0));
 }
 
-Datum
-int22complex(PG_FUNCTION_ARGS)
+
+PG_FUNCTION_INFO_V1(int22complex);
+Datum int22complex(PG_FUNCTION_ARGS);
+Datum int22complex(PG_FUNCTION_ARGS)
 {
 	int4		a = PG_GETARG_INT16(0);
 
 	PG_RETURN_COMPLEX_P(construct_complex_in(a, 0));
 }
 
-Datum
-numeric2complex(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(numeric2complex);
+Datum numeric2complex(PG_FUNCTION_ARGS);
+Datum numeric2complex(PG_FUNCTION_ARGS)
 {
 	Numeric		num = PG_GETARG_NUMERIC(0);
 	double		float_num;
@@ -1168,8 +1194,9 @@ numeric2complex(PG_FUNCTION_ARGS)
 /*
  *		complex_dot_product		- returns dot product of two 1-dim array with the same size
  */
-Datum
-complex_dot_product(PG_FUNCTION_ARGS)
+PG_FUNCTION_INFO_V1(complex_dot_product);
+Datum complex_dot_product(PG_FUNCTION_ARGS);
+Datum complex_dot_product(PG_FUNCTION_ARGS)
 {
 	ArrayType  *la = NULL;
 	bool		lnull = false;

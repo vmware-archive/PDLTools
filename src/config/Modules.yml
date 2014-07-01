@@ -16,3 +16,4 @@ modules:
     - name: sugar
       depends: ['common']
     - name: complex
+      depends: ['common']
