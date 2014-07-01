@@ -1,7 +1,10 @@
 /**
- *@about Implementation of a user-defined Complex type
+ *@addtogroup grp_complexnumbers
+ *@about 
+ *Implementation of a user-defined Complex type.
+ *@par Related Topics
  *
- *
+ *File complex_type.sql_in, source file for all overloaded forms of the SQL functions
  */
 
 CREATE TYPE DSTOOLS_SCHEMA.complex;
@@ -33,40 +36,43 @@ CREATE TYPE DSTOOLS_SCHEMA.complex(
 );
 COMMENT ON TYPE DSTOOLS_SCHEMA.complex IS 'double-precision floating point complex number, 16-byte storage';
 
-CREATE FUNCTION DSTOOLS_SCHEMA.complex(re float8, im float8) 
-RETURNS DSTOOLS_SCHEMA.complex
-AS  'MODULE_PATHNAME','construct_complex' 
-LANGUAGE C IMMUTABLE STRICT;
+---------------------------------------------------------------
+- Constructors and Operators on Complex Numbers
+----------------------------------------------------------------
 
-CREATE FUNCTION DSTOOLS_SCHEMA.complex_trig(float8, float8) RETURNS DSTOOLS_SCHEMA.complex LANGUAGE C IMMUTABLE STRICT 
+CREATE FUNCTION DSTOOLS_SCHEMA.complex(re float8, im float8) RETURNS DSTOOLS_SCHEMA.complex LANGUAGE C IMMUTABLE STRUCT
+AS  'MODULE_PATHNAME','construct_complex'; 
+COMMENT ON FUNCTION DSTOOLS_SCHEMA.construct_complex(float8, float8)  IS 'constructs a complex number with given magnitude and phase';
+
+CREATE FUNCTION DSTOOLS_SCHEMA.complex_trig(re float8, im float8) RETURNS DSTOOLS_SCHEMA.complex LANGUAGE C IMMUTABLE STRICT 
 	AS  'MODULE_PATHNAME','construct_complex_trig';
 COMMENT ON FUNCTION DSTOOLS_SCHEMA.complex_trig(float8, float8)  IS 'constructs a complex number with given magnitude and phase';
 
-CREATE FUNCTION DSTOOLS_SCHEMA.re(DSTOOLS_SCHEMA.complex) RETURNS float8 LANGUAGE C IMMUTABLE STRICT 
+CREATE FUNCTION DSTOOLS_SCHEMA.re(cmplx DSTOOLS_SCHEMA.complex) RETURNS float8 LANGUAGE C IMMUTABLE STRICT 
 	AS  'MODULE_PATHNAME','complex_re' ;
 COMMENT ON FUNCTION DSTOOLS_SCHEMA.re(DSTOOLS_SCHEMA.complex)  IS 'returns the real part of the argument';
 
-CREATE FUNCTION DSTOOLS_SCHEMA.im(DSTOOLS_SCHEMA.complex) RETURNS float8 LANGUAGE C IMMUTABLE STRICT 
+CREATE FUNCTION DSTOOLS_SCHEMA.im(cmplx DSTOOLS_SCHEMA.complex) RETURNS float8 LANGUAGE C IMMUTABLE STRICT 
 	AS  'MODULE_PATHNAME','complex_im';
 COMMENT ON FUNCTION DSTOOLS_SCHEMA.im(DSTOOLS_SCHEMA.complex)  IS 'returns the imaginary part of the argument';
 
-CREATE FUNCTION DSTOOLS_SCHEMA.radians(DSTOOLS_SCHEMA.complex) RETURNS float8 LANGUAGE C IMMUTABLE STRICT 
+CREATE FUNCTION DSTOOLS_SCHEMA.radians(cmplx DSTOOLS_SCHEMA.complex) RETURNS float8 LANGUAGE C IMMUTABLE STRICT 
 	AS  'MODULE_PATHNAME','complex_arg' ;
 COMMENT ON FUNCTION DSTOOLS_SCHEMA.radians(DSTOOLS_SCHEMA.complex)  IS 'returns the phase of the argument';
 
-CREATE FUNCTION DSTOOLS_SCHEMA.complexabs(DSTOOLS_SCHEMA.complex) RETURNS float8 LANGUAGE C IMMUTABLE STRICT 
+CREATE FUNCTION DSTOOLS_SCHEMA.complexabs(cmplx DSTOOLS_SCHEMA.complex) RETURNS float8 LANGUAGE C IMMUTABLE STRICT 
 	AS  'MODULE_PATHNAME','complex_mag' ;
 COMMENT ON FUNCTION DSTOOLS_SCHEMA.complexabs(DSTOOLS_SCHEMA.complex)  IS 'returns the magnitude of the argument';
 
-CREATE FUNCTION DSTOOLS_SCHEMA.abs(DSTOOLS_SCHEMA.complex) RETURNS float8 LANGUAGE C IMMUTABLE STRICT 
+CREATE FUNCTION DSTOOLS_SCHEMA.abs(cmplx DSTOOLS_SCHEMA.complex) RETURNS float8 LANGUAGE C IMMUTABLE STRICT 
 	AS  'MODULE_PATHNAME','complex_mag';
 COMMENT ON FUNCTION DSTOOLS_SCHEMA.abs(DSTOOLS_SCHEMA.complex)  IS 'returns the magnitude of the argument';
 
-CREATE FUNCTION DSTOOLS_SCHEMA.conj(DSTOOLS_SCHEMA.complex) RETURNS DSTOOLS_SCHEMA.complex LANGUAGE C IMMUTABLE STRICT 
+CREATE FUNCTION DSTOOLS_SCHEMA.conj(cmplx DSTOOLS_SCHEMA.complex) RETURNS DSTOOLS_SCHEMA.complex LANGUAGE C IMMUTABLE STRICT 
 	AS  'MODULE_PATHNAME','complex_conj' ;
 COMMENT ON FUNCTION DSTOOLS_SCHEMA.conj(DSTOOLS_SCHEMA.complex)  IS 'returns the conjunction of the argument';
 
-CREATE FUNCTION DSTOOLS_SCHEMA.complex_eq(DSTOOLS_SCHEMA.complex, DSTOOLS_SCHEMA.complex) RETURNS bool  LANGUAGE C IMMUTABLE STRICT 
+CREATE FUNCTION DSTOOLS_SCHEMA.complex_eq(cmplx_a DSTOOLS_SCHEMA.complex, cmplx_b DSTOOLS_SCHEMA.complex) RETURNS bool  LANGUAGE C IMMUTABLE STRICT 
 	AS  'MODULE_PATHNAME','complex_eq' ;
 COMMENT ON FUNCTION DSTOOLS_SCHEMA.complex_eq(DSTOOLS_SCHEMA.complex, DSTOOLS_SCHEMA.complex)  IS 'equal';
 
@@ -198,6 +204,10 @@ CREATE FUNCTION DSTOOLS_SCHEMA.numeric2point("numeric") RETURNS DSTOOLS_SCHEMA.c
 	AS  'MODULE_PATHNAME','numeric2complex' ;
 COMMENT ON FUNCTION DSTOOLS_SCHEMA.numeric2point("numeric")  IS '(internal) type cast from numeric to complex';
 
+
+/**
+ * Operators on Complex numbers
+ */
 CREATE OPERATOR =	 (PROCEDURE = DSTOOLS_SCHEMA.complex_eq	,  LEFTARG=DSTOOLS_SCHEMA.complex , RIGHTARG = DSTOOLS_SCHEMA.complex,  RESTRICT=eqsel, JOIN=eqjoinsel);
 
 CREATE OPERATOR <> (PROCEDURE = DSTOOLS_SCHEMA.complex_ne	,  LEFTARG=DSTOOLS_SCHEMA.complex , RIGHTARG = DSTOOLS_SCHEMA.complex, RESTRICT=neqsel, NEGATOR = =, JOIN=neqjoinsel); 

@@ -28,5 +28,6 @@ DS Tools is a library of reusable tools for use by Data Scientists. We at Pivota
     @defgroup grp_sessionize_url Sessionization
     @ingroup grp_sessionize
 
-
+@defgroup grp_complexnumbers Complex Numbers
+@{Complex numbers are supported as User Defined Data Types in DSTools @}
 */
