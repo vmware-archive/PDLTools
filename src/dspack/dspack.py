@@ -22,6 +22,7 @@ this = None
 py_min_ver = None
 perl_min_ver = 5.008
 perl_max_ver = 6.0
+plr_min_ver = '2.13'
 con_args={}
 verbose=False
 testcase=None
@@ -44,6 +45,7 @@ def init():
     global dstoolsdir, dstoolsdir_conf, rev, sugar_rev
     global this, con_args, py_min_ver
     global perl_min_ver,perl_max_ver
+    global plr_min_ver
     checkPythonVersion()
     dstoolsdir = os.path.abspath(os.path.dirname(os.path.realpath(__file__)) + "/..")
     dstoolsdir_conf = dstoolsdir+'/config'
@@ -203,21 +205,6 @@ def __run_sql_file(schema, sugar_schema, dsdir_mod_py, module, sqlfile,
         __error("Failed executing m4 on %s" % sqlfile, False)
         raise Exception
 
-#     # Only update function definition
-#     sub_module = ''
-#     if upgrade:
-#         # get filename from complete path without the extension
-#         sub_module = os.path.splitext(os.path.basename(sqlfile))[0]
-#         __info(sub_module, False)
-# 
-#         # Special treatment for new module and 'svec' module
-#         if ((sub_module not in sc.get_change_handler().newmodule) and
-#                 not (sub_module == 'svec' and
-#                      'svec' in sc.get_change_handler().udt)):
-#             sql = open(tmpfile).read()
-#             sql = sc.cleanup(sql)
-#             open(tmpfile, 'w').write(sql)
-
     # Run the SQL using DB command-line utility
     sqlcmd = 'psql'
     # Test the DB cmd line utility
@@ -227,7 +214,7 @@ def __run_sql_file(schema, sugar_schema, dsdir_mod_py, module, sqlfile,
         __error("Command not found: %s" % sqlcmd, True)
 
     runcmd = [sqlcmd, '-a',
-              '-v', 'ON_ERROR_STOP=1',
+    	      '-v', 'ON_ERROR_STOP=1',
               '-h', con_args['host'].split(':')[0],
               '-d', con_args['database'],
               '-U', con_args['user'],
@@ -301,6 +288,56 @@ def __plpy_check(py_min_ver):
         raise Exception
 
     __info("> PL/Python environment OK (version: %s)" % python, True)
+
+
+def __plr_check(plr_min_ver):
+    """
+    Check pl/r existence and version
+        @param plr_min_ver min PL/R version to run DS Tools
+    """
+
+    __info("Testing PL/R environment...", True)
+
+    # Check PL/R existence
+    rv = __run_sql_query("SELECT count(*) AS CNT FROM pg_language "
+                         "WHERE lanname = 'plr'", True)
+
+    if int(rv[0]['cnt']) > 0:
+        __info("> PL/R already installed", verbose)
+    else:
+        __info("> PL/R not installed", verbose)
+        __info("> Creating language PL/R...", True)
+        try:
+            __run_sql_query("CREATE LANGUAGE plr;", True)
+        except:
+            __error('Cannot create language plr. Stopping installation...', False)
+            raise Exception
+
+    # Check PL/R version
+    __run_sql_query("DROP FUNCTION IF EXISTS plr_version_for_dstools();", False)
+    __run_sql_query("""
+        CREATE OR REPLACE FUNCTION plr_version_for_dstools()
+        RETURNS TEXT AS
+        $$
+             return (paste(R.version$major,R.version$minor,sep="."));
+        $$
+        LANGUAGE plr;
+    """, True)
+    rv = __run_sql_query("SELECT plr_version_for_dstools() AS ver;", True)
+    plr_cur_ver = rv[0]['ver']
+    if plr_cur_ver >= plr_min_ver:
+        __info("> PL/R version: %s" % plr_cur_ver, verbose)
+    else:
+        __error("PL/R version too old: {cur_ver}. You need {min_ver} or greater".format(
+                                cur_ver=plr_cur_ver,
+                                min_ver=plr_min_ver
+                                ), 
+                                False
+                )
+        raise Exception
+
+    __info("> PL/R environment OK (version: %s)" % plr_cur_ver, True)
+
 
 def __plperl_check(perl_min_ver,perl_max_ver):
     """
@@ -981,11 +1018,11 @@ def main():
     portspecs = configyml.get_modules(dstoolsdir_conf)
 
     if(args.command[0]=='install'):
-        install(py_min_ver, perl_min_ver, perl_max_ver, schema, sugar_schema)
+        install(py_min_ver, perl_min_ver, perl_max_ver, plr_min_ver, schema, sugar_schema)
     elif(args.command[0]=='install-check'):
         install_check(schema, sugar_schema, args)
 
-def install(py_min_ver, perl_min_ver, perl_max_ver, schema, sugar_schema):
+def install(py_min_ver, perl_min_ver, perl_max_ver, plr_min_ver, schema, sugar_schema):
     '''
         Install dspack
     '''
@@ -993,6 +1030,7 @@ def install(py_min_ver, perl_min_ver, perl_max_ver, schema, sugar_schema):
     try:
         __plpy_check(py_min_ver)
         __plperl_check(perl_min_ver,perl_max_ver)
+        __plr_check(plr_min_ver)
         __db_install(schema, sugar_schema)
     except:
         __error("DSTools installation failed.", True)

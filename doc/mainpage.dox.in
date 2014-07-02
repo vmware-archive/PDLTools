@@ -30,4 +30,8 @@ DS Tools is a library of reusable tools for use by Data Scientists. We at Pivota
 
 @defgroup grp_complexnumbers Complex Numbers
 @{Complex numbers are supported as User Defined Data Types in DSTools @}
+
+@defgroup grp_plrutils Placeholder for PL/R functions
+@{The data science team frequently write functions in PL/R. This is a placeholder for those functions @}
+
 */

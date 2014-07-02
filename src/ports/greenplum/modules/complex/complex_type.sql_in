@@ -37,12 +37,12 @@ CREATE TYPE DSTOOLS_SCHEMA.complex(
 COMMENT ON TYPE DSTOOLS_SCHEMA.complex IS 'double-precision floating point complex number, 16-byte storage';
 
 ---------------------------------------------------------------
-- Constructors and Operators on Complex Numbers
+-- Constructors and Operators on Complex Numbers
 ----------------------------------------------------------------
 
-CREATE FUNCTION DSTOOLS_SCHEMA.complex(re float8, im float8) RETURNS DSTOOLS_SCHEMA.complex LANGUAGE C IMMUTABLE STRUCT
+CREATE FUNCTION DSTOOLS_SCHEMA.complex(re float8, im float8) RETURNS DSTOOLS_SCHEMA.complex LANGUAGE C IMMUTABLE STRICT
 AS  'MODULE_PATHNAME','construct_complex'; 
-COMMENT ON FUNCTION DSTOOLS_SCHEMA.construct_complex(float8, float8)  IS 'constructs a complex number with given magnitude and phase';
+COMMENT ON FUNCTION DSTOOLS_SCHEMA.complex(float8, float8)  IS 'constructs a complex number with given magnitude and phase';
 
 CREATE FUNCTION DSTOOLS_SCHEMA.complex_trig(re float8, im float8) RETURNS DSTOOLS_SCHEMA.complex LANGUAGE C IMMUTABLE STRICT 
 	AS  'MODULE_PATHNAME','construct_complex_trig';

@@ -17,3 +17,5 @@ modules:
       depends: ['common']
     - name: complex
       depends: ['common']
+    - name: plr_placeholder
+      depends: ['common'] 
