@@ -2,6 +2,97 @@
  *@addtogroup grp_complexnumbers
  *@about 
  *Implementation of a user-defined Complex type.
+ *@par Examples
+ *<pre class="example">
+ *-- constructors
+ * SELECT COMPLEX(5,3);
+ * SELECT COMPLEX('5+3i');
+ *
+ *-- re
+ *SELECT re(COMPLEX(5, 3));
+ *
+ *-- im
+ *SELECT im(COMPLEX(5, 3));
+ *
+ *-- abs
+ *SELECT abs(COMPLEX(4, 3)); 
+ *
+ *-- radians
+ *SELECT radians(COMPLEX(1, sqrt(3)));
+ *
+ *-- conj
+ *SELECT conj(COMPLEX(5,3));
+ *
+ *-- unary plus
+ *SELECT +(COMPLEX(5, 3));
+ *
+ *-- unary minus
+ *SELECT -(COMPLEX(5, 3));
+ *
+ *-- plus
+ *SELECT COMPLEX(3, 5) + COMPLEX(6, 7);
+ *
+ *-- minus
+ *SELECT COMPLEX(3, 5) - COMPLEX(6, 7);
+ *
+ *-- multiply
+ *SELECT COMPLEX(3, 5) * COMPLEX(6, 7);
+ *
+ *-- divide
+ *SELECT COMPLEX(2,2)/COMPLEX(1,1);
+ *
+ *-- @ (absolute value)
+ *SELECT @(COMPLEX(5,3);
+ *
+ *-- pow and ^
+ *SELECT COMPLEX(1,sqrt(3))^3;
+ *
+ *-- sqrt
+ *SELECT sqrt(COMPLEX(5,3));
+ *
+ *-- cbrt
+ *SELECT cbrt(COMPLEX(5,3));
+ *
+ *-- degrees
+ *SELECT degrees(COMPLEX(5,3));
+ *
+ *-- exp
+ *SELECT exp(COMPLEX(5,3));
+ *
+ *-- ln
+ *SELECT ln(COMPLEX(5,3));
+ *
+ *-- log10
+ *SELECT log(COMPLEX(5,3));
+ *
+ *-- acos
+ *SELECT acos(COMPLEX(5,3));
+ *
+ *-- asin
+ *SELECT asin(COMPLEX(5,3));
+ *
+ *-- atan
+ *SELECT atan(COMPLEX(5,3));
+ *
+ *-- cos
+ *SELECT cos(COMPLEX(5,3));
+ *
+ *-- sin
+ *SELECT sin(COMPLEX(5,3));
+ *
+ *-- cot
+ *SELECT cot(COMPLEX(5,3));
+ *
+ *-- tan
+ *SELECT tan(COMPLEX(5,3));
+ *
+ *-- type cast
+ *SELECT COMPLEX '5+3i' ^ '4'::int2;
+ *
+ *-- dot product
+ *SELECT dotproduct(ARRAY[COMPLEX(1,3),COMPLEX(5,7)], ARRAY[COMPLEX(2,4),COMPLEX(6,8)]);
+ *
+ *</pre>
  *@par Related Topics
  *
  *File complex_type.sql_in, source file for all overloaded forms of the SQL functions
