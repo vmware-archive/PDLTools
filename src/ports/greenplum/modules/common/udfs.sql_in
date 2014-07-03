@@ -21,7 +21,22 @@ BEGIN
 END
 $BODY$ LANGUAGE plpgsql IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.dstools_version()
+
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.assert(actual boolean, expected boolean)
+  RETURNS boolean AS
+$BODY$
+BEGIN
+   PERFORM DSTOOLS_SCHEMA.assert( 
+               case when actual=True then 'True' else 'False' end, 
+               case when expected=True then 'True' else 'False' end, 
+               ''
+           );
+   RETURN TRUE;
+END
+$BODY$ LANGUAGE plpgsql IMMUTABLE;
+
+
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.version()
 RETURNS VARCHAR AS
 $BODY$
 SELECT 'DSTOOLS_VERSION'::VARCHAR;
