@@ -3,54 +3,98 @@
  *
  * @file edit_distance.sql_in
  *
- * @brief Implementationof Levenshtein, Demerau-Levenshtein, Optimal Alighment
+ * @brief Implementation of Levenshtein, Demerau-Levenshtein, Optimal Alighment
  *        and related edit distance metrics (and non-distance metrics).
  *
- * @sa For a brief introduction to distance metrics, see the
- *     module description \ref grp_distmetrics.
+ * @author Written by Michael Brand
+ * @date 19 Feb 2014
  *
  *//* ----------------------------------------------------------------------- */
 
 /**
+ *
+ * @fn edit_distance(str1 text, str2 text, ins_cost integer, del_cost integer, sub_cost integer, tp_cost integer, final_tp_cost integer, spec_sub_cost integer, spec_sub_from text, spec_sub_to text) RETURNS integer;
  * @addtogroup grp_editdist
  *
  * @brief An edit distance calculator.
-
+ *
  * A row function, taking two strings and calculating their edit distance.
  * Costs for various edit operations, including the transposition of
  * characters that are adjacent in both the input and output, are user-defined.
- * This function is "unsafe" in the sense that it assumes certain qualities
- * about the user-defined costs without checking them. Scroll below for a
+ * This function is "safe" in the sense that it verifies certain assumptions
+ * about the user-defined costs and throws an exception if they do not hold
+ * true, rather than returning an erroneous value. See below for a
  * complete list of these assumptions.
  *
- * @param str1, str2 (text) The two strings to be compared. Edits make str1 into str2.
- * @param ins_cost  (int) Cost to insert a character.
- * @param del_cost  (int) Cost to delete a character.
- * @param sub_cost  (int) Cost to substitute a character by another.
- * @param tp_cost   (int) Cost to transpose two adjacent characters.
- * @param final_tp_cost (int) Cost to transpose two adjacent characters, on the assumption
- *                that no other transformation occurs on these characters or
- *                anything between them throughout the editing process.
- * @param spec_sub_cost (int) Cost for special substitution.
- * @param spec_sub_from (text) String giving the "from" list for substitution of characters
- *                that receives special weighing spec_sub_cost.
- * @param spec_sub_to (text) String with "to" list corresponding to the previous "from".
+ * @param str1, str2 The two strings to be compared.
+ *                   Edits make \a str1 into \a str2.
+ * @param ins_cost   Cost to insert a character.
+ * @param del_cost   Cost to delete a character.
+ * @param sub_cost   Cost to substitute a character by another.
+ * @param tp_cost    Cost to transpose two adjacent characters.
+ * @param final_tp_cost Cost to transpose two adjacent characters, on the
+ *                assumption that no other transformation occurs on these
+ *                characters or anything between them throughout the editing
+ *                process.
+ * @param spec_sub_cost Cost for special substitution.
+ * @param spec_sub_from String giving the "from" list for substitution of
+ *                characters that receives special weighing \a spec_sub_cost.
+ * @param spec_sub_to String with "to" list corresponding to the previous
+ *                "from".
  *
- * @returns The edit distance (integer)
+ * @returns The edit distance
  *
- * @par Assumptions
- *   -# All costs are assumed to be nonnegative.
- *   -# final_tp_cost <= tp_cost
- *   -# ins_cost+del_cost <= 2*final_tp_cost
- *   -# max(sub_cost,special_sub_cost) <= final_tp_cost
- * When these assumptions are voided, the result may be incorrect.
- *
+ * @par Usage
+ * Given two strings, \a str1 and \a str2, it is possible to transform the former into
+ * the latter by a sequence of edit operations such as insertion of a new
+ * character, deletion of an existing character, substitution of one character by
+ * another and transposition of the order of two adjacent characters.
+ * 
+ * Suppose that each one of these operations is associated with a cost
+ * (in the form of a nonnegative integer), then the cost of a sequence of
+ * operations can be measured as the sum of the costs of its individual parts.
+ * 
+ * There may be many sequences transforming \a str1 to \a str2, each with its own
+ * cost. The minimum of these costs is called the "edit distance" from \a str1
+ * to \a str2.
+ * 
+ * The particular edit distance implementation given here allows each one of the
+ * operations discussed above to be assigned a cost. Furthermore, one can
+ * assign the following special costs:
+ * 
+ *   - \a final_tp_cost is the cost of transposing two adjacent characters, given that these characters are at no point involved in any other type of operation.
+ *   - \a spec_sub_cost is the cost of making a character-to-character substitution that is one of a special list of substitutions defined by \a spec_sub_from and \a spec_sub_to. A substitution is "special" if it takes the \a i'th character in \a spec_sub_from and transforms it to the \a i'th character in \a spec_sub_to. For example, if `spec_sub_from="OI"` and `spec_sub_to="01"`, then the list of special substitutions is the list of common character to numeral substitutions, namely the transformation of an `"O"` to a `"0"` and of an `"I"` to a `"1"`. Note that the list is directional and case sensitive. So, for example, the above does not cover `"o"`-to-`"0"` or `"0"`-to-`"O"` substitutions. If we had wanted to include these, they would have had to be added to the list explicitly.
+ * 
+ * The function makes the following assumptions:
+ *   - All costs are assumed to be nonnegative.
+ *   - `final_tp_cost <= tp_cost`
+ *   - `ins_cost+del_cost <= 2*final_tp_cost`
+ *   - `max(sub_cost,special_sub_cost) <= final_tp_cost`
+ * 
+ * When these assumptions are voided, an exception is thrown.
+ * 
  * @note Even though we use the term "distance", the result is not
  * necessarily a distance metric. It is only a distance metric if all of the
  * following conditions hold:
- *    -# final_tp_cost = tp_cost;
- *    -# ins_cost = del_cost; and
- *    -# the spec_sub_from and spec_sub_to lists are symmetric.
+ *   -# `final_tp_cost = tp_cost`;
+ *   -# `ins_cost = del_cost`; and
+ *   -# the `spec_sub_from` and `spec_sub_to` lists are symmetric.
+ * 
+ * @sa
+ * edit_distance(str1 text, str2 text, ins_cost integer, del_cost integer, sub_cost integer, tp_cost integer, final_tp_cost integer),
+ * edit_distance(str1 text, str2 text, ins_cost integer, del_cost integer, sub_cost integer, tp_cost integer)
+ * The variants of \t edit_distance that accept less parameters are equivalent
+ * to the long-form \t edit_distance, except for the fact that some
+ * operations (such as special substitution) cannot be used. The user can reach
+ * the same effect (although, perhaps with reduced run-time efficiency) by
+ * assigning to these operations sufficiently high costs.
+ * 
+ * For example, a user can make sure that the only type of transpositions used
+ * are "final" transpositions by assigning to \a tp_cost the value
+ * `len(str1)*del_cost+len(str2)*ins_cost`. Because there is always an
+ * insertion-deletion path from \a str1 to \a str2 of that cost, assigning this as the
+ * cost for a single transposition ensures that the optimal path from \a str1 to
+ * \a str2 can always be found without any use of a non-final transpositon.
  *
  * @par Examples
  * <pre class="example">
@@ -75,10 +119,12 @@
  *       9
  * (1 row)
  * </pre>
- * @par Related Topics
  *
- * File edit_distance.sql_in, source file for all overloaded forms of the SQL functions
- *
+ */
+
+/**
+ * @overload edit_distance(str1 text, str2 text, ins_cost integer, del_cost integer, sub_cost integer, tp_cost integer, final_tp_cost integer) RETURNS integer;
+ * @overload edit_distance(str1 text, str2 text, ins_cost integer, del_cost integer, sub_cost integer, tp_cost integer) RETURNS integer;
  */
 
 ------------------------------------------------------------------------

@@ -1,37 +1,67 @@
 /**
 @mainpage
-DS Tools is a library of reusable tools for use by Data Scientists. We at Pivotal Data Labs often supplement the functionality provided by [MADlib](http://madlib.net) - our opensource library of in-database machine learning algorithms, by writing `UDFs` in procedural languages such as <B>PL/Python</B>, <B>PL/R</B> and <B>PL/PERL</B>, to solve data science problems for our customers. <B>DSTools</B> is a collection of such libraries packaged for re-usability.
+<B>DS Tools</B> is a library of reusable tools for use by Data Scientists.
 
-@defgroup grp_distmetrics Distance Metric Implementations
-@{A collection of methods for computing various distance metrics @}
+It is provided and maintained by Pivotal Data Labs, and includes tools that
+facilitate Big Data analytics using the SQL command-line, when using
+Pivotal's GPDB. <B>DS Tools</B> includes convenience tools, parallelized
+algorithms and the <B>SUgAR</B> library (enabling second-order SQL parsing).
+
+<B>DS Tools</B> is a non-free library, including IP unique to Pivotal and
+patent-pending material.
+
+@defgroup grp_tools Tools
+@{A collection of convenience functions. @}
+    @defgroup grp_uriutils URI Utils
+    @ingroup grp_tools
+
     @defgroup grp_editdist Edit Distance
-    @ingroup grp_distmetrics
+    @ingroup grp_tools
 
-    @defgroup grp_levendist Levenshtein Distance
-    @ingroup grp_distmetrics
+    @defgroup grp_anonymization Anonymization
+    @ingroup grp_tools
 
-    @defgroup grp_demaraulevdist Demarau Levenshtein Distance
-    @ingroup grp_distmetrics
+    @defgroup grp_sessionization Sessionization
+    @ingroup grp_tools
 
-    @defgroup grp_optimaligndist Optimal Alignment Distance
-    @ingroup grp_distmetrics
+    @defgroup grp_complexnumbers Complex Numbers
+    @ingroup grp_tools
 
-@defgroup grp_ccomp Connected Components Implementation
-@{A collection of methods for computing the connected components in a graph @}
-    @defgroup grp_ccomp_hawq Connected Components in HAWQ
-    @ingroup grp_ccomp
-    @defgroup grp_ccomp_perl Connected Components in Perl
-    @ingroup grp_ccomp
+@defgroup grp_algorithms Algorithms
+@{A collection of machine-learning algorithms. @}
+    @defgroup grp_ccomp Connected Components
+    @ingroup grp_algorithms
 
-@defgroup grp_sessionize Sessionization
-@{A collection of methods for Sessionization of Webserver Logs @}
-    @defgroup grp_sessionize_url Sessionization
-    @ingroup grp_sessionize
+@defgroup grp_sugar SUgAR - Syntactic Upgrades for Analytics Routines
+@{A library of routines powered by second-order SQL parsing.}
+    @defgroup grp_framework The SUgAR Framework
+    @ingroup grp_sugar
 
-@defgroup grp_complexnumbers Complex Numbers
-@{Complex numbers are supported as User Defined Data Types in DSTools @}
+    @defgroup grp_opat "@" (Pseudo-operator)
+    @ingroup grp_sugar
 
-@defgroup grp_plrutils Placeholder for PL/R functions
-@{The data science team frequently write functions in PL/R. This is a placeholder for those functions @}
+    @defgroup grp_zscore zscore (Pseudo-window-function)
+    @ingroup grp_sugar
+
+    @defgroup grp_pvalue pvalue (Pseduo-window-function)
+    @ingroup grp_sugar
+
+    @defgroup grp_normalize normalize (Pseudo-window-function)
+    @ingorup grp_sugar
+
+    @defgroup grp_proportion proportion (Pseudo-window-function)
+    @ingroup grp_sugar
+
+    @defgroup grp_pivot01 pivot01 (Pseudofunction)
+    @ingroup grp_sugar
+
+    @defgroup grp_pivot pivot (Pseudo-aggregate)
+    @ingroup grp_sugar
+
+    @defgroup grp_glob glob (Pseudofunction)
+    @ingroup grp_sugar
+
+    @defgroup grp_helper Helper Routines
+    @ingroup grp_sugar
 
 */
