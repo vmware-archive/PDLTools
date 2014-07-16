@@ -11,12 +11,26 @@ algorithms and the <B>SUgAR</B> library (enabling second-order SQL parsing).
 patent-pending material.
 
 @defgroup grp_tools Tools
-@{A collection of convenience functions. @}
+@{
+    A collection of convenience functions.
+
     @defgroup grp_uriutils URI Utils
-    @ingroup grp_tools
 
     @defgroup grp_editdist Edit Distance
-    @ingroup grp_tools
+    @{
+        @brief Calculators for generalized edit distance metrics.
+
+        Implementation of Levenshtein, Demerau-Levenshtein, Optimal Alignment
+        and related edit distance metrics (and non-distance metrics).
+
+        (Written by [Michael Brand](mailto:mbrand@gopivotal.com), 19 Feb 2014.)
+        @defgroup grp_edit_distance edit_distance
+        @defgroup grp_edit_distance_unsafe edit_distance_unsafe
+        @defgroup grp_levenshtein_distance levenshtein_distance
+        @defgroup grp_demerau_levenshtein_distance demerau_levenshtein_distance
+        @defgroup grp_optimal_alignment_distance optimal_alignment_distance
+    @}
+@}
 
     @defgroup grp_anonymization Anonymization
     @ingroup grp_tools
