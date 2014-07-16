@@ -7,75 +7,250 @@ facilitate Big Data analytics using the SQL command-line, when using
 Pivotal's GPDB. <B>DS Tools</B> includes convenience tools, parallelized
 algorithms and the <B>SUgAR</B> library (enabling second-order SQL parsing).
 
-<B>DS Tools</B> is a non-free library, including IP unique to Pivotal and
-patent-pending material.
+<B>DS Tools</B> is a non-free library. It is proprietary to Pivotal and
+embodies intellectual property that belongs to Pivotal, including
+patent-pending material. It is provided to customers of Pivotal Data Labs as
+part of Pivotal's differentiated Data Science services. PDL's <B>DS Tools</B>
+customers are granted copyright and a license for their own internal use.
 
-@defgroup grp_tools Tools
+Call any function without parameters (or with the single parameter
+<code>'usage'</code>, as a string) for online help. Use
+<code>"dstools_version()"</code> to get the library's version number.
+
+@defgroup grp_tools_module Tools
 @{
-    A collection of convenience functions.
+A collection of convenience functions.
 
     @defgroup grp_uriutils URI Utils
+    @{
+        @brief A set of utilities for parsing and extracting URIs from text.
+
+A set of utilities for parsing and extracting URIs from text.
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 22 Aug 2013, wrapping functionality from the <code>uriparser</code> library [under new BSD license].)
+
+        @sa Module source file: uri_utils.sql_in.
+
+        @prereq external library: uriparser
+
+        @defgroup grp_uri_type uri_type (Type)
+        @defgroup grp_uri_array_type uri_array_type (Type)
+        @defgroup grp_parse_uri parse_uri
+        @defgroup grp_extract_uri extract_uri
+        @defgroup grp_parse_domain parse_domain
+    @}
 
     @defgroup grp_editdist Edit Distance
     @{
         @brief Calculators for generalized edit distance metrics.
 
-        Implementation of Levenshtein, Demerau-Levenshtein, Optimal Alignment
-        and related edit distance metrics (and non-distance metrics).
+Implementation of Levenshtein, Demerau-Levenshtein, Optimal Alignment
+and related edit distance metrics (and non-distance metrics).
 
-        (Written by [Michael Brand](mailto:mbrand@gopivotal.com), 19 Feb 2014.)
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 19 Feb 2014.)
+
+        @sa Module source file: edit_distance.sql_in.
+
         @defgroup grp_edit_distance edit_distance
         @defgroup grp_edit_distance_unsafe edit_distance_unsafe
         @defgroup grp_levenshtein_distance levenshtein_distance
         @defgroup grp_demerau_levenshtein_distance demerau_levenshtein_distance
         @defgroup grp_optimal_alignment_distance optimal_alignment_distance
     @}
-@}
 
     @defgroup grp_anonymization Anonymization
-    @ingroup grp_tools
+    @{
+        @brief Implementation of anonymization utility.
+
+Implementation of anonymization utility.
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 9 Dec 2013.)
+
+        @sa Module source file: anonymization.sql_in.
+
+        @defgroup grp_create_anonymization_table create_anonymization_table
+        @defgroup grp_anonymize anonymize
+        @defgroup grp_deanonymize deanonymize
+    @}
 
     @defgroup grp_sessionization Sessionization
-    @ingroup grp_tools
+    @{
+        @brief Utility to partition event streams into sessions by timeouts and identifiers.
+
+Utility to partition event streams into sessions by timeouts and identifiers.
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 22 Aug 2013, based on code by Jin Yu.)
+        
+        @sa Module source file: session.sql_in.
+
+        @defgroup grp_session_split session_split
+    @}
 
     @defgroup grp_complexnumbers Complex Numbers
-    @ingroup grp_tools
+    @{
+        @brief Implementation of a user-defined Complex type.
 
-@defgroup grp_algorithms Algorithms
-@{A collection of machine-learning algorithms. @}
+Implementation of a user-defined Complex type.
+
+(Written by Kevin Yun Liu, 1 Apr 2012. Adapted for DS Tools by [Srivatsan Ramanujam](mailto:sramanujam@gopivotal.com).)
+
+        @sa Module source file: complex_type.sql_in.
+
+        @defgroup grp_complex complex (Type)
+    @}
+@}
+
+@defgroup grp_algorithms_module Algorithms
+@{
+A collection of machine-learning algorithms.
+
     @defgroup grp_ccomp Connected Components
-    @ingroup grp_algorithms
+    @{
+        @brief Implementation of (patent pending) connected components algorithm.
 
-@defgroup grp_sugar SUgAR - Syntactic Upgrades for Analytics Routines
-@{A library of routines powered by second-order SQL parsing.}
-    @defgroup grp_framework The SUgAR Framework
-    @ingroup grp_sugar
+Implementation of (patent pending) connected components algorithm.
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 14 Nov 2012.)
+
+        @sa Module source files: connected_components_perl.sql_in, connected_components_hawq.sql_in.
+
+        @defgroup grp_connected_components connected_components
+        @defgroup grp_connected_components_no_udfs connected_components_no_udfs
+    @}
+@}
+
+@defgroup grp_sugar_module SUgAR - Syntactic Upgrades for Analytics Routines
+@{
+A library of routines powered by second-order SQL parsing.
+
+    @sa Module source file: sugar.sql_in.
+
+    @defgroup grp_sugar_framework The SUgAR Framework
+    @{
+        @brief What SUgAR is, how to use and how to extend it.
+
+What SUgAR is, how to use and how to extend it.
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+
+        @defgroup grp_sugar_introduction Introduction
+        @{
+            @brief SUgAR overview.
+        @}
+
+        @defgroup grp_sugar sugar
+        @{
+            @brief The "sugar" function, the main function of SUgAR.
+        @}
+
+        @defgroup grp_sugar_db sugar_db (Table)
+        @{
+            @brief The SUgAR function database.
+        @}
+
+        @defgroup grp_sugar_help_db sugar_help_db (Table)
+        @{
+            @brief SUgAR's built-in documentation.
+        @}
+    @}
 
     @defgroup grp_opat "@" (Pseudo-operator)
-    @ingroup grp_sugar
+    @{
+        @brief A quick, easy shorthand array_agg variant, to make UDFs into UDWFs.
+
+A quick, easy shorthand array_agg variant, to make UDFs into UDWFs.
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+
+    @}
 
     @defgroup grp_zscore zscore (Pseudo-window-function)
-    @ingroup grp_sugar
+    @{
+        @brief Calculate the z-score (i.e. the standardized variable).
+
+Calculate the z-score (i.e. the standardized variable).
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+
+    @}
 
     @defgroup grp_pvalue pvalue (Pseduo-window-function)
-    @ingroup grp_sugar
+    @{
+        @brief Calculate the pvalue (i.e. the cdf of the z-score).
+
+Calculate the pvalue (i.e. the cdf of the z-score).
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+
+    @}
 
     @defgroup grp_normalize normalize (Pseudo-window-function)
-    @ingorup grp_sugar
+    @{
+        @brief Translate column values to the range \f$[0,1]\f$.
+
+Translate column values to the range \f$[0,1]\f$.
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+
+    @}
 
     @defgroup grp_proportion proportion (Pseudo-window-function)
-    @ingroup grp_sugar
+    @{
+        @brief Normalize the column values to sum to 1.
+
+Normalize the column values to sum to 1.
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+
+    @}
 
     @defgroup grp_pivot01 pivot01 (Pseudofunction)
-    @ingroup grp_sugar
+    @{
+        @brief Make 0/1 columns out of a categorical column (i.e. dummy variable generation).
+
+Make 0/1 columns out of a categorical column (i.e. dummy variable generation).
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+
+    @}
 
     @defgroup grp_pivot pivot (Pseudo-aggregate)
-    @ingroup grp_sugar
+    @{
+        @brief Cross-tabulate one column according to another.
+
+Cross-tabulate one column according to another.
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+
+    @}
 
     @defgroup grp_glob glob (Pseudofunction)
-    @ingroup grp_sugar
+    @{
+        @brief Glob the names of table columns.
+
+Glob the names of table columns.
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 26 Jun 2014.)
+
+    @}
 
     @defgroup grp_helper Helper Routines
-    @ingroup grp_sugar
+    @{
+        @brief Various convenience functions, used or useful with SUgAR.
+
+Various convenience functions, used or useful with SUgAR.
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+
+        @defgroup grp_proportional_trans proportional_trans
+        @defgroup grp_invprop_trans invprop_trans
+        @defgroup grp_clamp clamp
+        @defgroup grp_all_vals all_vals
+        @defgroup grp_freq_vals freq_vals
+        @defgroup grp_all_but_one all_but_one
+        @defgroup grp_choose_any choose_any (Aggregate)
+        @defgroup grp_unique_element unique_element (Aggregate)
+    @}
+@}
 
 */

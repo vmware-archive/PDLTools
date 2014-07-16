@@ -24,6 +24,7 @@
 </ul>
 </div>
 
+@about
 A row function, taking two strings and calculating their edit distance.
 Costs for various edit operations, including the transposition of
 characters that are adjacent in both the input and output, are user-defined.
@@ -74,7 +75,7 @@ RETURNS integer;
 @returns The edit distance.
 
 @anchor edit_distance_usage
-@par Usage
+@usage
 Given two strings, \a str1 and \a str2, it is possible to transform the former into
 the latter by a sequence of edit operations such as insertion of a new
 character, deletion of an existing character, substitution of one character by
@@ -124,7 +125,7 @@ cost for a single transposition ensures that the optimal path from \a str1 to
 \a str2 can always be found without any use of a non-final transpositon.
 
 @anchor edit_distance_example
-@par Example
+@examp
 @verbatim
 user=# SELECT edit_distance('demerau','levenshtein',1,1,1,1,1,1,'01OIIL','OI01LI');
 
@@ -151,6 +152,7 @@ user=# SELECT edit_distance('demerau','levenshtein',1,1,1,1,1,1,'01OIIL','OI01LI
 </ul>
 </div>
 
+@about
 A row function, taking two strings and calculating their edit distance.
 Costs for various edit operations, including the transposition of
 characters that are adjacent in both the input and output, are user-defined.
@@ -200,7 +202,7 @@ RETURNS integer;
 @returns The edit distance.
 
 @anchor edit_distance_unsafe_usage
-@par Usage
+@usage
 Given two strings, \a str1 and \a str2, it is possible to transform the former into
 the latter by a sequence of edit operations such as insertion of a new
 character, deletion of an existing character, substitution of one character by
@@ -250,7 +252,7 @@ cost for a single transposition ensures that the optimal path from \a str1 to
 \a str2 can always be found without any use of a non-final transpositon.
 
 @anchor edit_distance_unsafe_example
-@par Example
+@examp
 @verbatim
 user=# SELECT edit_distance_unsafe('demerau','levenshtein',1,1,1,
                                    1,1,1,'01OIIL','OI01LI');
@@ -381,6 +383,7 @@ LANGUAGE C IMMUTABLE STRICT;
 </ul>
 </div>
 
+@about
 A row function, taking two strings and calculating their Levenshtein distance.
 
 @anchor levenshtein_distance_syntax
@@ -396,7 +399,7 @@ RETURNS integer;
 @returns The Levenshtein distance between the two strings.
 
 @anchor levenshtein_distance_usage
-@par Usage
+@usage
 Given two strings, \a str1 and \a str2, it is possible to transform the former into
 the latter by a sequence of character insertions,
 deletions and substitutions.
@@ -405,7 +408,7 @@ The Levenshtein distance is the minimum number of such edit operations that
 is required to make \a str1 into \a str2.
 
 @anchor levenshtein_distance_example
-@par Example
+@examp
 @verbatim
 user=# SELECT levenshtein_distance('demerau','levenshtein');
 
@@ -440,6 +443,7 @@ LANGUAGE C IMMUTABLE STRICT;
 </ul>
 </div>
 
+@about
 A row function, taking two strings and calculating their Demerau-Levenshtein
 distance.
 
@@ -456,7 +460,7 @@ RETURNS integer;
 @returns The Demerau-Levenshtein distance between the two strings.
 
 @anchor demerau_levenshtein_distance_usage
-@par Usage
+@usage
 Given two strings, \a str1 and \a str2, it is possible to transform the former into
 the latter by a sequence of character insertions,
 deletions, substitutions and transposition of pairs of adjacent characters.
@@ -465,7 +469,7 @@ The Demerau-Levenshtein distance is the minimum number of such edit operations
 that is required to make \a str1 into \a str2.
 
 @anchor demerau_levenshtein_distance_example
-@par Example
+@examp
 @verbatim
 user=# SELECT demerau_levenshtein_distance('demerau','levenshtein');
 
@@ -500,6 +504,7 @@ LANGUAGE C IMMUTABLE STRICT;
 </ul>
 </div>
 
+@about
 A row function, taking two strings and calculating their Optimal Alignment
 distance.
 
@@ -516,7 +521,7 @@ RETURNS integer;
 @returns The Optimal Alignment distance between the two strings.
 
 @anchor optimal_alignment_distance_usage
-@par Usage
+@usage
 Given two strings, \a str1 and \a str2, it is possible to transform the former into
 the latter by a sequence of character insertions,
 deletions, substitutions and the transposition of pairs of adjacent characters,
@@ -527,7 +532,7 @@ The Optimal Alignment distance is the minimum number of such edit operations
 that is required to make \a str1 into \a str2.
 
 @anchor optimal_alignment_distance_example
-@par Example
+@examp
 @verbatim
 user=# SELECT optimal_alignment_distance('demerau','levenshtein');
 
