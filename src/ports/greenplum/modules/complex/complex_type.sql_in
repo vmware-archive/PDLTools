@@ -1,101 +1,131 @@
+/* ----------------------------------------------------------------------- *//**
+
+@file complex_type.sql_in
+
+@brief Implementation of a user-defined Complex type.
+
+@author Written by Kevin Yun Liu. Adapted for DS Tools by Srivatsan Ramanujam.
+@date 1 Apr 2012
+
+ *//* ----------------------------------------------------------------------- */
+
+
 /**
- *@addtogroup grp_complexnumbers
- *@about 
- *Implementation of a user-defined Complex type.
- *@par Examples
- *<pre class="example">
- *-- constructors
- * SELECT COMPLEX(5,3);
- * SELECT COMPLEX('5+3i');
- *
- *-- re
- *SELECT re(COMPLEX(5, 3));
- *
- *-- im
- *SELECT im(COMPLEX(5, 3));
- *
- *-- abs
- *SELECT abs(COMPLEX(4, 3)); 
- *
- *-- radians
- *SELECT radians(COMPLEX(1, sqrt(3)));
- *
- *-- conj
- *SELECT conj(COMPLEX(5,3));
- *
- *-- unary plus
- *SELECT +(COMPLEX(5, 3));
- *
- *-- unary minus
- *SELECT -(COMPLEX(5, 3));
- *
- *-- plus
- *SELECT COMPLEX(3, 5) + COMPLEX(6, 7);
- *
- *-- minus
- *SELECT COMPLEX(3, 5) - COMPLEX(6, 7);
- *
- *-- multiply
- *SELECT COMPLEX(3, 5) * COMPLEX(6, 7);
- *
- *-- divide
- *SELECT COMPLEX(2,2)/COMPLEX(1,1);
- *
- *-- @ (absolute value)
- *SELECT @(COMPLEX(5,3);
- *
- *-- pow and ^
- *SELECT COMPLEX(1,sqrt(3))^3;
- *
- *-- sqrt
- *SELECT sqrt(COMPLEX(5,3));
- *
- *-- cbrt
- *SELECT cbrt(COMPLEX(5,3));
- *
- *-- degrees
- *SELECT degrees(COMPLEX(5,3));
- *
- *-- exp
- *SELECT exp(COMPLEX(5,3));
- *
- *-- ln
- *SELECT ln(COMPLEX(5,3));
- *
- *-- log10
- *SELECT log(COMPLEX(5,3));
- *
- *-- acos
- *SELECT acos(COMPLEX(5,3));
- *
- *-- asin
- *SELECT asin(COMPLEX(5,3));
- *
- *-- atan
- *SELECT atan(COMPLEX(5,3));
- *
- *-- cos
- *SELECT cos(COMPLEX(5,3));
- *
- *-- sin
- *SELECT sin(COMPLEX(5,3));
- *
- *-- cot
- *SELECT cot(COMPLEX(5,3));
- *
- *-- tan
- *SELECT tan(COMPLEX(5,3));
- *
- *-- type cast
- *SELECT COMPLEX '5+3i' ^ '4'::int2;
- *
- *-- dot product
- *SELECT dotproduct(ARRAY[COMPLEX(1,3),COMPLEX(5,7)], ARRAY[COMPLEX(2,4),COMPLEX(6,8)]);
- *
- *</pre>
- *@par Related Topics
- *
- *File complex_type.sql_in, source file for all overloaded forms of the SQL functions
+@addtogroup grp_complex
+
+@brief Implementation of a user-defined Complex type.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#complex_usage">Usage</a>
+</ul>
+</div>
+
+@about
+A complex number is represented as \f$ a+b\text{i} \f$, where \a a and \a b
+are double precision floating point numbers (\c FLOAT8) and represent that
+number's real and imaginary part, respectively.
+
+@anchor complex_usage
+@usage
+The following are functionalities enabled by the \c Complex type.
+@verbatim
+-- Constructors.
+ SELECT COMPLEX(5,3);
+ SELECT COMPLEX('5+3i');
+
+-- Retrieving a complex number's real part.
+SELECT re(COMPLEX(5, 3));
+
+-- Retrieving a complex number's imaginary part.
+SELECT im(COMPLEX(5, 3));
+
+-- Absolute value.
+SELECT abs(COMPLEX(4, 3)); 
+
+-- Angle from the positive real line in radians.
+SELECT radians(COMPLEX(1, sqrt(3)));
+
+-- Complex conjugation.
+SELECT conj(COMPLEX(5,3));
+
+-- Unary plus.
+SELECT +(COMPLEX(5, 3));
+
+-- Unary minus.
+SELECT -(COMPLEX(5, 3));
+
+-- Addition.
+SELECT COMPLEX(3, 5) + COMPLEX(6, 7);
+
+-- Subtraction.
+SELECT COMPLEX(3, 5) - COMPLEX(6, 7);
+
+-- Multiplication.
+SELECT COMPLEX(3, 5) * COMPLEX(6, 7);
+
+-- Division.
+SELECT COMPLEX(2,2)/COMPLEX(1,1);
+
+-- @ (Shorthand for absolute value).
+SELECT @(COMPLEX(5,3);
+
+-- Exponentiation, using either "pow" or "^".
+SELECT COMPLEX(1,sqrt(3))^3;
+SELECT pow(COMPLEX(1,sqrt(3)),3);
+
+-- Square root.
+SELECT sqrt(COMPLEX(5,3));
+
+-- Cubic root.
+SELECT cbrt(COMPLEX(5,3));
+
+-- Angle from the positive real line in degrees.
+SELECT degrees(COMPLEX(5,3));
+
+-- Exponent of a complex number.
+SELECT exp(COMPLEX(5,3));
+
+-- Natural logarithm.
+SELECT ln(COMPLEX(5,3));
+
+-- Base 10 logarithm.
+SELECT log(COMPLEX(5,3));
+
+-- Inverse cosine.
+SELECT acos(COMPLEX(5,3));
+
+-- Inverse sine.
+SELECT asin(COMPLEX(5,3));
+
+-- Inverse tangent.
+SELECT atan(COMPLEX(5,3));
+
+-- Cosine.
+SELECT cos(COMPLEX(5,3));
+
+-- Sine.
+SELECT sin(COMPLEX(5,3));
+
+-- Cotangent.
+SELECT cot(COMPLEX(5,3));
+
+-- Tangent.
+SELECT tan(COMPLEX(5,3));
+
+-- Type cast.
+SELECT COMPLEX '5+3i' ^ '4'::int2;
+
+-- Dot product.
+SELECT dotproduct(ARRAY[COMPLEX(1,3),COMPLEX(5,7)], ARRAY[COMPLEX(2,4),COMPLEX(6,8)]);
+@endverbatim
+
+@note Like all other DS Tools utilities, the complex data type is defined
+within the DS Tools schema.
+
+@warning The '@' operator is a standard PostgreSQL operator signifying absolute
+value. Note, however, that its usage conflicts with the '@' SUgAR operator.
+When using SUgAR, opt for \c 'abs', instead.
  */
 
 CREATE TYPE DSTOOLS_SCHEMA.complex;
@@ -366,8 +396,8 @@ CREATE FUNCTION DSTOOLS_SCHEMA.numeric2point("numeric") RETURNS DSTOOLS_SCHEMA.c
 COMMENT ON FUNCTION DSTOOLS_SCHEMA.numeric2point("numeric")  IS '(internal) type cast from numeric to complex';
 
 
-/**
- * Operators on Complex numbers
+/*
+ Operators on Complex numbers
  */
 CREATE OPERATOR DSTOOLS_SCHEMA.=	 (PROCEDURE = DSTOOLS_SCHEMA.complex_eq	,  LEFTARG=DSTOOLS_SCHEMA.complex , RIGHTARG = DSTOOLS_SCHEMA.complex,  RESTRICT=eqsel, JOIN=eqjoinsel);
 

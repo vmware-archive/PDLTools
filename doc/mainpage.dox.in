@@ -31,7 +31,8 @@ A set of utilities for parsing and extracting URIs from text.
 
         @sa Module source file: uri_utils.sql_in.
 
-        @prereq external library: uriparser
+        @prereq
+External library: uriparser
 
         @defgroup grp_uri_type uri_type (Type)
         @defgroup grp_uri_array_type uri_array_type (Type)
@@ -68,6 +69,9 @@ Implementation of anonymization utility.
 
         @sa Module source file: anonymization.sql_in.
 
+        @prereq
+PL/pgSQL, PL/PythonU
+
         @defgroup grp_create_anonymization_table create_anonymization_table
         @defgroup grp_anonymize anonymize
         @defgroup grp_deanonymize deanonymize
@@ -82,6 +86,9 @@ Utility to partition event streams into sessions by timeouts and identifiers.
 (Written by [Michael Brand](mailto:mbrand@gopivotal.com), 22 Aug 2013, based on code by Jin Yu.)
         
         @sa Module source file: session.sql_in.
+
+        @prereq
+PL/Perl
 
         @defgroup grp_session_split session_split
     @}
@@ -108,11 +115,29 @@ A collection of machine-learning algorithms.
     @{
         @brief Implementation of (patent pending) connected components algorithm.
 
-Implementation of (patent pending) connected components algorithm.
+Two implementations of (patent pending) connected components algorithm.
+Use \ref grp_connected_components for increased speed on GPDB, when PL/Perl is
+available. The variant \ref grp_connected_components_no_udfs was originally
+programmed for an old version of HAWQ that did not allow user-defined
+functions. It works in pure PL/pgSQL, without UDAs or sub-function calls.
+However, it requires roughly twice as many passes over the data.
+Today, its main advantage is
+in that it can work on a wide variety of vertex ID types, whereas
+\ref grp_connected_components can only run on \c INTEGER and \c BIGINT vertices.
+
+Having said this, timing measurements are inconclusive as to whether the
+"no udf" version really is substantially slower than the PL/Perl version, and
+some measurements seem to even imply the reverse.
+These measurements have not been investigated closely. In both implementations,
+all heavy lifting is done in SQL.
 
 (Written by [Michael Brand](mailto:mbrand@gopivotal.com), 14 Nov 2012.)
 
         @sa Module source files: connected_components_perl.sql_in, connected_components_hawq.sql_in.
+
+        @prereq
+PL/Perl (function \ref grp_connected_components only),
+PL/pgSQL (function \ref grp_connected_components_no_udfs only)
 
         @defgroup grp_connected_components connected_components
         @defgroup grp_connected_components_no_udfs connected_components_no_udfs
@@ -125,6 +150,9 @@ A library of routines powered by second-order SQL parsing.
 
     @sa Module source file: sugar.sql_in.
 
+    @prereq
+MADlib (\ref grp_pvalue only)
+
     @defgroup grp_sugar_framework The SUgAR Framework
     @{
         @brief What SUgAR is, how to use and how to extend it.
@@ -134,104 +162,25 @@ What SUgAR is, how to use and how to extend it.
 (Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
 
         @defgroup grp_sugar_introduction Introduction
-        @{
-            @brief SUgAR overview.
-        @}
-
         @defgroup grp_sugar sugar
-        @{
-            @brief The "sugar" function, the main function of SUgAR.
-        @}
-
         @defgroup grp_sugar_db sugar_db (Table)
-        @{
-            @brief The SUgAR function database.
-        @}
-
         @defgroup grp_sugar_help_db sugar_help_db (Table)
-        @{
-            @brief SUgAR's built-in documentation.
-        @}
     @}
 
-    @defgroup grp_opat "@" (Pseudo-operator)
+    @defgroup grp_sugar_funcs SUgAR Pseudofunctions
     @{
-        @brief A quick, easy shorthand array_agg variant, to make UDFs into UDWFs.
+        @brief The SUgAR pseudofunctions available out-of-the-box.
 
-A quick, easy shorthand array_agg variant, to make UDFs into UDWFs.
+The SUgAR pseudofunctions available out-of-the-box.
 
-(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
-
-    @}
-
-    @defgroup grp_zscore zscore (Pseudo-window-function)
-    @{
-        @brief Calculate the z-score (i.e. the standardized variable).
-
-Calculate the z-score (i.e. the standardized variable).
-
-(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
-
-    @}
-
-    @defgroup grp_pvalue pvalue (Pseduo-window-function)
-    @{
-        @brief Calculate the pvalue (i.e. the cdf of the z-score).
-
-Calculate the pvalue (i.e. the cdf of the z-score).
-
-(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
-
-    @}
-
-    @defgroup grp_normalize normalize (Pseudo-window-function)
-    @{
-        @brief Translate column values to the range \f$[0,1]\f$.
-
-Translate column values to the range \f$[0,1]\f$.
-
-(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
-
-    @}
-
-    @defgroup grp_proportion proportion (Pseudo-window-function)
-    @{
-        @brief Normalize the column values to sum to 1.
-
-Normalize the column values to sum to 1.
-
-(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
-
-    @}
-
-    @defgroup grp_pivot01 pivot01 (Pseudofunction)
-    @{
-        @brief Make 0/1 columns out of a categorical column (i.e. dummy variable generation).
-
-Make 0/1 columns out of a categorical column (i.e. dummy variable generation).
-
-(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
-
-    @}
-
-    @defgroup grp_pivot pivot (Pseudo-aggregate)
-    @{
-        @brief Cross-tabulate one column according to another.
-
-Cross-tabulate one column according to another.
-
-(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
-
-    @}
-
-    @defgroup grp_glob glob (Pseudofunction)
-    @{
-        @brief Glob the names of table columns.
-
-Glob the names of table columns.
-
-(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 26 Jun 2014.)
-
+        @defgroup grp_opat "@" (Pseudo-operator)
+        @defgroup grp_zscore zscore (Pseudo-window-function)
+        @defgroup grp_pvalue pvalue (Pseudo-window-function)
+        @defgroup grp_normalize normalize (Pseudo-window-function)
+        @defgroup grp_proportion proportion (Pseudo-window-function)
+        @defgroup grp_pivot01 pivot01 (Pseudofunction)
+        @defgroup grp_pivot pivot (Pseudo-aggregate)
+        @defgroup grp_glob glob (Pseudofunction)
     @}
 
     @defgroup grp_helper Helper Routines

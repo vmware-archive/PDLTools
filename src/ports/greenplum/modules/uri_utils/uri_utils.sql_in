@@ -23,7 +23,7 @@
 
 @about
 A URI (URL or URN) is represented by its components:
-<code>scheme://userInfo@hostText:portText/path?query#fragment</code>.
+<code>scheme://userInfo\@hostText:portText/path?query#fragment</code>.
 
 @anchor uri_type_syntax
 @par Syntax
@@ -412,7 +412,7 @@ user=# SELECT parse_domain('www.gopivotal.com');
 ---------------------
  {www,gopivotal,com}
 (1 row)
-@endvarbatim
+@endverbatim
  */
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.parse_domain(domainname text)
