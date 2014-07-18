@@ -59,15 +59,19 @@ Installation
     Next, you will have to install the SQL UDFs in the target database.
 
     To install dstools into a database of your choice, run the following (consider adding `dspack` in your PATH):
-        `$GPHOME/dstools/bin/dspack install -s <schema name> -c <username>@<hostname>:<port>/<database name>`
+        `$GPHOME/dstools/bin/dspack install [-s <schema name>] [-S <SUgAR schema name>] [-M <MADlib schema name>] -c <username>@<hostname>:<port>/<database name>`
     
     For example:
         `$GPHOME/dstools/bin/dspack install -s dstools -c gpadmin@mdw:5432/testdb`
+
+    The default schemas are `dstools` for the main schema, `sugarlib` for SUgAR and `madlib` to search for MADlib objects.
 
 Running Install Check Tests
 =============================
     
     Post installation, you can run the unit tests in DSTools with the install-check command like so:
         `$GPHOME/dstools/bin/dspack install-check -s dstools -c gpadmin@mdw:5432/testdb`
+
+    Parameters for `install-check` are the same as parameters for `install`.
 
     If any of the tests fail, you will see an error message displayed on your console.
