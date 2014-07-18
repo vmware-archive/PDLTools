@@ -1,301 +1,1703 @@
--- File: sugar.sql
--- The SUgAR library: Syntactic Up-grades for Analytic Routines
--- by Michael Brand
--- Mar 3, 2013
 
-/*
-  The SUgAR library
-  Syntactic Up-grade for Analytics Routines
-  by Michael Brand
-  Mar 3, 2013
+/* ----------------------------------------------------------------------- *//**
 
-  The SUgAR library is a tool for providing second-order parsing of your SQL
-  command-line, a capability that is much-needed for analytics. With this
-  capability, queries can become easier to write, more reusable and prettier.
-  SUgAR, therefore, provides much more than just syntactic sugaring.
+@file sugar.sql_in
 
-  Examples of the power of second-order parsing, as provided by SUgAR, include
-  full-featured pivoting, the ability to write UDWFs (user-defined window
-  functions, a feature currently missing from GPDB) and the ability to easily
-  utilize your own UDFs (user-defined functions) as UDWFs, regardless of the
-  language in which they were implemented.
+@brief The SUgAR library: Syntactic Up-grades for Analytic Routines.
 
-  To perform this, SUgAR provides one main function ('sugar'), two database
-  tables ('sugar_db' and 'sugar_help_db') and several convenience functions.
+@author Written by Michael Brand
+@date 3 Mar 2013
+
+ *//* ----------------------------------------------------------------------- */
+
+/**
+@addtogroup grp_sugar
+
+@brief SUgAR: Syntactic Up-grade for Analytic Routines
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#sugar_syntax">Syntax</a>
+<li class="level1"><a href="#sugar_usage">Usage</a>
+<li class="level1"><a href="#sugar_example">Example</a>
+</ul>
+</div>
+
+@about
+\c 'sugar' is the main function for the SUgAR library. It accepts a textual
+parameter, and this parameter is expected to be a SQL query, possibly including
+special add-ons that SUgAR enables.
+
+@anchor sugar_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION sugar(orig_query VARCHAR) RETURNS TEXT;
+</pre>
+
+@param orig_query The SUgAR query to be executed.
+
+@returns
+SUgAR's return value is a text parameter, usually the empty string but
+may include usage messages from SUgAR if the user asks for these.
+
+@anchor sugar_usage
+@usage
+\c 'sugar' is the main function for the SUgAR library. It accepts a textual
+parameter, and this parameter is expected to be a SQL query, which is
+subsequently executed in the database.
+Before executing it, however, SUgAR performs shallow parsing of the SQL
+code, extracts function calls to functions which it recognizes and
+replaces them by dynamically-generated code. This second-order parsing
+supplements the underlying SQL syntax, which, natively, does not have
+such parsing abilities. The result is a far more powerful syntax, able
+to easily support common analytics activities (such as pivoting) that
+are notoriously difficult to support with native SQL.
+
+The functions that SUgAR recognizes, which we call 'SUgAR functions', are
+not part of the definition of the \c 'sugar' function. Rather, they are defined
+inside the tables \c sugar_db and and \c sugar_help_db. This makes SUgAR 100%
+extendable.
+
+Because SUgAR's functions can do things that normal SQL functions cannot,
+they are not, technically, functions. We refer to them as 'pseudofunctions'.
+However, we do distinguish between SUgAR functions that can appear in
+places where one would normally expect a function, those that can appear
+where one would normally expect an aggregate and those that can appear where
+one would normally expect a window function. We refer to these as
+pseudofunctions, pseudo-aggregates and pseudo-window-functions, respectively.
+We note that GPDB does not currently support user-defined window functions,
+so SUgAR's pseudo-window-functions are the only way to define such UDWFs,
+even though this particular SUgAR feature does not require breaking the
+SQL standard.
+
+@note
+A limitation when using SUgAR is that it cannot return tables.
+To use SUgAR effectively, the SQL query which is the parameter to
+the SUgAR function (we refer to it as the 'sugar-coated' query) should
+be a table creation query, rather than a \c SELECT query. Thus, in addition
+to the basic sugar-coating (enveloping your query inside a 'sugar(...)'
+string), usage of SUgAR typically involves the following idiom:
+@verbatim
+   DROP TABLE IF EXISTS outtable;
+   SELECT sugar('CREATE TABLE outtable AS ...');
+   SELECT * FROM outtable;
+@endverbatim
+
+@par Getting Help on SUgAR and the \c 'sugar' function
+All SQL functions in the SUgAR schema (except <code>'sugar_version()'</code>,
+aggregate functions and internal functions) can be called with no parameters
+or with the parameter '' for a brief usage message (unless this conflicts
+with their regular functionality), as well as with the single textual
+parameter \c 'usage' for their full documentation.
+In particular, this is true for \c 'sugar', the main function of the SUgAR
+library.
+
+The following are additional methods to get help regarding the SUgAR library,
+the \c 'sugar' function and the SUgAR pseudofunctions.
+
+<pre class="example">
+SELECT sugar();
+SELECT sugar('');
+</pre>
+A brief description of the \c 'sugar' function, including
+how to get further help.
+
+<pre class="example">
+SELECT sugar('about');
+</pre>
+Overview of the SUgAR library.
+
+<pre class="example">
+SELECT sugar('list');
+</pre>
+Listing of the various SUgAR pseudofunctions supported,
+with a brief apropos-style description of each.
+(Note that this function lists only pseudofunctions, not
+regular SQL functions. So, for example, to get help on
+the SQL function \c 'proportional_trans', use
+<code>"SELECT proportional_trans('usage');"</code>, instead.
+All (non-aggregate) SQL functions in the SUgAR library
+provide help when invoked with either no parameters or with
+the single textual parameter \c 'usage'.)
+
+<pre class='example'>
+SELECT sugar('list','\a func_pattern');
+</pre>
+With '\a func_pattern' being a pattern (possibly
+simply being the name of a pseudofunction), the function
+returns a brief apropos-style description of each
+SUgAR pseudofunction matching the pattern.
+The supported pattern format is the PostgreSQL \c 'LIKE'.
+
+<pre class="example">
+SELECT sugar('usage');
+</pre>
+A full description of the \c 'sugar' function, including
+usage examples.
+
+<pre class="example">
+SELECT sugar('usage','\a funcname');
+</pre>
+Get usage help on any particular pseduofunction.
+(In this case: \a funcname.)
+Use <code>"SELECT sugar('usage','sugar_db');"</code> and
+<code>"SELECT sugar('usage','sugar_help_db');"</code> to get usage
+help regarding the two database tables used by SUgAR and
+how to use these in order to write your own SUgAR
+extensions.
+
+<pre class="example">
+SELECT sugar_version();
+</pre>
+Get the version-string describing the version number of
+the SUgAR library.
+
+
+@par AN IMPORTANT NOTE REGARDING SCHEMA QUALIFIERS
+By default, all SUgAR's pseudofunctions, exactly like all other functions,
+must have full schema qualifications. So, for example, one would to use
+the SUgAR query
+
+@verbatim
+  CREATE TABLE outtable AS
+    SELECT patient_id AS id, name,
+      SUGAR_SCHEMA.pivot(diagnosis_code, patient_table, from_date,
+        SUGAR_SCHEMA.unique_element)
+    FROM patient_table GROUP BY (id,name)
+  DISTRIBUTED BY (id);
+@endverbatim
+
+rather than
+
+@verbatim
+  CREATE TABLE outtable AS
+    SELECT patient_id AS id, name,
+      pivot(diagnosis_code, patient_table, from_date,
+        unique_element)
+    FROM patient_table GROUP BY (id,name)
+  DISTRIBUTED BY (id);
+@endverbatim
+
+where \c SUGAR_SCHEMA is the schema housing the SUgAR library.
+This is consistent with the SQL method of keeping the namespace clean.
+However, it is possible to get SUgAR to recognize both the qualified and
+the unqualified pseudofunction names. The way to do so is to add
+\c SUGAR_SCHEMA to the search_path (again, consistent with standard SQL
+methods).
+
+Because SUgAR's typing is not consistent with SQL typing, it was not
+possible for SUgAR's schema resolution to be exactly identical to SQL's.
+For example, if \c SUGAR_SCHEMA is on the search_path after another schema
+that also defines \c 'pivot', SUgAR would nevertheless treat \c 'pivot' as the
+SUgAR pseudofunction, rather than the function appearing earlier on the
+path. The general rule is that SUgAR will only recognize the qualified
+names if \c SUGAR_SCHEMA is not on the path, but will recognize both versions
+of the names if it is on the path. The position of \c SUGAR_SCHEMA on the path
+does not change the treatment of pseudofunctions. For the purpose of
+pseudofunctions, \c SUGAR_SCHEMA is always treated as the first element on the
+path. (For regular functions appearing in \c SUGAR_SCHEMA, standard SQL rules
+apply, of course.)
+
+Note that in either case, SUgAR's name resolution is case insensitive.
+
+@anchor sugar_example
+@examp
+@verbatim
+user=# DROP TABLE IF EXISTS outtable;
+DROP TABLE
+user=#
+user=# SELECT sugar($$
+user$#   CREATE TABLE outtable AS
+user$#     SELECT x,
+user$#            zscore(x) AS col_zscore,
+user$#            zscore(x,PARTITION BY x%3) AS win_zscore
+user$#     FROM generate_series(1,10) x
+user$#     DISTRIBUTED RANDOMLY;
+user$# $$);
+ sugar 
+-------
+
+(1 row)
+
+user=# SELECT * FROM outtable ORDER BY x;
+ x  |       col_zscore        |       win_zscore        
+----+-------------------------+-------------------------
+  1 |     -1.4863010829205868 |     -1.1618950038622251
+  2 | -1.15601195338267862269 | -1.00000000000000000000
+  3 | -0.82572282384477044478 | -1.00000000000000000000
+  4 | -0.49543369430686226687 | -0.38729833462074168704
+  5 | -0.16514456476895408896 |  0.00000000000000000000
+  6 |  0.16514456476895408896 |  0.00000000000000000000
+  7 |  0.49543369430686226687 |  0.38729833462074168704
+  8 |  0.82572282384477044478 |  1.00000000000000000000
+  9 |  1.15601195338267862269 |  1.00000000000000000000
+ 10 |      1.4863010829205868 |      1.1618950038622251
+(10 rows)
+@endverbatim
+
+@sa grp_sugar_db, grp_sugar_help_db
+ */
+
+/**
+@addtogroup grp_opat
+
+@brief A quick, easy shorthand \c array_agg variant, to make UDFs into UDWFs.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#opat_syntax">Syntax</a>
+<li class="level1"><a href="#opat_usage">Usage</a>
+<li class="level1"><a href="#opat_example">Example</a>
+</ul>
+</div>
+
+@about
+A SUgAR pseudoaggregate, passing the values in a chosen column and window as an
+array.
+
+@anchor opat_syntax
+@par Syntax
+<pre class="syntax">
+\@(x,w)
+</pre>
+Aggregates the values of column \a x inside window \a w and returns these
+         as an array. \a "x" may be an expression.
+<pre class="syntax">
+\@(x)
+\@x
+</pre>
+When \a "w" is not specified, its value defaults to \c DEFAULT_WINDOW, which
+         should be defined in the same SUgAR query. If it is not defined, the
+         aggregation is performed over the entire column.
+
+@param x Value column to be aggregated.
+@param w Window to perform aggregation on.
+
+@anchor opat_usage
+@usage
+The purpose of this pseudoaggregate is to allow a user to conveniently pass
+columnar values into procedural languages, by aggregating them into arrays and
+sending them to the procedural language function call in a single invocation.
+In the procedural language function requires more than one parameter, the
+pseudoaggregate can be called separately for each parameter.
+
+The pseudoaggregate returns an array of column values. The order within the
+array is not guaranteed. However, several calls to this pseudoaggregate made
+in the same query and using the same choice of \a "w" are guaranteed to all
+return arrays in the same row-wise order. This feature, currently guaranteed by
+undocumented GPDB features, is what allows the pseudoaggregate to be used
+conveniently to prepare several parameters for sending to a single invocation
+of a procedural language call.
+
+Note that PL functions may not accept arrays with \c NULL values in them
+gracefully, so it is important to weed out the rows containing \c NULL values
+prior to aggregation. The '\@' operator will raise an exception if applied on
+a column of inputs that includes NULLs.
+
+The operator precedence of '\@' is fairly low, ensuring that '\@ x+3' means the
+same thing as '\@(x+3)', which is probably the correct interpretation. To
+override this behavior, simply use parentheses: '\@(x)+3'.
+
+@warning
+The '\@' SUgAR operator conflicts with the standard PostgreSQL '\@' operator
+whose meaning is absolute-value taking. When using SUgAR, opt for
+<code>abs()</code>, instead.
+
+@anchor opat_example
+@examp
+@verbatim
+user=# CREATE TABLE test_data
+user-# (fyear integer,firm float8,eps float8);
+CREATE TABLE
+user=# 
+user=# INSERT INTO test_data
+user-#   SELECT (b.f + 1) % 10 + 2000 AS fyear,
+user-#          floor((b.f+1)/10) + 50 AS firm,
+user-#          f::float8/100 + random()/10 AS eps
+user-#          FROM generate_series(-500,499,1) b(f);
+INSERT 0 1000
+user=#
+user=# -- We define a new procedural language function, to calculate
+user=# -- the slope of a linear model regression line. Most conveniently,
+user=# -- this function accepts its parameters in the form of two arrays.
+user=# CREATE OR REPLACE FUNCTION r_regr_slope(x float8[], y float8[])
+user-# RETURNS float8 AS $BODY$
+user$#   slope <- NA
+user$#   if (length(x)==9) try (slope <- lm(y ~ x)$coefficients[2])
+user$#     return(slope)
+user$# $BODY$ LANGUAGE plr;
+CREATE FUNCTION
+user=# 
+user=# -- By invoking the '@' pseudoaggregate, we can now instantly make
+user=# -- the newly-defined UDF "r_regr_slope" into either a window function
+user=# -- or an aggregate function.
+user=# SELECT sugar($SUGAR$
+user$#   CREATE TABLE outtable AS
+user$#     SELECT *, r_regr_slope(@eps, @lag_eps) AS slope_R FROM (
+user$#       SELECT firm, fyear, eps,
+user$#         lag(eps) OVER (PARTITION BY firm ORDER BY firm, fyear) AS lag_eps
+user$#       FROM test_data) AS a
+user$#     WHERE eps IS NOT NULL AND lag_eps IS NOT NULL
+user$#     WINDOW default_window AS (
+user$#       PARTITION BY firm ORDER BY firm, fyear ROWS 8 PRECEDING
+user$#     )
+user$#   DISTRIBUTED BY (fyear);
+user$# $SUGAR$);
+ sugar
+-------
+
+(1 row)
+@endverbatim
+
+The query creates a table, \c "outtable", containing for each firm and each
+year (\c "fyear"), in addition to its earnings per share (\c "eps") and its
+previous year's earnings per share (\c "lag_eps"), also the slope coefficient
+relating the firm's earnings per share with its previous year's earnings per
+share, as estimated over the current and 8 preceding years.
+
+@note
+-# The exclusion <code>"WHERE eps IS NOT NULL and lag_eps IS NOT NULL"</code>
+avoids the creation of \c NULL values in arrays. The function \c "r_regr_slope"
+would have balked at such inputs.
+-# The definition <code>"WINDOW default_window AS"</code> defines the window
+that \@eps and \@lag_eps work on. \c "DEFAULT_WINDOW", regardless of case,
+should be taken as a reserved word when using the '\@' pseudoaggregate. Had it
+not been defined anywhere within the SUgAR query, the aggregation would have
+been done over the entire column.
+-# Note that '\@eps' and '\@lag_eps' are guaranteed to have the same aggregation
+order, or else the \c "r_regr_slope" calculation would not have yielded the
+correct result.
+-# This example involves nested querying, running the function with an argument
+created on the fly (with a native window function), data partitioning, ordering,
+a rolling window, etc.. This is to demonstrate the fact that '\@' continues to
+work well even in complex situations.
+-# The example above was adopted from a blog entry by Joe Conway.
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+
+ */
+
+/**
+@addtogroup grp_zscore
+
+@brief Calculate the z-score (i.e. the standardized variable).
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#zscore_syntax">Syntax</a>
+<li class="level1"><a href="#zscore_example">Example</a>
+</ul>
+</div>
+
+@about
+A pseudo-window-function, calculating for each value its distance from the
+column (or window) mean in standard deviations.
+
+@anchor zscore_syntax
+@par Syntax
+<pre class="syntax">
+zscore(x)
+</pre>
+Distance of \a x from column mean in stddevs.
+<pre class="syntax">
+SUGAR_SCHEMA.zscore(x,w)
+</pre>
+<code>zscore(\a x)</code> over window \a w.
+
+@param x The column value.
+@param w The (optional) window specification.
+
+@returns
+The pseudofunction returns a value of type NUMERIC, signifying the distance
+from the column (or window) mean in standard deviations (also measured over
+the column (or window).
+
+@anchor zscore_example
+@examp
+@verbatim
+user=# SELECT sugar($$
+user$#   CREATE TABLE outtable AS
+user$#     SELECT x,
+user$#            zscore(x) AS col_zscore,
+user$#            zscore(x,PARTITION BY x%3) AS win_zscore
+user$#     FROM generate_series(1,10) x
+user$#     DISTRIBUTED RANDOMLY;
+user$# $$);
+ sugar 
+-------
  
-  Use of SUgAR is usually done by providing your desired SQL query as a
-  parameter to the 'sugar' function. Such as this:
+(1 row)
 
-  SELECT SUGAR_SCHEMA.sugar('SELECT a FROM generate_series(1,10) a;');
+user=# SELECT * FROM outtable ORDER BY x;
+ x  |       col_zscore        |       win_zscore        
+----+-------------------------+-------------------------
+  1 |     -1.4863010829205868 |     -1.1618950038622251
+  2 | -1.15601195338267862269 | -1.00000000000000000000
+  3 | -0.82572282384477044478 | -1.00000000000000000000
+  4 | -0.49543369430686226687 | -0.38729833462074168704
+  5 | -0.16514456476895408896 |  0.00000000000000000000
+  6 |  0.16514456476895408896 |  0.00000000000000000000
+  7 |  0.49543369430686226687 |  0.38729833462074168704
+  8 |  0.82572282384477044478 |  1.00000000000000000000
+  9 |  1.15601195338267862269 |  1.00000000000000000000
+ 10 |      1.4863010829205868 |      1.1618950038622251
+(10 rows)
+@endverbatim
 
-  This is known as 'sugar-coating' your query. The reason because of which
-  sugar-coating your query is good, is because it allows your query to include
-  some features not supported by GPDB or not supportable by SQL. For example,
-  even though a window-function called 'zscore' is not available in GPDB,
-  and even though UDWFs are not supported in GPDB, with SUgAR you can write
-  your own 'zscore' and execute it by running
+Column \c 'col_zscore' produced by the query reflects z-score values for the
+values 1 through 10 based on their mean and standard deviation. The values
+are monotone rising from roughly -1.5 (1.5 standard deviations below the
+mean, which is at 5.5) to roughly 1.5 (1.5 standard deviations above the
+same mean). By contrast, in column \c 'win_zscore' the means and standard
+deviations are estimated separately within each partition (where partitions
+are determined by the value of <code>'x%3'</code>). So, for example,
+<code>{2,5,8}</code> form one
+part, with a mean of 5 and a standard deviation of 3. Normalizing according
+to these values, the z-scores for these are <code>{-1,0,1}</code>, respectively.
 
-  SELECT SUGAR_SCHEMA.sugar($$
+@note
+Columns that are z-score outputs should be named. Otherwise,
+their names will reflect internals of the SUgAR implementation, and may
+cause multiple columns to be assigned the same name, which would result in
+a SQL error.
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+
+ */
+
+/**
+@addtogroup grp_pvalue
+
+@brief Calculate the pvalue (i.e. the cdf of the z-score).
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#pvalue_syntax">Syntax</a>
+<li class="level1"><a href="#pvalue_usage">Usage</a>
+<li class="level1"><a href="#pvalue_example">Example</a>
+</ul>
+</div>
+
+@about
+A pseudo-window-function, calculating for each element the probability of
+receiving an element lower than it, given that the element was allotted from a
+normal distribution, and given that the expectation and variance of this
+distribution are the mean and the squared standard deviation of the
+other values in the same column (or within the same window, if one is
+specified).
+
+@anchor pvalue_syntax
+@par Syntax
+<pre class="syntax">
+pvalue(x)
+</pre>
+probability of lower value given normal distribution, calculated from
+<code>zscore(\a x)</code>.
+<pre class="syntax">
+pvalue(x,w)
+</pre>
+<code>pvalue(\a x)</code> over window \a w.
+
+@param x Column of values.
+@w Window.
+
+@returns The pvalue of \a x, as a <code>DOUBLE PRECISION</code> number.
+
+@anchor pvalue_usage
+@usage
+The pseudo-window-function calculates for the column of \a x values (or for the
+\a x values that are within a given window, \a w, if such a window is specified)
+their mean and standard deviation. It then returns, for each \a x value, the
+probability of receiving a value smaller than it if all values within the
+column (or window) were allotted from a single normal distribution, and if that
+distribution's expectation and variance were the sample's mean and squared
+standard deviation, respectively.
+
+@anchor pvalue_example
+@examp
+@verbatim
+user=# SELECT sugar($$
+user$#   CREATE TABLE outtable AS
+user$#     SELECT x,
+user$#            pvalue(x) AS col_pvalue,
+user$#            pvalue(x,PARTITION BY x%3) AS win_pvalue
+user$#     FROM generate_series(1,10) x
+user$#     DISTRIBUTED RANDOMLY;
+user$# $$);
+ sugar 
+-------
+ 
+(1 row)
+
+user=# SELECT * FROM outtable ORDER BY x;
+ x  |     col_pvalue     |    win_pvalue     
+----+--------------------+-------------------
+  1 | 0.0685997502074812 | 0.122639058403386
+  2 |  0.123838133845947 | 0.158655253931457
+  3 |  0.204480671018437 | 0.158655253931457
+  4 |   0.31014700767458 | 0.349267679151669
+  5 |  0.434415098462657 |               0.5
+  6 |  0.565584901537343 |               0.5
+  7 |   0.68985299232542 | 0.650732320848331
+  8 |  0.795519328981563 | 0.841344746068543
+  9 |  0.876161866154053 | 0.841344746068543
+ 10 |  0.931400249792519 | 0.877360941596614
+(10 rows)
+@endverbatim
+
+Column \c 'col_pvalue' produced by the query reflects p-values for the
+values 1 through 10 based on their mean and standard deviation. The values
+are monotone rising from roughly 0.07 (1.5 standard deviations below the
+mean, which is at 5.5) to the complementary probability, roughly 1-0.07=0.93
+(1.5 standard deviations above the column mean). By contrast, in column
+\c 'win_pvalue' the means and standard deviations are estimated separately
+within each partition (where partitions are determined by the value of
+<code>'x%3'</code>). So, for example, <code>{2,5,8}</code> form one part, with a
+mean of 5 and a standard deviation of 3.
+Normalizing according to these values, the p-values for these are
+<code>{~0.16,0.5,~0.84}</code>, respectively, or, equivalently,
+<code>{-1,0,1}</code> standard deviations from the mean.
+
+@note
+Columns that are pvalue outputs should be named. Otherwise,
+their names will reflect internals of the SUgAR implementation, and may
+cause multiple columns to be assigned the same name, which would result in
+a SQL error.
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+
+@prereq
+MADlib
+
+ */
+
+/**
+@addtogroup grp_normalize
+
+@brief Translate column values to the range \f$[0,1]\f$.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#normalize_syntax">Syntax</a>
+<li class="level1"><a href="#normalize_usage">Usage</a>
+<li class="level1"><a href="#normalize_example">Example</a>
+</ul>
+</div>
+
+@about
+A pseudo-window-function used to take all column values and map them, via a
+linear transformation, so that the column minimum is mapped to 0 and the
+column maximum is mapped to 1. If a window is specified, minima and maxima are
+calculated separately for each window.
+
+@anchor normalize_syntax
+@par Syntax
+<pre class="syntax">
+normalize(x)
+</pre>
+Linear transform to make \f$\min(x)\f$ match 0 and \f$\max(x)\f$ match 1.
+
+<pre class="syntax">
+normalize(x,w)
+</pre>
+<code>normalize(\a x)</code> over window \a w.
+
+@param x Value to be normalized.
+@param w Window.
+
+@returns The normalized value, of type NUMERIC.
+
+@anchor normalize_usage
+@usage
+The pseudo-window-function calculates for each window its minimum and maximum
+(or for the entire column, if no window is specified) and determines the
+linear transform that will map the minimum value to 0 and the maximum value
+to 1. It then applies this transformation to each row in the window.
+
+@anchor normalize_example
+@examp
+@verbatim
+user=# SELECT sugar($$
+user$#   CREATE TABLE outtable AS
+user$#     SELECT x,
+user$#            normalize(x) AS col_normalize,
+user$#            normalize(x,PARTITION BY x%3) AS win_normalize
+user$#     FROM generate_series(0,10) x
+user$#     DISTRIBUTED RANDOMLY;
+user$# $$);
+ sugar 
+-------
+ 
+(1 row)
+
+user=# SELECT * FROM outtable ORDER BY x;
+ x  |     col_normalize      |     win_normalize      
+----+------------------------+------------------------
+  0 | 0.00000000000000000000 | 0.00000000000000000000
+  1 | 0.10000000000000000000 | 0.00000000000000000000
+  2 | 0.20000000000000000000 | 0.00000000000000000000
+  3 | 0.30000000000000000000 | 0.33333333333333333333
+  4 | 0.40000000000000000000 | 0.33333333333333333333
+  5 | 0.50000000000000000000 | 0.50000000000000000000
+  6 | 0.60000000000000000000 | 0.66666666666666666667
+  7 | 0.70000000000000000000 | 0.66666666666666666667
+  8 | 0.80000000000000000000 | 1.00000000000000000000
+  9 | 0.90000000000000000000 | 1.00000000000000000000
+ 10 | 1.00000000000000000000 | 1.00000000000000000000
+(11 rows)
+@endverbatim
+
+Column \c 'col_noramlize' produced by the query reflects normalized values for
+the
+values 0 through 10, these having been scaled down by a factor of 10 to fit the
+interval \f$[0,1]\f$. By contrast, in column \c 'win_normalize' a distinct
+transform
+is applied within each partition (where partitions are determined by the value
+of <code>'x%3'</code>). So, for example, <code>{2,5,8}</code> form one part,
+with a minimum of 2 and a maximum of 8.  Normalizing according to these values
+results in <code>{0,0.5,1}</code>, respectively.
+
+@note
+Columns that are \c normalize outputs should be named. Otherwise,
+their names will reflect internals of the SUgAR implementation, and may
+cause multiple columns to be assigned the same name, which would result in
+a SQL error.
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+
+ */
+
+/**
+@addtogroup grp_proportion
+
+@brief Normalize the column values to sum to 1.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#proportion_syntax">Syntax</a>
+<li class="level1"><a href="#proportion_usage">Usage</a>
+<li class="level1"><a href="#proportion_example">Example</a>
+</ul>
+</div>
+
+@about
+A pseudo-window-function which takes a column of values (or a window defined
+on one) and divides each element by the sum of the values.
+
+@anchor proportion_syntax
+@par Syntax
+<pre class="syntax">
+proportion(x)
+</pre>
+Calculates \f$\frac{x}{\sum x}\f$.
+
+<pre class="syntax">
+proportion(x,w)
+</pre>
+Calculates <code>proportion(\a x)</code> over window \a w.
+
+@param x Values to be transformed.
+@param w Window over which to determine the sum.
+
+@returns The original value, normalized to a proportion.
+
+@anchor proportion_usage
+@usage
+The pseudo-window-function takes a column of values (or a window defined
+on one) and calculates their sum over the entire column or over the window
+defined. It then divides each element by this sum. Without windows,
+this results in a column whose values are proportional to the original
+column values, but which sums to 1. With windows that form a partition, the
+sum is 1 within each part.
+This is useful in order to consider column values in terms of their parts in
+the whole created by their total.
+
+@anchor proportion_example
+@examp
+@verbatim
+user=# SELECT sugar($$
+user$#   CREATE TABLE outtable AS
+user$#     SELECT x,
+user$#            proportion(x) AS col_proportion,
+user$#            proportion(x,PARTITION BY x%3) AS win_proportion
+user$#     FROM generate_series(1,10) x
+user$#     DISTRIBUTED RANDOMLY;
+user$# $$);
+ sugar 
+-------
+ 
+(1 row)
+
+user=# SELECT * FROM outtable ORDER BY x;
+ x  |     col_proportion     |     win_proportion     
+----+------------------------+------------------------
+  1 | 0.01818181818181818182 | 0.04545454545454545455
+  2 | 0.03636363636363636364 | 0.13333333333333333333
+  3 | 0.05454545454545454545 | 0.16666666666666666667
+  4 | 0.07272727272727272727 | 0.18181818181818181818
+  5 | 0.09090909090909090909 | 0.33333333333333333333
+  6 | 0.10909090909090909091 | 0.33333333333333333333
+  7 | 0.12727272727272727273 | 0.31818181818181818182
+  8 | 0.14545454545454545455 | 0.53333333333333333333
+  9 | 0.16363636363636363636 | 0.50000000000000000000
+ 10 | 0.18181818181818181818 | 0.45454545454545454545
+(10 rows)
+@endverbatim
+
+Column \c 'col_proportion' produced by the query are the values 1 through 10
+divided by their sum: \f$55=1+2+...+10\f$. They retain their proportions, while
+now summing up to 1.0 over the entire column. By contrast, in column
+\c 'win_proportion' each partition is normalized separately (where partitions
+are determined by the value of <code>'x%3'</code>). The parts are
+<code>{1,4,7,10}</code>, <code>{2,5,8}</code> and <code>{3,6,9}</code>. Each of
+these are now normalized so as to sum up to 1. For example,
+\f$ 3+6+9=18 \f$, so these values are mapped to
+\f$\{3/18=1/6, 6/18=1/3, 9/18=1/2\}\f$,
+respectively. The sum of all values over the entire column is 3, reflecting
+the fact that we have partitioned the data into 3 sets.
+
+@note
+Columns that are \c 'proportion' outputs should be named. Otherwise,
+their names will reflect internals of the SUgAR implementation, and may
+cause multiple columns to be assigned the same name, which would result in
+a SQL error.
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+
+ */
+
+/**
+@addtogroup grp_pivot01
+
+@brief Make 0/1 columns (dummy variables) out of a categorical column.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#pivot01_syntax">Syntax</a>
+<li class="level1"><a href="#pivot01_usage">Usage</a>
+<li class="level1"><a href="#pivot01_example">Example</a>
+</ul>
+</div>
+
+@about
+A SUgAR pseudo-row-function, splitting a categorical column into multiple 0/1
+columns.
+
+@anchor pivot01_syntax
+@par Syntax
+<pre class="syntax">
+pivot01(x,t)
+</pre>
+Expand \a x into 0-1 columns based on its
+values in table \a t (typically, the present table).
+
+<pre class="syntax">
+pivot01(x,t,c)
+</pre>
+Same as <code>pivot01(\a x,\a t)</code>, but take values from
+column \a t.c, rather than \a t.x.
+
+<pre class="syntax">
+pivot01(x,t,c,formatspec)
+</pre>
+Same as <code>pivot01(\a x,\a t,\a c)</code>, but use a
+user-defined naming-convention for the generated columns.
+
+<pre class="syntax">
+pivot01(x,t,c,formatspec,colchoice)
+</pre>
+Same as <code>pivot01(\a x,\a t,\a c,\a formatspec)</code>, but
+specify which columns to create.
+
+@param x The categorical column to be expanded into 0-1 columns.
+@param t A table. The columns to be generated correspond to the values of
+column \a t.x.
+@param c When used, columns are generated based on \a t.c rather than \a t.x.
+To revert to \a t.x, use the value \c 'NULL' for \a c.
+@param formatspec Specification of the method by which to generate names for the
+0/1 column. By default, or if given a \c NULL, the value of
+\a formatspec is taken to be the string <code>'{c}_{v}'</code>.
+This specifies that the names of columns generated is
+the lowercase original column name followed by an underscore,
+followed by the lowercase value associated with the column. Any
+string can be used instead of formatspec (however, the string
+must be properly string-quoted). The string is taken literally,
+except for the fact that appearances of <code>'{c}'</code>, <code>'{v}'</code>,
+<code>'{C}'</code> and <code>'{V}'</code> in the original
+string are replaced by the lower-cased
+column name, the lower-cased column value, the original-case
+column name and the original-case column value, respectively.
+Alternatively, one can supply the name of a function instead of
+a string. This would cause this function to be called with two
+parameters (the column name and the column value). The function
+should return a text string, and that string will be used as the
+name of the generated column.
+@param colchoice A text parameter, allowing the caller explicit control over
+which columns are created in pivoting. The parameter's value is
+interpretted as string containing an (immutable) query that returns
+a table with a column called \c "col_name". The values in this column
+will be the columns created. Prior to evaluating the string as a
+query, instances of <code>'{col}'</code> in it are replaced by the name of the
+column from which values are to be generated (\a 't.c' if parameter \a 'c'
+is specified and non-NULL, \a 't.x', otherwise), and, similarly,
+instances of <code>'{tabl}</code>' are replaced by the value in parameter
+\a 't'. The default value for this parameter is
+<code>"SELECT DISTINCT {col} AS col_name FROM {tabl};"</code>.
+SUgAR provides several convenience functions (\c "ALL_VALS",
+\c "FREQ_VALS" and \c "ALL_BUT_ONE") which can be used to as the
+\a 'colchoice' parameter: use <code>'all_vals()'</code> to create all columns,
+as is the default behavior; use <code>'freq_vals(\a n)'</code>, for any \a n
+value, to create columns only for the top \a n most frequent values. Use
+<code>'all_but_one()'</code> to create all columns except for an arbitrarily
+chosen one. (This last option is useful for avoiding colinearity in the output.)
+
+@returns
+This pseudofunction returns multiple \c integer columns (which is not a return
+type available for a row function in standard SQL).
+
+@anchor pivot01_usage
+@usage
+This SUgAR pseudofunction acts as a list of row functions, creating multiple
+columns. Each column generated represents a possible value of the original
+categorical column (\a 'x'). In a row where this possible value matches the
+original categorical column's actual value, the generated column's value is '1'.
+Otherwise, it is '0'.
+
+@note
+\c 'pivot01' is a pseudofunction, not a pseudo-aggregate. If you want
+to use pivoting in conjunction with grouping, see \ref grp_pivot.
+
+@anchor pivot01_example
+@examp
+@verbatim
+user=# CREATE TABLE wiki_table (region text, gender text, style text,
+user(#                          ship_date date, units integer,
+user(#                          price float8, cost float8, row_num integer)
+user-# DISTRIBUTED BY (row_num);
+CREATE TABLE
+user=#
+user=# INSERT INTO wiki_table VALUES
+user-# ('East', 'Girl', 'Tee', '1/31/05', 12, 11.04, 10.42, 1),
+user-# ('East', 'Boy', 'Golf', '4/30/05', 12, 13, 12.6, 2),
+user-# (NULL , 'Boy', 'Tee', '3/31/05', 10, 11.96, 11.74, 3),
+user-# ('West', 'Girl', 'Tee', '4/30/05', 12, 11.27, 10.56, 4),
+user-# ('West', 'Girl', 'Fancy', '6/30/05', 11, 12.12, 11.95, 5),
+user-# ('South', 'Boy', 'Fancy', '5/31/05', 15, 13.47, 13.33, 6),
+user-# ('South', 'Girl', 'Golf', '1/31/05', 15, 11.44, 10.94, 7),
+user-# ('North', 'Girl', 'Golf', '2/28/05', 12, 12.63, 11.73, 8),
+user-# ('South', 'Girl', 'Fancy', '6/30/05', 10, 12.06, 11.51, 9),
+user-# ('West', 'Boy', 'Tee', '2/28/05', 12, 13.42, 13.29, 10),
+user-# ('East', 'Boy', 'Tee', '1/31/05', 11, 11.48, 10.67, 11)
+user-# ;
+INSERT 0 11
+user=# -- Table data from Wikipedia 'pivoting' entry.
+user=#
+user=# SELECT sugar($$
+user$#   CREATE TABLE outtable AS SELECT price,units,cost,row_num,
+user$#     pivot01(region,wiki_table,null,'{v}', freq_vals(3))
+user$#   FROM wiki_table
+user$#   DISTRIBUTED BY (row_num);
+user$# $$);
+ sugar 
+-------
+ 
+(1 row)
+
+user=# SELECT * FROM outtable;
+ price | units | cost  | row_num | west | east | south 
+-------+-------+-------+---------+------+------+-------
+ 11.04 |    12 | 10.42 |       1 |    0 |    1 |     0
+ 11.96 |    10 | 11.74 |       3 |    0 |    0 |     0
+ 12.12 |    11 | 11.95 |       5 |    1 |    0 |     0
+ 11.44 |    15 | 10.94 |       7 |    0 |    0 |     1
+ 12.06 |    10 | 11.51 |       9 |    0 |    0 |     1
+ 11.48 |    11 | 10.67 |      11 |    0 |    1 |     0
+    13 |    12 |  12.6 |       2 |    0 |    1 |     0
+ 11.27 |    12 | 10.56 |       4 |    1 |    0 |     0
+ 13.47 |    15 | 13.33 |       6 |    0 |    0 |     1
+ 12.63 |    12 | 11.73 |       8 |    0 |    0 |     0
+ 13.42 |    12 | 13.29 |      10 |    1 |    0 |     0
+(11 rows)
+@endverbatim
+
+@sa grp_pivot, grp_all_vals, grp_freq_vals, grp_all_but_one, grp_choose_any, grp_unique_element
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+
+ */
+
+/**
+@addtogroup grp_pivot
+
+@brief Cross-tabulate one column according to another.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#pivot_syntax">Syntax</a>
+<li class="level1"><a href="#pivot_usage">Usage</a>
+<li class="level1"><a href="#pivot_example">Example</a>
+</ul>
+</div>
+
+@about
+Given a pivot column, \a 'colx' and a value column, \a 'colv', this SUgAR
+pseudo-aggregate-function, when used in a query grouped by a grouping column
+\a 'coly', produces a set of columns, one for each value of \a 'colx', and
+places \a 'colv' values in the column determined by the \a 'colx' value and the
+row determined by the \a 'coly' value in conjunction with which they appeared in
+the original table data. If more than one value of \a 'colv' fits a particular
+row/column combination, the set of \a 'colv' values are aggregated together.
+
+@anchor pivot_syntax
+@par Syntax
+<pre class="syntax">
+pivot(colx,t,colv)
+</pre>
+Cross-tabulate \a colv according to the values of \a colx.
+
+<pre class="syntax">
+pivot(colx,t,colv,agg)
+</pre>
+Same as <code>pivot(\a colx,\a t,\a colv)</code>, but overrides the default
+aggregation function, which is \c "unique_element".
+
+<pre class="syntax">
+pivot(colx,t,colv,agg,default)
+</pre>
+Same as <code>pivot(\a colx,\a t,\a colv,\a agg)</code>, but uses
+\a "default" instead of \c "NULL" for missing values.
+
+<pre class="syntax">
+pivot(colx,t,colv,agg,default,fcolx)
+</pre>
+Same as <code>pivot(\a colx,\a t,\a colv,\a agg,\a default)</code>,
+but uses \a t.fcolx to discover pivot
+columns, rather than \a t.colx. Using \c NULL
+for \a fcolx has the same effect as choosing
+it to equal \a colx.
+
+<pre class="syntax">
+pivot(colx,t,colv,agg,default,fcolx,formatspec)
+</pre>
+Same as <code>pivot(\a colx,\a t,\a colv,\a agg,\a default,\a fcolx)</code>, but
+names the columns in a user-defined way.
+
+<pre class="syntax">
+pivot(colx,t,colv,agg,default,fcolx,formatspec,colchoice)
+</pre>
+Same as <code>pivot(\a colx,\a t,\a colv,\a agg,\a default,\a fcolx,\a formatspec)</code>,
+but allows the caller explicit control on which columns are
+created in pivoting.
+
+@param colx The pivot column. Its values determine where \a colv values will
+appear.
+@param t A table. Pivot columns are created according to the values in
+\a t.colx.
+@param colv The value column. Its values are the ones presented (and aggregated)
+in the new pivot table.
+@param agg The aggregation function to be applied if multiple \a colv values
+need to be aggregated into the same table cell. SUgAR supplies two aggregation
+functions out-of-the-box for this purpose: \c 'unique_element' and
+\c 'choose_any'. The default is \c 'unique_element'. It places \a colv values
+into pivot-table cells as long as the assignment is unique. If two \a colv
+values compete for the same row and column, an exception is thrown.
+The aggregate \c 'choose_any' works the same way, but suppresses the
+exception. If several \a colv values compete for the same row and column,
+one is chosen arbitrarily and placed in the cell. The aggregate
+guarantees that a cell will be non-NULL if there are any non-NULL
+values to be assigned to it. The parameter \a 'agg' can be any aggregate,
+including these two, any standard aggregate and any user-defined
+aggregate.
+@param default The value given to a cell for which no \a colv values are
+assigned.
+By default this is NULL. Typically, the choice of \a agg function leads
+to a corresponding choice of \a 'default'. For example, the \a agg
+function \c 'sum' is likely to appear with a default '0'. This value
+indicates the appropriate return value for the aggregation of zero
+elements.
+@param fcolx If present (and not \c NULL), the values of \a t.fcolx are used
+generate the list of pivot columns, rather than \a t.colx.
+@param formatspec Specification of the method by which to generate names for the
+pivot-table column. By default, or if given a \c NULL, the value of
+\a formatspec is taken to be the
+string <code>'{c}_{v}'</code>. This specifies that the names of columns
+generated is the lowercase original column name followed by an
+underscore, followed by the lowercase value associated with the
+column. Any string can be used instead of formatspec (however, the
+string must be properly string-quoted). The string is taken
+literally, except for the fact that appearances of <code>'{c}'</code>,
+<code>'{v}'</code>, <code>'{C}'</code> and <code>'{V}'</code> in the original
+string are replaced by the
+lower-cased column name, the lower-cased column value, the
+original-case column name and the original-case column value,
+respectively.  Alternatively, one can supply the name of a function
+instead of a string. This would cause this function to be called
+with two parameters (the column name and the column value). The
+function should return a text string, and that string will be used
+as the name of the generated column.
+@param colchoice A text parameter, allowing the caller explicit control over
+which columns are created in pivoting. The parameter's value is
+interpretted as string containing an (immutable) query that returns
+a table with a column called \c "col_name". The values in this column
+will be the columns created. Prior to evaluating the string as a
+query, instances of <code>'{col}'</code> in it are replaced by the name of the
+column from which values are to be generated (\a 't.fcolx' if parameter
+\a 'fcolx' is specified and non-NULL, \a 't.colx', otherwise), and,
+similarly, instances of <code>'{tabl}'</code> are replaced by the value in
+parameter \a 't'.  The default value for this parameter is
+<code>"SELECT DISTINCT {col} AS col_name FROM {tabl};"</code>.
+SUgAR provides several convenience functions (<code>"ALL_VALS"</code>,
+<code>"FREQ_VALS"</code> and <code>"ALL_BUT_ONE"</code>) which can be used as
+the \a 'colchoice' parameter: use <code>'all_vals()'</code> to create all
+columns, as is the default behavior; use <code>'freq_vals(\a n)'</code>, for any
+\a n value, to create columns only for the top \a n most frequent values. Use
+<code>'all_but_one()'</code> to create all columns except an arbitrarily chosen
+one.
+
+@returns The function returns a set of aggregation results, of the type returned
+by \a agg. (This is not possible return type for a standard SQL row function.)
+
+@anchor pivot_usage
+@usage
+This SUgAR pseudo-aggregate-function is used to perform pivoting. It behaves as
+a list of aggregate functions, generating multiple columns. The values of
+\a 'colx' (or \a 'fcolx', if it is supplied) determine a set of columns to be
+created. For each row, the value of \a 'colv' is placed into the column
+associated with the currenct \a 'colx' value. If this pseudo-aggregate is
+applied in a query that groups by a \a 'coly' column, the cell in which
+\a 'colv' values are placed is determined by this '\a colx'+'\a coly'
+combination: \a 'colx' determines the choice of column; \a 'coly' - the choice
+of row. If multiple \a 'colv' values are mapped into a single cell, they are
+aggregated by a user-defined aggregate. The default aggregation method, however,
+is simply to report an error if such collisions exist.
+
+Note that \c 'pivot' acts as an aggregate function (or, rather, as a combination
+of aggregate functions). It should therefore only be applied in
+contexts that allow aggregation. If you are looking for a pivoting
+pseudofunction, rather than a pseudo-aggregate, consider \ref grp_pivot01.
+
+@anchor pivot_example
+@examp
+@verbatim
+user=# CREATE TABLE patient_table
+user-# (patient_id INTEGER, name TEXT, from_date DATE, diagnosis_code TEXT)
+user-# DISTRIBUTED BY (patient_id);
+CREATE TABLE
+user=# 
+user=# INSERT INTO patient_table VALUES
+user-# (1, 'John Smith', '2012/2/5', 'ICD9-CM-845.0'),
+user-# (1, 'John Smith', '2001/12/23', 'ICD9-CM-785.2'),
+user-# (2, 'Jane Smith', '2010/12/6', 'ICD9-CM-785.2'),
+user-# (3, 'Ben Franklin', '1785/4/17', 'ICD9-CM-274.9'),
+user-# (4, 'Hillary Clinton', '2012/1/1', 'ICD9-CM-434.0')
+user-# ;
+INSERT 0 5
+user=#
+user=# CREATE FUNCTION truncname(col TEXT, val TEXT)
+user-# RETURNS TEXT
+user-# IMMUTABLE
+user-# LANGUAGE SQL
+user-# AS $$
+user$#   SELECT substring($2 FROM 9 FOR 5);
+user$# $$;
+CREATE FUNCTION
+user=#
+user=# SELECT sugar($$
+user$#   CREATE TABLE outtable AS
+user$#     SELECT patient_id AS id, name,
+user$#            pivot(diagnosis_code, patient_table, from_date,
+user$#                  unique_element, NULL, NULL, truncname)
+user$#     FROM patient_table GROUP BY (id,name)
+user$#   DISTRIBUTED BY (id);
+user$# $$);
+ sugar
+-------
+
+(1 row)
+
+user=# SELECT * FROM outtable;
+ id |      name       |   274.9    |   434.0    |   785.2    |   845.0    
+----+-----------------+------------+------------+------------+------------
+  2 | Jane Smith      |            |            | 2010-12-06 | 
+  4 | Hillary Clinton |            | 2012-01-01 |            | 
+  1 | John Smith      |            |            | 2001-12-23 | 2012-02-05
+  3 | Ben Franklin    | 1785-04-17 |            |            | 
+(4 rows)
+@endverbatim
+
+@sa grp_pivot01, grp_all_vals, grp_freq_vals, grp_all_but_one, grp_choose_any, grp_unique_element
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+
+ */
+
+/**
+@addtogroup grp_glob
+
+@brief Glob the names of table columns.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#glob_syntax">Syntax</a>
+<li class="level1"><a href="#glob_usage">Usage</a>
+<li class="level1"><a href="#glob_example">Example</a>
+</ul>
+</div>
+
+@about
+Given a table, this SUgAR pseudofunction returns a list of its column names.
+It can be used for easily selecting multiple columns using a pattern.
+
+@anchor glob_syntax
+@par Syntax
+<pre class="syntax">
+glob(table,schema)
+</pre>
+Return a comma-separated list of all the table's columns.
+
+<pre class="syntax">
+glob(table,schema,incl_pat)
+</pre>
+Same, but return only columns matching pattern.
+
+<pre class="syntax">
+glob(table,schema,incl_pat,excl_pat)
+</pre>
+Same, but futher exclude second pattern.
+
+<pre class="syntax">
+glob(table,schema,incl_pat,excl_pat,sep)
+</pre>
+Same, but use \a sep as the string separator, instead of a comma.
+
+@param table The name of the table to glob from.
+@param schema The name of the schema the table resides in.
+@param incl_pat A string denoting a \c 'SIMILAR TO' regex pattern to match.
+Defaults to <code>'%'</code> ("match every column").
+@param excl_pat A string denoting a \c 'SIMILAR TO' regex pattern to exclude.
+Defaults to '' ("exclude nothing").
+Column names returned will match \a incl_pat but not \a excl_pat.
+@param sep A separator string to appear between column names. Defaults to
+comma separation.
+
+@returns The set of retrieved columns. (This is not a valid return type in
+standard SQL.)
+
+@anchor glob_usage
+@usage
+This SUgAR pseudofunction is used to fetch the names of multiple table columns
+at once by use of patterns. Columns can also be excluded by a second pattern.
+This is especially important in analytics, where machine-learning training
+functions may require a large number of independent variable columns to be
+given as inputs.
+
+@note
+-# Patterns are matched accoring to PostgreSQL \c "SIMILAR TO" rules.
+-# Similar to the Unix method, if nothing matches, returns the original pattern.
+-# The columns are fetched in the order that they would appear in a
+<code>'SELECT *'</code> from the original table.
+
+@anchor glob_example
+@examp
+@verbatim
+user=# CREATE TABLE wiki_table (region text, gender text, style text,
+user(#                          ship_date date, units integer,
+user(#                          price float8, cost float8, row_num integer)
+user-# DISTRIBUTED BY (row_num);
+CREATE TABLE
+user=#
+user=# INSERT INTO wiki_table VALUES
+user-# ('East', 'Girl', 'Tee', '1/31/05', 12, 11.04, 10.42, 1),
+user-# ('East', 'Boy', 'Golf', '4/30/05', 12, 13, 12.6, 2),
+user-# (NULL , 'Boy', 'Tee', '3/31/05', 10, 11.96, 11.74, 3),
+user-# ('West', 'Girl', 'Tee', '4/30/05', 12, 11.27, 10.56, 4),
+user-# ('West', 'Girl', 'Fancy', '6/30/05', 11, 12.12, 11.95, 5),
+user-# ('South', 'Boy', 'Fancy', '5/31/05', 15, 13.47, 13.33, 6),
+user-# ('South', 'Girl', 'Golf', '1/31/05', 15, 11.44, 10.94, 7),
+user-# ('North', 'Girl', 'Golf', '2/28/05', 12, 12.63, 11.73, 8),
+user-# ('South', 'Girl', 'Fancy', '6/30/05', 10, 12.06, 11.51, 9),
+user-# ('West', 'Boy', 'Tee', '2/28/05', 12, 13.42, 13.29, 10),
+user-# ('East', 'Boy', 'Tee', '1/31/05', 11, 11.48, 10.67, 11)
+user-# ;
+INSERT 0 11
+user=# -- Table data from Wikipedia 'pivoting' entry.
+user=#
+user=# SELECT sugar($$
+user$#   CREATE TABLE pivot_table AS SELECT price,units,cost,row_num,
+user$#     pivot01(region,wiki_table,null,null,all_but_one()),
+user$#     pivot01(gender,wiki_table,null,null,all_but_one()),
+user$#     pivot01(style,wiki_table,null,null,all_but_one())
+user$#   FROM wiki_table
+user$#   DISTRIBUTED BY (row_num);
+user$# $$);
+ sugar 
+-------
+ 
+(1 row)
+
+user=# -- Note the use of 'all_but_one' to avoid colinear expressions.
+user=#
+user=# \x
+Expanded display is on.
+user=# SELECT * FROM pivot_table LIMIT 1;
+-[ RECORD 1 ]+------
+price        | 11.04
+units        | 12
+cost         | 10.42
+row_num      | 1
+region_north | 0
+region_south | 0
+region_west  | 0
+region_none  | 0
+gender_girl  | 1
+style_fancy  | 0
+style_tee    | 1
+
+user=# \x
+Expanded display is off.
+user=#
+user=# -- We now build a model based on the pivot-column dummy variables.
+user=#
+user=# SELECT sugar($$
+user$#   CREATE TABLE model_table AS SELECT
+user$#     (madlib.linregr(price,array[
+user$#           glob('pivot_table','myschema','(region|gender|style)_%')
+user$#       ])).*
+user$#     FROM pivot_table
+user$#   DISTRIBUTED RANDOMLY;
+user$# $$);
+ sugar 
+-------
+ 
+(1 row)
+
+user=# \x
+Expanded display is on.
+user=# SELECT * FROM model_table;
+-[ RECORD 1 ]+--------------------------------------------------------------------------------------------------------------------------------------
+coef         | {11.6213333333333,8.08933333333334,3.42699999999999,2.37533333333333,1.00866666666667,5.34233333333334,9.58466666666667}
+r2           | 0
+std_err      | {1.63689950821671,1.25829466125607,1.20893040629839,1.63689950821671,0.923335849466016,1.25829466125607,0.923335849466016}
+t_stats      | {7.09960096817058,6.42880684660802,2.83473720418124,1.45111738467139,1.09241579567175,4.24569339585408,10.3804771278075}
+p_values     | {0.0020789843832798,0.00301045859193261,0.0471181875122522,0.22037157387082,0.33603325906707,0.0132033739658328,0.000486271930582483}
+condition_no | 21.9542172021876
+
+user=# \x
+Expanded display is off.
+user=#
+user=# -- We now build a model based on all columns except the dependent
+user=# -- variable and the row number.
+user=#
+user=# SELECT sugar($$
+user$#   CREATE TABLE model_table2 AS SELECT
+user$#     (madlib.linregr(price,array[
+user$#           glob('pivot_table','myschema','%','price|row_num')
+user$#       ])).*
+user$#     FROM pivot_table
+user$#   DISTRIBUTED RANDOMLY;
+user$# $$);
+ sugar 
+-------
+ 
+(1 row)
+
+user=# \x
+Expanded display is on.
+user=# select * from model_table2;
+-[ RECORD 1 ]+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+coef         | {-0.0142837123125565,1.04130957661233,0.281204444710959,-0.0352315827156531,-0.352943629685487,-0.417010262886446,0.305638769377028,-0.111145474650055,0.294872956587369}
+r2           | 0.973378808315947
+std_err      | {0.0889950892127067,0.0919474625974511,0.458282603978408,0.402657364267115,0.291754108465693,0.417006883129105,0.230365118396282,0.382395764497836,0.296857342046528}
+t_stats      | {-0.160500005549937,11.3250496228615,0.613604885434856,-0.0874976738095398,-1.20972976710279,-1.00000810479989,1.32675802441261,-0.290655611199072,0.993315356644109}
+p_values     | {0.887233259077507,0.0077068431068974,0.60196716636129,0.938247879753775,0.349968878299479,0.422646611284083,0.315802891138953,0.798683313344773,0.425231263503929}
+condition_no | 9683.22896325205
+@endverbatim
+
+Note that the order in which the columns appear in the glob (and therefore also
+the order of the coefficients) is the same as their order in the original
+table (the order they will appear in, in a <code>'SELECT *'</code>).
+
+@sa grp_all_but_one
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 26 Jun 2014.)
+
+ */
+
+/**
+@addtogroup grp_sugar_introduction
+
+@brief SUgAR overview.
+
+# The SUgAR library
+## Syntactic Up-grade for Analytics Routines
+
+The SUgAR library is a tool for providing second-order parsing of your SQL
+command-line, a capability that is much-needed for analytics. With this
+capability, queries can become easier to write, more reusable and prettier.
+SUgAR, therefore, provides much more than just syntactic sugaring.
+
+Examples of the power of second-order parsing, as provided by SUgAR, include
+full-featured pivoting, the ability to write UDWFs (user-defined window
+functions, a feature currently missing from GPDB) and the ability to easily
+utilize your own UDFs (user-defined functions) as UDWFs, regardless of the
+language in which they were implemented.
+
+To perform this, SUgAR provides one main function (\c 'sugar'), two database
+tables (\c 'sugar_db' and \c 'sugar_help_db') and several convenience functions.
+ 
+Use of SUgAR is usually done by providing your desired SQL query as a
+parameter to the \c 'sugar' function. Such as this:
+
+@verbatim
+SELECT sugar('SELECT a FROM generate_series(1,10) a;');
+@endverbatim
+
+This is known as 'sugar-coating' your query. The reason because of which
+sugar-coating your query is good, is because it allows your query to include
+some features not supported by GPDB or not supportable by SQL. For example,
+even though a window-function called \c 'zscore' is not available in GPDB,
+and even though UDWFs are not supported in GPDB, with SUgAR you can write
+your own \c 'zscore' and execute it by running
+
+@verbatim
+SELECT sugar($$
+  SELECT a, zscore(a) AS z FROM generate_series(1,10) a;
+$$);
+@endverbatim
+
+In fact, SUgAR provides zscoring out of the box, so you can simply use
+
+@verbatim
+SELECT sugar($$
+  SELECT a, SUGAR_SCHEMA.zscore(a) AS z FROM generate_series(1,10) a;
+$$);
+@endverbatim
+
+where SUGAR_SCHEMA is the schema that SUgAR was installed into.
+
+An important note, however, is that \c 'sugar' SELECT statements do not
+provide tabular outputs. For this reason, the only reasonable way to use
+SUgAR is by sending table creation queries as parameters. A common SUgAR
+idiom is therefore
+
+@verbatim
+SELECT sugar($$
+  CREATE TABLE outtable AS
     SELECT a, zscore(a) AS z FROM generate_series(1,10) a;
-  $$);
+$$);
+SELECT * FROM outtable;
+@endverbatim
 
-  In fact, SUgAR provides zscoring out of the box, so you can simply use
+We call such SUgAR-supported functions as \c 'zscore' by the name SUgAR
+functions or pseudofunctions.
 
-  SELECT SUGAR_SCHEMA.sugar($$
-    SELECT a, SUGAR_SCHEMA.zscore(a) AS z FROM generate_series(1,10) a;
-  $$);
+Currently supported pseudofunctions are:
+ - *zscore* -- Calculate the z-score (i.e. the standardized variable).
+ - *pvalue* -- Calculate the pvalue (i.e. the cdf of the z-score).
+ - *normalize* -- Translate column values to the range \f$[0,1]\f$.
+ - *proportion* -- Normalize the column values to sum to 1.
+ - *pivot01* -- Make 0/1 columns out of a categorical column.
+ - *pivot* -- Cross-tabulate one column according to another.
+ - *glob* -- Glob column names by a pattern.
+(See \ref grp_sugar_funcs for the complete documentation.)
 
-  An important note, however, is that 'sugar' SELECT statements do not
-  provide tabular outputs. For this reason, the only reasonable way to use
-  SUgAR is by sending table creation queries as parameters. A common SUgAR
-  idiom is therefore
+Importantly, however, the function \c 'sugar' itself is unaware of any of these
+extension functions. All \c 'sugar' does is some shallow parsing of the SQL
+code sent to it, followed by re-dressing of the SQL, as per instructions
+that are external to the function.
+All of SUgAR's pseudofunctions are defined in the table
+\c 'SUGAR_SCHEMA.sugar_db' (see \ref grp_sugar_db).
+The complete documentation for SUgAR pseudofunctions is
+available in the table \c 'SUGAR_SCHEMA.sugar_help_db'
+(see \ref grp_sugar_help_db). The purpose of this is
+to make SUgAR 100% extendable. Any future pseudofunction that you want to add
+can extend the syntax supported by \c 'sugar' simply by adding the relevant rows
+to \c 'sugar_db' and \c 'sugar_help_db'. (The existing rows, in addition to
+providing all of SUgAR's functionality, can be used as examples to work off
+of.)
 
-  SELECT SUGAR_SCHEMA.sugar($$
+@par
+AN IMPORTANT NOTE REGARDING SCHEMA QUALIFIERS
+=============================================
+By default, all SUgAR's pseudofunctions, exactly like all other functions,
+must have full schema qualifications. So, for example, one would to use
+the SUgAR query
+ 
+@verbatim
+  CREATE TABLE outtable AS
+    SELECT patient_id AS id, name,
+      SUGAR_SCHEMA.pivot(diagnosis_code, patient_table, from_date,
+        SUGAR_SCHEMA.unique_element)
+    FROM patient_table GROUP BY (id,name)
+  DISTRIBUTED BY (id);
+@endverbatim
+ 
+rather than
+ 
+@verbatim
+  CREATE TABLE outtable AS
+    SELECT patient_id AS id, name,
+      pivot(diagnosis_code, patient_table, from_date,
+        unique_element)
+    FROM patient_table GROUP BY (id,name)
+  DISTRIBUTED BY (id);
+@endverbatim
+
+(on the assumption that SUgAR is installed in the database schema SUGAR_SCHEMA).
+ 
+This is consistent with the SQL method of keeping the namespace clean.
+However, it is possible to get SUgAR to recognize both the qualified and
+the unqualified pseudofunction names. The way to do so is to add
+SUGAR_SCHEMA to the search_path (again, consistent with standard SQL
+methods).
+ 
+Because SUgAR's typing is not consistent with SQL typing, it was not
+possible for SUgAR's schema resolution to be exactly identical to SQL's.
+For example, if SUGAR_SCHEMA is on the search_path after another schema
+that also defines \c 'pivot', SUgAR would nevertheless treat \c 'pivot' as the
+SUgAR pseudofunction, rather than the function appearing earlier on the
+path. The general rule is that SUgAR will only recognize the qualified
+names if SUGAR_SCHEMA is not on the path, but will recognize both versions
+of the names if it is on the path. The position of SUGAR_SCHEMA on the path
+does not change the treatment of pseudofunctions. For the purpose of
+pseudofunctions, SUGAR_SCHEMA is always treated as the first element on the
+path. (For regular functions appearing in SUGAR_SCHEMA, standard SQL rules
+apply, of course.)
+ 
+Note that in either case, SUgAR's name resolution is case insensitive.
+
+Also note that SUgAR's schema is distinct from the schema housing all other
+DS Tools functionality.
+
+@par
+Additional features of the \c 'sugar' function
+==============================================
+
+<code>"@"</code>:
+Use <code>@(x,w)</code> to return column \c x values inside window \c w as an
+  array. (The order of \c x values in the array is not guaranteed, but it will
+  be consistent for a given choice of \c w within a single query. The function
+  can also be used without \c w. As a single argument function, it also works
+  without parentheses: <code>"@x"</code>. This uses \c DEFAULT_WINDOW as the
+  window. If \c DEFAULT_WINDOW is not defined, <code>"@x"</code> works as an
+  aggregate. This pseudo-aggregate, essentially a faster version of
+  \c array_agg, allows one to easily make one's UDFs into window functions, by
+  having them take results of <code>\@(x,w)</code> [or <code>\@x</code>] as
+  parameters.
+
+@examp
+@verbatim
+  CREATE TABLE test_data
+  (fyear integer,firm float8,eps float8);
+  
+  INSERT INTO test_data
+  SELECT (b.f + 1) % 10 + 2000 AS fyear,
+  floor((b.f+1)/10) + 50 AS firm,
+  f::float8/100 + random()/10 AS eps
+  FROM generate_series(-500,499,1) b(f);
+  
+  -- find slope of the linear model regression line
+  CREATE OR REPLACE FUNCTION r_regr_slope(x float8[], y float8[])
+  RETURNS float8 AS $BODY$
+  slope <- NA
+  if (length(x)==9) try (slope <- lm(y ~ x)$coefficients[2])
+  return(slope)
+  $BODY$ LANGUAGE plr;
+  
+  -- Use the function as follows
+  DROP TABLE IF EXISTS outtable;
+  
+  SELECT sugar($SUGAR$
     CREATE TABLE outtable AS
-      SELECT a, SUGAR_SCHEMA.zscore(a) AS z FROM generate_series(1,10) a;
-  $$);
-  SELECT * FROM outtable;
+      SELECT *, r_regr_slope(@eps, @lag_eps) AS slope_R FROM (
+        SELECT firm, fyear, eps,
+               lag(eps) OVER (
+                 PARTITION BY firm ORDER BY firm, fyear
+               ) AS lag_eps
+        FROM test_data
+      ) AS a
+      WHERE eps IS NOT NULL AND lag_eps IS NOT NULL
+      WINDOW default_window AS (
+        PARTITION BY firm ORDER BY firm, fyear ROWS 8 PRECEDING
+      )
+      DISTRIBUTED BY (fyear);
+  $SUGAR$);
+@endverbatim
 
-  We call such SUgAR-supported functions as 'zscore' by the name SUgAR functions
-  or pseudofunctions.
+Note that the operator precedence of <code>'@'</code> is fairly low, so
+<code>'\@x+3'</code> is the same as <code>'\@(x+3)'</code>. This is usually the
+desired behavior. If the reverse behavior is required, one can always use
+parentheses: <code>'\@(x)+3'</code>.
 
-  The currently supported pseudofunctions are:
-  zscore -- Calculate the z-score (i.e. the standardized variable)
-  pvalue -- Calculate the pvalue (i.e. the cdf of the z-score)
-  normalize -- Translate column values to the range [0,1]
-  proportion -- Normalize the column values to sum to 1
-  pivot01 -- Make 0/1 columns out of a categorical column
-  pivot -- Cross-tabulate one column according to another
-  glob -- Glob column names by pattern
+@warning
+The SUgAR <code>'@'</code> operator conflicts with the standard PostgreSQL
+<code>'@'</code> denoting absolute value. When using SUgAR, denote absolute
+value taking by <code>abs()</code>, instead.
 
-  Importantly, however, the function 'sugar' itself is unaware of any of these
-  extension functions. All 'sugar' does is some shallow parsing of the SQL
-  code sent to it, followed by re-dressing of the SQL, as per instructions
-  that are external to the function.
-  All of SUgAR's pseudofunctions are defined in the table
-  'SUGAR_SCHEMA.sugar_db'. The complete documentation for SUgAR pseudofunctions
-  is available in the table 'SUGAR_SCHEMA.sugar_help_db'. The purpose of this is
-  to make SUgAR 100% extendable. Any future pseudofunction that you want to add
-  can extend the syntax supported by 'sugar' simply by adding the relevant rows
-  to 'sugar_db' and 'sugar_help_db'. (The existing rows, in addition to
-  providing all of SUgAR's functionality, can be used as examples to work off
-  of.)
+@par
+Additional convenience functions in SUgAR (all in the SUGAR_SCHEMA schema)
+==========================================================================
 
-  AN IMPORTANT NOTE REGARDING SCHEMA QUALIFIERS
-  =============================================
-  By default, all SUgAR's pseudofunctions, exactly like all other functions,
-  must have full schema qualifications. So, for example, one would to use
-  the SUgAR query
+<pre class="syntax">
+AGGREGATE choose_any(x);
+</pre>
+
+is an aggregate function, returning an arbitrary value from column \a x.
+It's guaranteed to return a non-null value if one exists.
+
+<pre class="syntax">
+AGGREGATE unique_element(x);
+</pre>
+
+is an aggregate function that returns the unique non-NULL value from column
+\a x or raises an exception if it is not unique.
+
+Both \c "choose_any" and \c "unique_element" are useful as pivoting
+aggregates. The default \c pivot aggregation parameter is \c "unique_element".
+
+<pre class="syntax">
+FUNCTION \ref grp_all_vals() RETURNS TEXT;
+</pre>
+
+<pre class="syntax">
+FUNCTION \ref grp_freq_vals(n) RETURNS TEXT;
+</pre>
+
+<pre class="syntax">
+FUNCTION \ref grp_all_but_one() RETURNS TEXT;
+</pre>
+
+These are convenience functions for <code>pivot</code>/<code>pivot01</code>.
+They can be used as the \a colchoice parameter for pivoting.
+It is easy to create more such functions for other needs. See these
+functions for more documentation, as well as \ref grp_pivot and
+\ref grp_pivot01.
+
+Other convenience functions available in SUgAR are
+
+<pre class="syntax">
+FUNCTION proportional_trans(x,a,b);
+</pre>
+
+which returns \f$x*a+b\f$,
+
+<pre class="syntax">
+FUNCTION invprop_trans(x,a,b);
+</pre>
+
+which returns \f$(x-b)/a\f$, and
+
+<pre class="syntax">
+FUNCTION clamp(x,minval,maxval);
+</pre>
+
+which returns \f$ \text{GREATEST}(\text{LEAST}(x,\textit{maxval}),\textit{minval}) \f$.
+
+
+Getting Help on SUgAR and the \c 'sugar' function
+=================================================
+All SQL functions in the SUGAR_SCHEMA schema (except \c 'sugar_version()',
+aggregate functions and internal functions) can be called with no parameters
+or with the parameter '' for a brief usage message (unless this conflicts
+with their regular functionality), as well as with the single textual
+parameter \c 'usage' for their full documentation.
+In particular, this is true for \c 'sugar', the main function of the SUgAR
+library.
+
+The following are additional methods to get help regarding the SUgAR library,
+the \c 'sugar' function and the SUgAR pseudofunctions.
  
-    CREATE TABLE outtable AS
-      SELECT patient_id AS id, name,
-        SUGAR_SCHEMA.pivot(diagnosis_code, patient_table, from_date,
-          SUGAR_SCHEMA.unique_element)
-      FROM patient_table GROUP BY (id,name)
-    DISTRIBUTED BY (id);
+<pre class="example">
+SELECT sugar();
+SELECT sugar('');
+</pre>
+                  A brief description of the \c 'sugar' function, including
+                  how to get further help.
  
-  rather than
+<pre class="example">
+SELECT sugar('about');
+</pre>
+                  Overview of the SUgAR library.
  
-    CREATE TABLE outtable AS
-      SELECT patient_id AS id, name,
-        pivot(diagnosis_code, patient_table, from_date,
-          unique_element)
-      FROM patient_table GROUP BY (id,name)
-    DISTRIBUTED BY (id);
+<pre class="example">
+SELECT sugar('list');
+</pre>
+                  Listing of the various SUgAR pseudofunctions supported,
+                  with a brief apropos-style description of each.
+                  (Note that this function lists only pseudofunctions, not
+                  regular SQL functions. So, for example, to get help on
+                  the SQL function \c 'proportional_trans', use
+                  <code>"SELECT proportional_trans('usage');"</code>, instead.
+                  All SQL functions in the SUgAR library provide help when
+                  invoked with either no parameters or with the single
+                  textual parameter \c 'usage'.)
  
-  This is consistent with the SQL method of keeping the namespace clean.
-  However, it is possible to get SUgAR to recognize both the qualified and
-  the unqualified pseudofunction names. The way to do so is to add
-  SUGAR_SCHEMA to the search_path (again, consistent with standard SQL
-  methods).
+<pre class="example">
+SELECT sugar('list','\a func_pattern');
+</pre>
+                  With '\a func_pattern' being a pattern (possibly
+                  simply being the name of a pseudofunction), the function
+                  returns a brief apropos-style description of each
+                  SUgAR pseudofunction matching the pattern.
+                  The supported pattern format is the PostgreSQL \c 'LIKE'.
  
-  Because SUgAR's typing is not consistent with SQL typing, it was not
-  possible for SUgAR's schema resolution to be exactly identical to SQL's.
-  For example, if SUGAR_SCHEMA is on the search_path after another schema
-  that also defines 'pivot', SUgAR would nevertheless treat 'pivot' as the
-  SUgAR pseudofunction, rather than the function appearing earlier on the
-  path. The general rule is that SUgAR will only recognize the qualified
-  names if SUGAR_SCHEMA is not on the path, but will recognize both versions
-  of the names if it is on the path. The position of SUGAR_SCHEMA on the path
-  does not change the treatment of pseudofunctions. For the purpose of
-  pseudofunctions, SUGAR_SCHEMA is always treated as the first element on the
-  path. (For regular functions appearing in SUGAR_SCHEMA, standard SQL rules
-  apply, of course.)
+<pre class="example">
+SELECT sugar('usage');
+</pre>
+                  A full description of the \c 'sugar' function, including
+                  usage examples.
  
-  Note that in either case, SUgAR's name resolution is case insensitive.
-
-
-  Additional features of the sugar function
-  =========================================
-
-  "@":
-  Use @(x,w) to return column x values inside window w as an array.
-    (The order of x values in the array is not guaranteed, but it will be
-    consistent for a given choice of w within a single query. The function can
-    also be used without w. As a single argument function, it also works
-    without parentheses: "@x". This uses DEFAULT_WINDOW as the window.
-    If DEFAULT_WINDOW is not defined, "@x" works as an aggregate.
-    This pseudo-aggregate, essentially a faster version of array_agg, allows
-    one to easily make one's UDFs into window functions, by having them take
-    results of @(x,w) [or @x] as parameters.
-
-  Example:
-
-    CREATE TABLE test_data
-    (fyear integer,firm float8,eps float8);
-    
-    INSERT INTO test_data
-    SELECT (b.f + 1) % 10 + 2000 AS fyear,
-    floor((b.f+1)/10) + 50 AS firm,
-    f::float8/100 + random()/10 AS eps
-    FROM generate_series(-500,499,1) b(f);
-    
-    -- find slope of the linear model regression line
-    CREATE OR REPLACE FUNCTION r_regr_slope(x float8[], y float8[])
-    RETURNS float8 AS $BODY$
-    slope <- NA
-    if (length(x)==9) try (slope <- lm(y ~ x)$coefficients[2])
-    return(slope)
-    $BODY$ LANGUAGE plr;
-    
-    -- Use the function as follows
-    DROP TABLE IF EXISTS outtable;
-    
-    SELECT sugar($SUGAR$
-      CREATE TABLE outtable AS
-        SELECT *, r_regr_slope(@eps, @lag_eps) AS slope_R FROM (
-          SELECT firm, fyear, eps,
-                 lag(eps) OVER (
-                   PARTITION BY firm ORDER BY firm, fyear
-                 ) AS lag_eps
-          FROM test_data
-        ) AS a
-        WHERE eps IS NOT NULL AND lag_eps IS NOT NULL
-        WINDOW default_window AS (
-          PARTITION BY firm ORDER BY firm, fyear ROWS 8 PRECEDING
-        )
-        DISTRIBUTED BY (fyear);
-    $SUGAR$);
-
-  Note that the operator precedence of '@' is fairly low, so '@x+3' is the
-  same as '@(x+3)'. This is usually the desired behavior. If the reverse
-  behavior is required, one can always use parentheses: '@(x)+3'.
-
-
-  Additional convenience functions in SUgAR (all in the SUGAR_SCHEMA schema)
-  ==========================================================================
-
-  SELECT choose_any(x);
-
-  is an aggregate function, returning an arbitrary value from column x.
-  It's guaranteed to return a non-null value if one exists.
-
-  SELECT unique_element(x);
-
-  is an aggregate function that returns the unique non-NULL value from column
-  x or raises an exception if it is not unique.
-
-  Both "choose_any" and "unique_element" are useful as pivoting
-  aggregates. The default pivot function is "unique_element".
-
-  SELECT all_vals();
-
-  SELECT freq_vals(n);
-
-  SELECT all_but_one();
-
-  These are convenience functions for pivot/pivot01. They can be used as the
-  "colchoice" parameter for pivoting. See full
-  documentation at these functions and with the pivot/pivot01 documentation.
-
-  SELECT proportional_trans(x,a,b);
-
-  returns x*a+b
-
-  SELECT invprop_trans(x,a,b);
-
-  returns (x-b)/a
-
-  SELECT clamp(x,minval,maxval);
-
-  returns GREATEST(LEAST(x,maxval),minval)
-
-
-  Getting Help on SUgAR and the 'sugar' function
-  ==============================================
-  All SQL functions in the SUGAR_SCHEMA schema (except 'sugar_version()',
-  aggregate functions and internal functions) can be called with no parameters
-  or with the parameter '' for a brief usage message (unless this conflicts
-  with their regular functionality), as well as with the single textual
-  parameter 'usage' for their full documentation.
-  In particular, this is true for 'sugar', the main function of the SUgAR
-  library.
-
-  The following are additional methods to get help regarding the SUgAR library,
-  the 'sugar' function and the SUgAR pseudofunctions.
+<pre class="example">
+SELECT sugar('usage','\a funcname');
+</pre>
+                  Get usage help on any particular pseduofunction.
+                  (In this case: \a funcname.)
+                  Use <code>"SELECT sugar('usage','sugar_db');"</code> and
+                  <code>"SELECT sugar('usage','sugar_help_db');"</code> to get
+                  usage help regarding the two database tables used by SUgAR.
  
-  SELECT sugar();
-  SELECT sugar('');
-                    A brief description of the 'sugar' function, including
-                    how to get further help.
- 
-  SELECT sugar('about');
-                    Overview of the SUgAR library.
- 
-  SELECT sugar('list');
-                    Listing of the various SUgAR pseudofunctions supported,
-                    with a brief apropos-style description of each.
-                    (Note that this function lists only pseudofunctions, not
-                    regular SQL functions. So, for example, to get help on
-                    the SQL function 'proportional_trans', use
-                    "SELECT proportional_trans('usage');", instead.
-                    All SQL functions in the SUgAR library provide help when
-                    invoked with either no parameters or with the single
-                    textual parameter 'usage'.)
- 
-  SELECT sugar('list','<func_pattern>');
-                    With '<func_pattern>' being a pattern (possibly
-                    simply being the name of a pseudofunction), the function
-                    returns a brief apropos-style description of each
-                    SUgAR pseudofunction matching the pattern.
-                    The supported pattern format is the PostgreSQL 'LIKE'.
- 
-  SELECT sugar('usage');
-                    A full description of the 'sugar' function, including
-                    usage examples.
- 
-  SELECT sugar('usage','<funcname>');
-                    Get usage help on any particular pseduofunction.
-                    (In this case: <funcname>.)
-                    Use "SELECT sugar('usage','sugar_db');" and
-                    "SELECT sugar('usage','sugar_help_db');" to get usage
-                    help regarding the two database tables used by SUgAR.
- 
-  SELECT sugar_version();
-                    Get the version-string describing the version number of
-                    the SUgAR library.
-*/
+<pre class="example">
+SELECT sugar_version();
+</pre>
+                  Get the version-string describing the version number of
+                  the SUgAR library.
+
+@sa grp_sugar
+ */
 
 /**
  * @internal
  * @brief __sugar_get_col_names: Backend function for SUgAR's pseudofunction
- *                               'glob'.
+ *                               \c 'glob'.
  *
  * @about
- * A backend function for SUgAR's pseudofunction 'glob'.
- * See also "glob"'s documentation.
+ * A backend function for SUgAR's pseudofunction \c 'glob'.
  *
- * @usage
- * tablename    - Table whose columns are to be globbed.
- * schemaname   - Schema of table to be globbed.
- * include_cols - columns to be included (PostgreSQL SIMILAR TO regex)
- * exclude_cols - columns of which to exclude (PostgreSQL SIMILAR TO regex)
- * separator    - separator string to put between column names.
+ * @par Syntax
+ * <pre class="syntax">
+ * FUNCTION __sugar_get_col_names(
+ *   tablename TEXT,
+ *   schemaname TEXT,
+ *   include_cols TEXT,
+ *   exclude_cols TEXT,
+ *   separator TEXT
+ * )
+ * RETURNS TEXT;
+ * </pre>
  *
+ * @param tablename    Table whose columns are to be globbed.
+ * @param schemaname   Schema of table to be globbed.
+ * @param include_cols Columns to be included (PostgreSQL <code>SIMILAR TO</code> regex).
+ * @param exclude_cols Columns of which to exclude (PostgreSQL <code>SIMILAR TO</code> regex).
+ * @param separator    Separator string to put between column names.
+ *
+ * @returns
  * The return value is a string containing all the names of the requested
  * columns, in the order in which they appear in the original table, separated
  * by the separator string.
  * If nothing matches, the original "include_cols" expression is returned.
+ *
+ * @sa grp_glob
  *
 **/
 
@@ -332,37 +1734,60 @@ AS $$
 $$;
 
 /**
- * @brief proportional_trans: a simple linear transformation.
- *
- * @about
- * A row function, taking three numerical values, x, alpha and beta,
- * and returning x*alpha+beta. This is a convenience function.
- *
- * @usage
- * x - the value to be transformed.
- * alpha - the multiplicative element of the transformation.
- * beta - the additive element of the transformation.
- *
- * @examp
- * user=# SELECT SUGAR_SCHEMA.proportional_trans(centigrade,1.8,32.0) AS
- *          fahrenheit FROM generate_series(20,30) centigrade;
- *  fahrenheit 
- * ------------
- *        68.0
- *        69.8
- *        71.6
- *        73.4
- *        75.2
- *        77.0
- *        78.8
- *        80.6
- *        82.4
- *        84.2
- *        86.0
- * (11 rows)
- * 
+@addtogroup grp_proportional_trans
+
+@brief A simple linear transformation.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#proportional_trans_syntax">Syntax</a>
+<li class="level1"><a href="#proportional_trans_example">Example</a>
+</ul>
+</div>
+
+@about
+A row function, taking three numerical values, \f$x\f$, \f$\alpha\f$ and
+\f$\beta\f$, and returning \f$ x\alpha+\beta \f$. This is a convenience
+function.
+
+@anchor proportional_trans_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION proportional_trans(x NUMERIC, alpha NUMERIC, beta NUMERIC)
+RETURNS NUMERIC;
+</pre>
+
+@param x The value to be transformed.
+@param alpha The multiplicative element of the transformation.
+@param beta The additive element of the transformation.
+
+@returns The transformation result.
+
+@anchor proportional_trans_example
+@examp
+@verbatim
+user=# SELECT proportional_trans(centigrade,1.8,32.0) AS
+         fahrenheit FROM generate_series(20,30) centigrade;
+ fahrenheit 
+------------
+       68.0
+       69.8
+       71.6
+       73.4
+       75.2
+       77.0
+       78.8
+       80.6
+       82.4
+       84.2
+       86.0
+(11 rows)
+@endverbatim
+
+@sa grp_invprop_trans, grp_zscore, grp_normalize, grp_proportion
+
  */
- 
+
 CREATE OR REPLACE FUNCTION SUGAR_SCHEMA.proportional_trans(
   x NUMERIC,
   alpha NUMERIC,
@@ -432,42 +1857,66 @@ user=# SELECT SUGAR_SCHEMA.proportional_trans(centigrade,1.8,32.0) AS
        84.2
        86.0
 (11 rows)
+
+See also: invprop_trans, zscore, normalize, proportion
 '::VARCHAR END;
 $$;
 
 /**
- * @brief invprop_trans: a simple reverse linear transformation.
- *
- * @about
- * A row function, taking three numerical values, x, alpha and beta,
- * and returning the value y for which x=y*alpha+beta.
- * This is a convenience function, inverting proportional_trans.
- *
- * @usage
- * x - the value to be inverse-transformed.
- * alpha - the multiplicative element of the transformation.
- * beta - the additive element of the transformation.
- *
- * @examp
- * user=# SELECT SUGAR_SCHEMA.invprop_trans(fahrenheit,1.8,32.0) AS
- *          centigrade FROM generate_series(20,30) fahrenheit;
- *      centigrade      
- * ---------------------
- *  -6.6666666666666667
- *  -6.1111111111111111
- *  -5.5555555555555556
- *  -5.0000000000000000
- *  -4.4444444444444444
- *  -3.8888888888888889
- *  -3.3333333333333333
- *  -2.7777777777777778
- *  -2.2222222222222222
- *  -1.6666666666666667
- *  -1.1111111111111111
- * (11 rows)
- * 
+@addtogroup grp_invprop_trans
+
+@brief A simple reverse linear transformation.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#invprop_trans_syntax">Syntax</a>
+<li class="level1"><a href="#invprop_trans_example">Example</a>
+</ul>
+</div>
+
+@about
+A row function, taking three numerical values, \f$x\f$, \f$\alpha\f$ and
+\f$\beta\f$, and returning the value \f$y\f$ for which \f$x=y\alpha+\beta\f$.
+This is a convenience function, inverting \ref grp_proportional_trans.
+
+@anchor invprop_trans_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION invprop_trans(x NUMERIC, alpha NUMERIC, beta NUMERIC)
+RETURNS NUMERIC;
+</pre>
+
+@param x The value to be inverse-transformed.
+@param alpha The multiplicative element of the transformation.
+@param beta The additive element of the transformation.
+
+@returns The inverse transformation result.
+
+@anchor invprop_trans_example
+@examp
+@verbatim
+user=# SELECT invprop_trans(fahrenheit,1.8,32.0) AS
+         centigrade FROM generate_series(20,30) fahrenheit;
+     centigrade      
+---------------------
+ -6.6666666666666667
+ -6.1111111111111111
+ -5.5555555555555556
+ -5.0000000000000000
+ -4.4444444444444444
+ -3.8888888888888889
+ -3.3333333333333333
+ -2.7777777777777778
+ -2.2222222222222222
+ -1.6666666666666667
+ -1.1111111111111111
+(11 rows)
+@endverbatim
+
+@sa grp_proportional_trans, grp_zscore, grp_normalize, grp_proportion
+
  */
- 
+
 CREATE OR REPLACE FUNCTION SUGAR_SCHEMA.invprop_trans(
   x NUMERIC,
   alpha NUMERIC,
@@ -539,51 +1988,74 @@ user=# SELECT SUGAR_SCHEMA.invprop_trans(fahrenheit,1.8,32.0) AS
  -1.6666666666666667
  -1.1111111111111111
 (11 rows)
+
+See also: proportional_trans, zscore, normalize, proportion
 '::VARCHAR END;
 $$;
 
 /**
- * @brief clamp: clamp a value between a minimum and a maximum
- *
- * @about
- * A row function, taking three numerical values, x, minval and maxval,
- * where minval<maxval is assumed, and returning the value of x if
- * minval<x<maxval, or of the closest of the two thresholds, otherwise.
- * This is a convenience function.
- *
- * @usage
- * x - the value to be clamped.
- * minval - the bottom clamping threshold.
- * maxval - the top clamping threshold.
- *
- * Assumes minval<maxval.
- *
- * @examp
- * user=# SELECT SUGAR_SCHEMA.clamp(outside_temperature,70,75) AS
- *          temperature_after_airconditioning
- *          FROM generate_series(65,80) outside_temperature;
- *  temperature_after_airconditioning 
- * -----------------------------------
- *                                 70
- *                                 70
- *                                 70
- *                                 70
- *                                 70
- *                                 70
- *                                 71
- *                                 72
- *                                 73
- *                                 74
- *                                 75
- *                                 75
- *                                 75
- *                                 75
- *                                 75
- *                                 75
- * (16 rows)
- * 
+@addtogroup grp_clamp
+
+@brief Clamp a value between a minimum and a maximum.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#clamp_syntax">Syntax</a>
+<li class="level1"><a href="#clamp_example">Example</a>
+</ul>
+</div>
+
+@about
+A row function, taking three numerical values, \a x, \a minval and \a maxval,
+where \f$ minval<maxval \f$ is assumed, and returning the value of \a x if
+\f$ minval<x<maxval \f$, or of the closest of the two thresholds, otherwise.
+This is a convenience function.
+
+@anchor clamp_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION clamp(x NUMERIC, minval NUMERIC, maxval NUMERIC)
+RETURNS NUMERIC;
+</pre>
+
+@param x The value to be clamped.
+@param minval The bottom clamping threshold.
+@param maxval The top clamping threshold.
+
+@returns The clamped value, i.e. the median of the three inputs.
+
+@note
+Assumes \f$ minval<maxval \f$.
+
+@anchor clamp_example
+@examp
+@verbatim
+user=# SELECT clamp(outside_temperature,70,75) AS
+         temperature_after_airconditioning
+         FROM generate_series(65,80) outside_temperature;
+ temperature_after_airconditioning 
+-----------------------------------
+                                70
+                                70
+                                70
+                                70
+                                70
+                                70
+                                71
+                                72
+                                73
+                                74
+                                75
+                                75
+                                75
+                                75
+                                75
+                                75
+(16 rows)
+@endverbatim
+
  */
- 
+
 CREATE OR REPLACE FUNCTION SUGAR_SCHEMA.clamp(
   x NUMERIC,
   minval NUMERIC,
@@ -703,7 +2175,7 @@ $$;
 /**
  * @internal
  * @brief __sugar_fast_agg: Faster but not order-guaranteeing version
- *                          of array_agg.
+ *                          of \c array_agg.
  *
  * @about
  * An aggregate, taking any element-type and returning an array of all values
@@ -712,18 +2184,24 @@ $$;
  * times on (potentially different columns of) the same table, the row-order
  * reflected in all resulting arrays within the same query will be the
  * same.
- * This is an internal aggregate, used by SUgAR's '@' feature.
+ * This is an internal aggregate, used by SUgAR's <code>'@'</code> feature.
+ *
+ * @par Syntax
+ * <pre class="syntax">
+ * AGGREGATE __sugar_fast_agg(ANYELEMENT);
+ * </pre>
  *
  * @usage
- * This is an internal aggregate, used by SUgAR's '@' feature.
+ * This is an internal aggregate, used by SUgAR's <code>'@'</code> feature.
  *
  * The present assumption that within a SQL query and over a single table
- * aggregation order is consistentent in calculating __sugar_fast_agg.
+ * aggregation order is consistentent in calculating \c __sugar_fast_agg.
  * This is an undocumented feature and it may change in future GPDB/HAWQ
- * releases. If the assumption breaks, SUgAR's '@' feature may return
- * incorrect results.
+ * releases. If the assumption breaks, SUgAR's <code>'@'</code> feature may
+ * return incorrect results.
  *
- * Note: this aggregate function should never be used on NULL inputs.
+ * @warning
+ * This aggregate function should never be used on NULL inputs.
  */
  
 DROP AGGREGATE IF EXISTS SUGAR_SCHEMA.__sugar_fast_agg(ANYELEMENT) CASCADE;
@@ -750,29 +2228,46 @@ END;
 $$;
 
 /**
- * @brief choose_any: choose arbitrarily among a column of values.
- *
- * @about
- * An aggregate taking a column and returning one of its values, chosen
- * arbitrarily. Is guaranteed not to return NULL unless the column has no
- * other values.
- * Its main usage is as the 'agg' parameter in SUgAR's pseudofunction
- * 'pivot'. (The pseudofunction's 4th parameter.) Using it as the 'agg'
- * parameter essentially suppresses any exception that would have been
- * thrown by the default choice ('unique_element') in the case where there is
- * more than one value that needs to be pivoted into a single pivot-table
- * cell.
- * See also: 'unique_element', as well as the documentation for SUgAR's
- * pseudofunction 'pivot'.
- *
- * @examp
- * user=# SELECT SUGAR_SCHEMA.choose_any(x)
- *          FROM generate_series(1,20) x;
- *  choose_any 
- * ------------
- *           1
- * (1 row)
- *
+@addtogroup grp_choose_any
+
+@brief Choose arbitrarily among a column of values.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#choose_any_syntax">Syntax</a>
+<li class="level1"><a href="#choose_any_example">Example</a>
+</ul>
+</div>
+
+@about
+An aggregate taking a column and returning one of its values, chosen
+arbitrarily. Is guaranteed not to return NULL unless the column has no
+other values.
+Its main usage is as the \a agg parameter in SUgAR's pseudofunction
+\c 'pivot'. (The pseudofunction's 4th parameter.) Using it as the \a agg
+parameter essentially suppresses any exception that would have been
+thrown by the default choice (\c 'unique_element') in the case where there is
+more than one value that needs to be pivoted into a single pivot-table
+cell.
+
+@anchor choose_any_syntax
+@par Syntax
+<pre class="syntax">
+AGGREGATE choose_any(ANYELEMENT);
+</pre>
+
+@anchor choose_any_example
+@examp
+@verbatim
+user=# SELECT choose_any(x) FROM generate_series(1,20) x;
+ choose_any 
+------------
+          1
+(1 row)
+@endverbatim
+
+@sa grp_pivot, grp_unique_element
+
  */
  
 DROP AGGREGATE IF EXISTS SUGAR_SCHEMA.choose_any(ANYELEMENT) CASCADE;
@@ -802,34 +2297,52 @@ END;
 $$;
 
 /**
- * @brief unique_element: return a column's non-NULL element, given that this
- *                        element exists and is unique.
- *
- * @about
- * An aggregate taking a column and returning its non-NULL value, given that
- * there is exactly one such value. If there is no such value, the aggregate
- * returns NULL, and if the value is non-unique, it throws an exception.
- * Its main usage is as the 'agg' parameter in SUgAR's pseudofunction
- * 'pivot'. (The pseudofunction's 4th parameter.) Using it as the 'agg'
- * parameter ensures that all values are mapped into their correct cells within
- * the pivot table, while throwing an exception if there is more than one
- * element that needs to be mapped into a single cell. This latter case usually
- * indicates that the original data is not as assumed, and usually calls for
- * a different aggregation function altogether.
- * This exception can be suppressed by choosing 'choose_any' rather than
- * 'unique_element' (the default value).
- * See also: 'choose_any', as well as the documentation for SUgAR's
- * pseudofunction 'pivot'.
- *
- * @examp
- * user=# SELECT SUGAR_SCHEMA.unique_element(x) FROM (
+@addtogroup grp_unique_element
+
+@brief Return a column's non-NULL element, given that this
+                       element exists and is unique.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#unique_element_syntax">Syntax</a>
+<li class="level1"><a href="#unique_element_example">Example</a>
+</ul>
+</div>
+
+@about
+An aggregate taking a column and returning its non-NULL value, given that
+there is exactly one such value. If there is no such value, the aggregate
+returns NULL, and if the value is non-unique, it throws an exception.
+Its main usage is as the \a agg parameter in SUgAR's pseudofunction
+\c 'pivot'. (The pseudofunction's 4th parameter.) Using it as the \a agg
+parameter ensures that all values are mapped into their correct cells within
+the pivot table, while throwing an exception if there is more than one
+element that needs to be mapped into a single cell. This latter case usually
+indicates that the original data is not as assumed, and usually calls for
+a different aggregation function altogether.
+This exception can be suppressed by choosing \c 'choose_any' rather than
+\c 'unique_element' (the default value).
+
+@anchor unique_element_syntax
+@par Syntax
+<pre class="syntax">
+AGGREGATE unique_element(ANYELEMENT);
+</pre>
+
+@anchor unique_element_example
+@examp
+@verbatim
+user=# SELECT unique_element(x) FROM (
             SELECT CASE WHEN y=17 THEN y ELSE NULL END AS x
- *          FROM generate_series(1,20) y) vals;
- *  unique_element 
- * ----------------
- *              17
- * (1 row)
- *
+         FROM generate_series(1,20) y) vals;
+ unique_element 
+----------------
+             17
+(1 row)
+@endverbatim
+
+@sa grp_pivot, grp_choose_any
+
  */
 
 DROP AGGREGATE IF EXISTS SUGAR_SCHEMA.unique_element(ANYELEMENT) CASCADE;
@@ -842,69 +2355,85 @@ CREATE AGGREGATE SUGAR_SCHEMA.unique_element(ANYELEMENT) (
 -- End of definition of unique_element aggregate.
 
 /**
- * @brief all_vals: when used as 'colchoice' parameter in 'pivot' and 'pivot01',
- *                  creates a pivot table with columns for all values.
- *
- * @about
- * A convenience function, to be used in conjunction with SUgAR's "pivot"
- * and "pivot01" pseudofunctions. Both "pivot" and "pivot01" have a "colchoice"
- * parameter (5th parameter in "pivot01", 8th parameter in "pivot"). This
- * parameter determines which columns will be formed in the pivoted table.
- * The option "all_vals()", which is the default, produces columns for
- * every value that appears in the original table's data.
- *
- * See also: 'freq_vals(int)', 'all_but_one()' and the documentation for SUgAR's
- * pseudofunctions 'pivot' and 'pivot01'.
- *
- * @examp
- * user=# CREATE TABLE wiki_table
- * user-# (region text, gender text, style text, ship_date date, units integer,
- * user(# price float8, cost float8, row_num integer) DISTRIBUTED BY (row_num);
- * CREATE TABLE
- * user=# INSERT INTO wiki_table VALUES
- * user-# ('East', 'Girl', 'Tee', '1/31/05', 12, 11.04, 10.42, 1),
- * user-# ('East', 'Boy', 'Golf', '4/30/05', 12, 13, 12.6, 2),
- * user-# (NULL , 'Boy', 'Tee', '3/31/05', 10, 11.96, 11.74, 3),
- * user-# ('West', 'Girl', 'Tee', '4/30/05', 12, 11.27, 10.56, 4),
- * user-# ('West', 'Girl', 'Fancy', '6/30/05', 11, 12.12, 11.95, 5),
- * user-# ('South', 'Boy', 'Fancy', '5/31/05', 15, 13.47, 13.33, 6),
- * user-# ('South', 'Girl', 'Golf', '1/31/05', 15, 11.44, 10.94, 7),
- * user-# ('North', 'Girl', 'Golf', '2/28/05', 12, 12.63, 11.73, 8),
- * user-# ('South', 'Girl', 'Fancy', '6/30/05', 10, 12.06, 11.51, 9),
- * user-# ('West', 'Boy', 'Tee', '2/28/05', 12, 13.42, 13.29, 10),
- * user-# ('East', 'Boy', 'Tee', '1/31/05', 11, 11.48, 10.67, 11)
- * user-# ;
- * INSERT 0 11
- * user=# -- Table data from Wikipedia 'pivoting' entry.
- * user=#
- * user=# SELECT SUGAR_SCHEMA.sugar($$
- * user$#   CREATE TABLE outtable AS SELECT price,units,cost,row_num,
- * user$#     SUGAR_SCHEMA.pivot01(region,wiki_table,null,'{v}',
- * user$#                      SUGAR_SCHEMA.all_vals())
- * user$#   FROM wiki_table
- * user$#   DISTRIBUTED BY (row_num);
- * user$# $$);
- *  sugar 
- * -------
- *  
- * (1 row)
- * 
- * user=# SELECT * FROM outtable;
- *  price | units | cost  | row_num | east | north | south | west | none 
- * -------+-------+-------+---------+------+-------+-------+------+------
- *  11.04 |    12 | 10.42 |       1 |    1 |     0 |     0 |    0 |    0
- *  11.96 |    10 | 11.74 |       3 |    0 |     0 |     0 |    0 |    1
- *  12.12 |    11 | 11.95 |       5 |    0 |     0 |     0 |    1 |    0
- *  11.44 |    15 | 10.94 |       7 |    0 |     0 |     1 |    0 |    0
- *  12.06 |    10 | 11.51 |       9 |    0 |     0 |     1 |    0 |    0
- *  11.48 |    11 | 10.67 |      11 |    1 |     0 |     0 |    0 |    0
- *     13 |    12 |  12.6 |       2 |    1 |     0 |     0 |    0 |    0
- *  11.27 |    12 | 10.56 |       4 |    0 |     0 |     0 |    1 |    0
- *  13.47 |    15 | 13.33 |       6 |    0 |     0 |     1 |    0 |    0
- *  12.63 |    12 | 11.73 |       8 |    0 |     1 |     0 |    0 |    0
- *  13.42 |    12 | 13.29 |      10 |    0 |     0 |     0 |    1 |    0
- * (11 rows)
- * 
+@addtogroup grp_all_vals
+
+@brief When used as \a colchoice parameter in \c 'pivot' and \c 'pivot01',
+          creates a pivot table with columns for all values.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#all_vals_syntax">Syntax</a>
+<li class="level1"><a href="#all_vals_example">Example</a>
+</ul>
+</div>
+
+@about
+A convenience function, to be used in conjunction with SUgAR's \c "pivot"
+and \c "pivot01" pseudofunctions. Both \c "pivot" and \c "pivot01" have a
+\a colchoice parameter (5th parameter in \c "pivot01", 8th parameter in
+\c "pivot"). This parameter determines which columns will be formed in the
+pivoted table. The option \c "all_vals()", which is the default, produces
+columns for every value that appears in the original table's data.
+
+@anchor all_vals_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION all_vals() RETURNS VARCHAR;
+</pre>
+
+@anchor all_vals_example
+@examp
+@verbatim
+user=# CREATE TABLE wiki_table
+user-# (region text, gender text, style text, ship_date date, units integer,
+user(# price float8, cost float8, row_num integer) DISTRIBUTED BY (row_num);
+CREATE TABLE
+user=# INSERT INTO wiki_table VALUES
+user-# ('East', 'Girl', 'Tee', '1/31/05', 12, 11.04, 10.42, 1),
+user-# ('East', 'Boy', 'Golf', '4/30/05', 12, 13, 12.6, 2),
+user-# (NULL , 'Boy', 'Tee', '3/31/05', 10, 11.96, 11.74, 3),
+user-# ('West', 'Girl', 'Tee', '4/30/05', 12, 11.27, 10.56, 4),
+user-# ('West', 'Girl', 'Fancy', '6/30/05', 11, 12.12, 11.95, 5),
+user-# ('South', 'Boy', 'Fancy', '5/31/05', 15, 13.47, 13.33, 6),
+user-# ('South', 'Girl', 'Golf', '1/31/05', 15, 11.44, 10.94, 7),
+user-# ('North', 'Girl', 'Golf', '2/28/05', 12, 12.63, 11.73, 8),
+user-# ('South', 'Girl', 'Fancy', '6/30/05', 10, 12.06, 11.51, 9),
+user-# ('West', 'Boy', 'Tee', '2/28/05', 12, 13.42, 13.29, 10),
+user-# ('East', 'Boy', 'Tee', '1/31/05', 11, 11.48, 10.67, 11)
+user-# ;
+INSERT 0 11
+user=# -- Table data from Wikipedia 'pivoting' entry.
+user=#
+user=# SELECT sugar($$
+user$#   CREATE TABLE outtable AS SELECT price,units,cost,row_num,
+user$#     pivot01(region,wiki_table,null,'{v}', all_vals())
+user$#   FROM wiki_table
+user$#   DISTRIBUTED BY (row_num);
+user$# $$);
+ sugar 
+-------
+ 
+(1 row)
+
+user=# SELECT * FROM outtable;
+ price | units | cost  | row_num | east | north | south | west | none 
+-------+-------+-------+---------+------+-------+-------+------+------
+ 11.04 |    12 | 10.42 |       1 |    1 |     0 |     0 |    0 |    0
+ 11.96 |    10 | 11.74 |       3 |    0 |     0 |     0 |    0 |    1
+ 12.12 |    11 | 11.95 |       5 |    0 |     0 |     0 |    1 |    0
+ 11.44 |    15 | 10.94 |       7 |    0 |     0 |     1 |    0 |    0
+ 12.06 |    10 | 11.51 |       9 |    0 |     0 |     1 |    0 |    0
+ 11.48 |    11 | 10.67 |      11 |    1 |     0 |     0 |    0 |    0
+    13 |    12 |  12.6 |       2 |    1 |     0 |     0 |    0 |    0
+ 11.27 |    12 | 10.56 |       4 |    0 |     0 |     0 |    1 |    0
+ 13.47 |    15 | 13.33 |       6 |    0 |     0 |     1 |    0 |    0
+ 12.63 |    12 | 11.73 |       8 |    0 |     1 |     0 |    0 |    0
+ 13.42 |    12 | 13.29 |      10 |    0 |     0 |     0 |    1 |    0
+(11 rows)
+@endverbatim
+
+@sa grp_pivot, grp_pivot01, grp_freq_vals, grp_all_but_one
+
  */
 
 CREATE OR REPLACE FUNCTION SUGAR_SCHEMA.all_vals()
@@ -1006,74 +2535,88 @@ $BODY$::VARCHAR END;
 $FUNCBODY$;
 
 /**
- * @brief freq_vals: when used as 'colchoice' parameter in 'pivot' and
- *                   'pivot01', creates a pivot table with columns for the
- *                   n most frequent values.
- *
- * @about
- * A convenience function, to be used in conjunction with SUgAR's "pivot"
- * and "pivot01" pseudofunctions. Both "pivot" and "pivot01" have a "colchoice"
- * parameter (5th parameter in "pivot01", 8th parameter in "pivot"). This
- * parameter determines which columns will be formed in the pivoted table.
- * The option "freq_vals(n)" produces columns for the n values that appear
- * most frequently in the original table's data.
- *
- * See also: 'all_vals()', which is the default option for the 'colchoice'
- * parameter, as well as 'all_but_one()' and the documentation for SUgAR's
- * pseudofunctions 'pivot' and 'pivot01'.
- *
- * @usage
- * n - the number of columns to be produced by 'pivot' and 'pivot01'.
- *
- * @examp
- * user=# CREATE TABLE wiki_table
- * user-# (region text, gender text, style text, ship_date date, units integer,
- * user(# price float8, cost float8, row_num integer) DISTRIBUTED BY (row_num);
- * CREATE TABLE
- * user=# INSERT INTO wiki_table VALUES
- * user-# ('East', 'Girl', 'Tee', '1/31/05', 12, 11.04, 10.42, 1),
- * user-# ('East', 'Boy', 'Golf', '4/30/05', 12, 13, 12.6, 2),
- * user-# (NULL , 'Boy', 'Tee', '3/31/05', 10, 11.96, 11.74, 3),
- * user-# ('West', 'Girl', 'Tee', '4/30/05', 12, 11.27, 10.56, 4),
- * user-# ('West', 'Girl', 'Fancy', '6/30/05', 11, 12.12, 11.95, 5),
- * user-# ('South', 'Boy', 'Fancy', '5/31/05', 15, 13.47, 13.33, 6),
- * user-# ('South', 'Girl', 'Golf', '1/31/05', 15, 11.44, 10.94, 7),
- * user-# ('North', 'Girl', 'Golf', '2/28/05', 12, 12.63, 11.73, 8),
- * user-# ('South', 'Girl', 'Fancy', '6/30/05', 10, 12.06, 11.51, 9),
- * user-# ('West', 'Boy', 'Tee', '2/28/05', 12, 13.42, 13.29, 10),
- * user-# ('East', 'Boy', 'Tee', '1/31/05', 11, 11.48, 10.67, 11)
- * user-# ;
- * INSERT 0 11
- * user=# -- Table data from Wikipedia 'pivoting' entry.
- * user=#
- * user=# SELECT SUGAR_SCHEMA.sugar($$
- * user$#   CREATE TABLE outtable AS SELECT price,units,cost,row_num,
- * user$#     SUGAR_SCHEMA.pivot01(region,wiki_table,null,'{v}',
- * user$#                      SUGAR_SCHEMA.freq_vals(3))
- * user$#   FROM wiki_table
- * user$#   DISTRIBUTED BY (row_num);
- * user$# $$);
- *  sugar 
- * -------
- *  
- * (1 row)
- * 
- * user=# SELECT * FROM outtable;
- *  price | units | cost  | row_num | west | east | south 
- * -------+-------+-------+---------+------+------+-------
- *  11.04 |    12 | 10.42 |       1 |    0 |    1 |     0
- *  11.96 |    10 | 11.74 |       3 |    0 |    0 |     0
- *  12.12 |    11 | 11.95 |       5 |    1 |    0 |     0
- *  11.44 |    15 | 10.94 |       7 |    0 |    0 |     1
- *  12.06 |    10 | 11.51 |       9 |    0 |    0 |     1
- *  11.48 |    11 | 10.67 |      11 |    0 |    1 |     0
- *     13 |    12 |  12.6 |       2 |    0 |    1 |     0
- *  11.27 |    12 | 10.56 |       4 |    1 |    0 |     0
- *  13.47 |    15 | 13.33 |       6 |    0 |    0 |     1
- *  12.63 |    12 | 11.73 |       8 |    0 |    0 |     0
- *  13.42 |    12 | 13.29 |      10 |    1 |    0 |     0
- * (11 rows)
- * 
+@addtogroup grp_freq_vals
+
+@brief When used as \a colchoice parameter in \c 'pivot' and
+           \c 'pivot01', creates a pivot table with columns for the
+           \a n most frequent values.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#freq_vals_syntax">Syntax</a>
+<li class="level1"><a href="#freq_vals_example">Example</a>
+</ul>
+</div>
+
+@about
+A convenience function, to be used in conjunction with SUgAR's \c "pivot"
+and \c "pivot01" pseudofunctions. Both \c "pivot" and \c "pivot01" have a
+\a colchoice parameter (5th parameter in \c "pivot01", 8th parameter in
+\c "pivot"). This parameter determines which columns will be formed in the
+pivoted table. The option <code>"freq_vals(n)"</code> produces columns for the
+\a n values that appear most frequently in the original table's data.
+
+@anchor freq_vals_syntax
+@par Synax
+<pre class="syntax">
+FUNCTION freq_vals(n integer) RETURNS TEXT;
+</pre>
+
+@param n The number of columns to be produced by \c 'pivot' and \c 'pivot01'.
+
+@anchor freq_vals_example
+@examp
+@verbatim
+user=# CREATE TABLE wiki_table
+user-# (region text, gender text, style text, ship_date date, units integer,
+user(# price float8, cost float8, row_num integer) DISTRIBUTED BY (row_num);
+CREATE TABLE
+user=# INSERT INTO wiki_table VALUES
+user-# ('East', 'Girl', 'Tee', '1/31/05', 12, 11.04, 10.42, 1),
+user-# ('East', 'Boy', 'Golf', '4/30/05', 12, 13, 12.6, 2),
+user-# (NULL , 'Boy', 'Tee', '3/31/05', 10, 11.96, 11.74, 3),
+user-# ('West', 'Girl', 'Tee', '4/30/05', 12, 11.27, 10.56, 4),
+user-# ('West', 'Girl', 'Fancy', '6/30/05', 11, 12.12, 11.95, 5),
+user-# ('South', 'Boy', 'Fancy', '5/31/05', 15, 13.47, 13.33, 6),
+user-# ('South', 'Girl', 'Golf', '1/31/05', 15, 11.44, 10.94, 7),
+user-# ('North', 'Girl', 'Golf', '2/28/05', 12, 12.63, 11.73, 8),
+user-# ('South', 'Girl', 'Fancy', '6/30/05', 10, 12.06, 11.51, 9),
+user-# ('West', 'Boy', 'Tee', '2/28/05', 12, 13.42, 13.29, 10),
+user-# ('East', 'Boy', 'Tee', '1/31/05', 11, 11.48, 10.67, 11)
+user-# ;
+INSERT 0 11
+user=# -- Table data from Wikipedia 'pivoting' entry.
+user=#
+user=# SELECT sugar($$
+user$#   CREATE TABLE outtable AS SELECT price,units,cost,row_num,
+user$#     pivot01(region,wiki_table,null,'{v}', freq_vals(3))
+user$#   FROM wiki_table
+user$#   DISTRIBUTED BY (row_num);
+user$# $$);
+ sugar 
+-------
+ 
+(1 row)
+
+user=# SELECT * FROM outtable;
+ price | units | cost  | row_num | west | east | south 
+-------+-------+-------+---------+------+------+-------
+ 11.04 |    12 | 10.42 |       1 |    0 |    1 |     0
+ 11.96 |    10 | 11.74 |       3 |    0 |    0 |     0
+ 12.12 |    11 | 11.95 |       5 |    1 |    0 |     0
+ 11.44 |    15 | 10.94 |       7 |    0 |    0 |     1
+ 12.06 |    10 | 11.51 |       9 |    0 |    0 |     1
+ 11.48 |    11 | 10.67 |      11 |    0 |    1 |     0
+    13 |    12 |  12.6 |       2 |    0 |    1 |     0
+ 11.27 |    12 | 10.56 |       4 |    1 |    0 |     0
+ 13.47 |    15 | 13.33 |       6 |    0 |    0 |     1
+ 12.63 |    12 | 11.73 |       8 |    0 |    0 |     0
+ 13.42 |    12 | 13.29 |      10 |    1 |    0 |     0
+(11 rows)
+@endverbatim
+
+@sa grp_pivot, grp_pivot01, grp_all_vals
+
  */
 
 CREATE OR REPLACE FUNCTION SUGAR_SCHEMA.freq_vals(n integer)
@@ -1189,114 +2732,134 @@ $BODY$::VARCHAR END;
 $FUNCBODY$;
 
 /**
- * @brief all_but_one: when used as 'colchoice' parameter in 'pivot' and
- *                     'pivot01', creates a pivot table with columns for all
- *                     values except an arbitrarily chosen one.
- *
- * @about
- * A convenience function, to be used in conjunction with SUgAR's "pivot"
- * and "pivot01" pseudofunctions. Both "pivot" and "pivot01" have a "colchoice"
- * parameter (5th parameter in "pivot01", 8th parameter in "pivot"). This
- * parameter determines which columns will be formed in the pivoted table.
- * The option "all_but_one()" produces columns for all values except an
- * arbitrarily chosen one. This is useful if one wants the output table to
- * avoid co-linearity in the generated 0/1 columns of pivot01.
- *
- * Note: to avoid a specific value, v, rather than an arbitrary value, use
- * pivot(column,table WHERE coalesce(column!=v,true),...)
- * or
- * pivot01(column,table WHERE coalesce(column!=v,true),...)
- * rather than all_but_one().
- *
- * (The "coalesce" is needed for correct handling of NULL values in the
- * WHERE clause.)
- *
- * See also: 'all_vals()', which is the default option for the 'colchoice'
- * parameter, as well as 'freq_vals(int)' and the documentation for SUgAR's
- * pseudofunctions 'pivot' and 'pivot01'.
- *
- * @examp
- * user=# CREATE TABLE wiki_table
- * user-# (region text, gender text, style text, ship_date date, units integer,
- * user(# price float8, cost float8, row_num integer) DISTRIBUTED BY (row_num);
- * CREATE TABLE
- * user=# INSERT INTO wiki_table VALUES
- * user-# ('East', 'Girl', 'Tee', '1/31/05', 12, 11.04, 10.42, 1),
- * user-# ('East', 'Boy', 'Golf', '4/30/05', 12, 13, 12.6, 2),
- * user-# (NULL , 'Boy', 'Tee', '3/31/05', 10, 11.96, 11.74, 3),
- * user-# ('West', 'Girl', 'Tee', '4/30/05', 12, 11.27, 10.56, 4),
- * user-# ('West', 'Girl', 'Fancy', '6/30/05', 11, 12.12, 11.95, 5),
- * user-# ('South', 'Boy', 'Fancy', '5/31/05', 15, 13.47, 13.33, 6),
- * user-# ('South', 'Girl', 'Golf', '1/31/05', 15, 11.44, 10.94, 7),
- * user-# ('North', 'Girl', 'Golf', '2/28/05', 12, 12.63, 11.73, 8),
- * user-# ('South', 'Girl', 'Fancy', '6/30/05', 10, 12.06, 11.51, 9),
- * user-# ('West', 'Boy', 'Tee', '2/28/05', 12, 13.42, 13.29, 10),
- * user-# ('East', 'Boy', 'Tee', '1/31/05', 11, 11.48, 10.67, 11)
- * user-# ;
- * INSERT 0 11
- * user=# -- Table data from Wikipedia 'pivoting' entry.
- * user=#
- * user=# SELECT SUGAR_SCHEMA.sugar($$
- * user$#   CREATE TABLE outtable AS SELECT price,units,cost,row_num,
- * user$#     SUGAR_SCHEMA.pivot01(region,wiki_table,null,'{v}',
- * user$#                      SUGAR_SCHEMA.all_but_one())
- * user$#   FROM wiki_table
- * user$#   DISTRIBUTED BY (row_num);
- * user$# $$);
- *  sugar 
- * -------
- *  
- * (1 row)
- * 
- * user=# SELECT * FROM outtable;
- *  price | units | cost  | row_num | north | south | west | none 
- * -------+-------+-------+---------+-------+-------+------+------
- *     13 |    12 |  12.6 |       2 |     0 |     0 |    0 |    0
- *  11.27 |    12 | 10.56 |       4 |     0 |     0 |    1 |    0
- *  13.47 |    15 | 13.33 |       6 |     0 |     1 |    0 |    0
- *  12.63 |    12 | 11.73 |       8 |     1 |     0 |    0 |    0
- *  13.42 |    12 | 13.29 |      10 |     0 |     0 |    1 |    0
- *  11.04 |    12 | 10.42 |       1 |     0 |     0 |    0 |    0
- *  11.96 |    10 | 11.74 |       3 |     0 |     0 |    0 |    1
- *  12.12 |    11 | 11.95 |       5 |     0 |     0 |    1 |    0
- *  11.44 |    15 | 10.94 |       7 |     0 |     1 |    0 |    0
- *  12.06 |    10 | 11.51 |       9 |     0 |     1 |    0 |    0
- *  11.48 |    11 | 10.67 |      11 |     0 |     0 |    0 |    0
- * (11 rows)
- *
- * -- By comparison, this is how it is done had we wanted to omit a
- * -- specific value, e.g. 'North':
- *
- * user=# drop table outtable;
- * DROP TABLE
- * user=# SELECT sugar($$
- *   CREATE TABLE outtable AS SELECT price,units,cost,row_num,
- *     pivot01(region,wiki_table
- *                      WHERE coalesce(region!='North',true),null,'{v}')
- *   FROM wiki_table
- *   DISTRIBUTED BY (row_num);
- * $$);
- *  sugar 
- * -------
- *  
- * (1 row)
- * 
- * michaeldb=# SELECT * FROM outtable;
- *  price | units | cost  | row_num | east | south | west | none 
- * -------+-------+-------+---------+------+-------+------+------
- *  11.04 |    12 | 10.42 |       1 |    1 |     0 |    0 |    0
- *  11.96 |    10 | 11.74 |       3 |    0 |     0 |    0 |    1
- *  12.12 |    11 | 11.95 |       5 |    0 |     0 |    1 |    0
- *  11.44 |    15 | 10.94 |       7 |    0 |     1 |    0 |    0
- *  12.06 |    10 | 11.51 |       9 |    0 |     1 |    0 |    0
- *  11.48 |    11 | 10.67 |      11 |    1 |     0 |    0 |    0
- *     13 |    12 |  12.6 |       2 |    1 |     0 |    0 |    0
- *  11.27 |    12 | 10.56 |       4 |    0 |     0 |    1 |    0
- *  13.47 |    15 | 13.33 |       6 |    0 |     1 |    0 |    0
- *  12.63 |    12 | 11.73 |       8 |    0 |     0 |    0 |    0
- *  13.42 |    12 | 13.29 |      10 |    0 |     0 |    1 |    0
- * (11 rows)
- * 
+@addtogroup grp_all_but_one
+
+@brief When used as \a colchoice parameter in \c 'pivot' and
+             \c 'pivot01', creates a pivot table with columns for all
+             values except an arbitrarily chosen one.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#all_but_one_syntax">Syntax</a>
+<li class="level1"><a href="#all_but_one_example">Example</a>
+</ul>
+</div>
+
+@about
+A convenience function, to be used in conjunction with SUgAR's \c "pivot"
+and \c "pivot01" pseudofunctions. Both \c "pivot" and \c "pivot01" have a
+\a colchoice parameter (5th parameter in \c "pivot01", 8th parameter in
+\c "pivot"). This parameter determines which columns will be formed in the
+pivoted table. The option <code>"all_but_one()"</code> produces columns for all
+values except an arbitrarily chosen one. This is useful if one wants the output
+table to avoid co-linearity in the generated 0/1 columns of \c pivot01.
+
+@anchor all_but_one_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION all_but_one() RETURNS VARCHAR;
+</pre>
+
+@note
+To avoid a specific value, \a v, rather than an arbitrary value, use
+@verbatim
+pivot(column,table WHERE coalesce(column!=v,true),...)
+@endverbatim
+or
+@verbatim
+pivot01(column,table WHERE coalesce(column!=v,true),...)
+@endverbatim
+rather than <code>all_but_one()</code>.
+
+(The \c "coalesce" is needed for correct handling of \c NULL values in the
+\c WHERE clause.)
+
+@anchor all_but_one_example
+@examp
+@verbatim
+user=# CREATE TABLE wiki_table
+user-# (region text, gender text, style text, ship_date date, units integer,
+user(# price float8, cost float8, row_num integer) DISTRIBUTED BY (row_num);
+CREATE TABLE
+user=# INSERT INTO wiki_table VALUES
+user-# ('East', 'Girl', 'Tee', '1/31/05', 12, 11.04, 10.42, 1),
+user-# ('East', 'Boy', 'Golf', '4/30/05', 12, 13, 12.6, 2),
+user-# (NULL , 'Boy', 'Tee', '3/31/05', 10, 11.96, 11.74, 3),
+user-# ('West', 'Girl', 'Tee', '4/30/05', 12, 11.27, 10.56, 4),
+user-# ('West', 'Girl', 'Fancy', '6/30/05', 11, 12.12, 11.95, 5),
+user-# ('South', 'Boy', 'Fancy', '5/31/05', 15, 13.47, 13.33, 6),
+user-# ('South', 'Girl', 'Golf', '1/31/05', 15, 11.44, 10.94, 7),
+user-# ('North', 'Girl', 'Golf', '2/28/05', 12, 12.63, 11.73, 8),
+user-# ('South', 'Girl', 'Fancy', '6/30/05', 10, 12.06, 11.51, 9),
+user-# ('West', 'Boy', 'Tee', '2/28/05', 12, 13.42, 13.29, 10),
+user-# ('East', 'Boy', 'Tee', '1/31/05', 11, 11.48, 10.67, 11)
+user-# ;
+INSERT 0 11
+user=# -- Table data from Wikipedia 'pivoting' entry.
+user=#
+user=# SELECT sugar($$
+user$#   CREATE TABLE outtable AS SELECT price,units,cost,row_num,
+user$#     pivot01(region,wiki_table,null,'{v}', all_but_one())
+user$#   FROM wiki_table
+user$#   DISTRIBUTED BY (row_num);
+user$# $$);
+ sugar 
+-------
+ 
+(1 row)
+
+user=# SELECT * FROM outtable;
+ price | units | cost  | row_num | north | south | west | none 
+-------+-------+-------+---------+-------+-------+------+------
+    13 |    12 |  12.6 |       2 |     0 |     0 |    0 |    0
+ 11.27 |    12 | 10.56 |       4 |     0 |     0 |    1 |    0
+ 13.47 |    15 | 13.33 |       6 |     0 |     1 |    0 |    0
+ 12.63 |    12 | 11.73 |       8 |     1 |     0 |    0 |    0
+ 13.42 |    12 | 13.29 |      10 |     0 |     0 |    1 |    0
+ 11.04 |    12 | 10.42 |       1 |     0 |     0 |    0 |    0
+ 11.96 |    10 | 11.74 |       3 |     0 |     0 |    0 |    1
+ 12.12 |    11 | 11.95 |       5 |     0 |     0 |    1 |    0
+ 11.44 |    15 | 10.94 |       7 |     0 |     1 |    0 |    0
+ 12.06 |    10 | 11.51 |       9 |     0 |     1 |    0 |    0
+ 11.48 |    11 | 10.67 |      11 |     0 |     0 |    0 |    0
+(11 rows)
+
+-- By comparison, this is how it is done had we wanted to omit a
+-- specific value, e.g. 'North':
+
+user=# drop table outtable;
+DROP TABLE
+user=# SELECT sugar($$
+  CREATE TABLE outtable AS SELECT price,units,cost,row_num,
+    pivot01(region,wiki_table
+                     WHERE coalesce(region!='North',true),null,'{v}')
+  FROM wiki_table
+  DISTRIBUTED BY (row_num);
+$$);
+ sugar 
+-------
+ 
+(1 row)
+
+michaeldb=# SELECT * FROM outtable;
+ price | units | cost  | row_num | east | south | west | none 
+-------+-------+-------+---------+------+-------+------+------
+ 11.04 |    12 | 10.42 |       1 |    1 |     0 |    0 |    0
+ 11.96 |    10 | 11.74 |       3 |    0 |     0 |    0 |    1
+ 12.12 |    11 | 11.95 |       5 |    0 |     0 |    1 |    0
+ 11.44 |    15 | 10.94 |       7 |    0 |     1 |    0 |    0
+ 12.06 |    10 | 11.51 |       9 |    0 |     1 |    0 |    0
+ 11.48 |    11 | 10.67 |      11 |    1 |     0 |    0 |    0
+    13 |    12 |  12.6 |       2 |    1 |     0 |    0 |    0
+ 11.27 |    12 | 10.56 |       4 |    0 |     0 |    1 |    0
+ 13.47 |    15 | 13.33 |       6 |    0 |     1 |    0 |    0
+ 12.63 |    12 | 11.73 |       8 |    0 |     0 |    0 |    0
+ 13.42 |    12 | 13.29 |      10 |    0 |     0 |    1 |    0
+(11 rows)
+@endverbatim
+
+@sa grp_pivot, grp_pivot01, grp_all_vals, grp_freq_vals
+
  */
 
 CREATE OR REPLACE FUNCTION SUGAR_SCHEMA.all_but_one()
@@ -1450,50 +3013,60 @@ $FUNCBODY$;
 /**
  * @internal
  * @brief __sugar_pivot_expand: Backend function for SUgAR's pseudofunction
- *                              'pivot01'.
+ *                              \c 'pivot01'.
  *
  * @about
- * A backend function for SUgAR's pseudofunction 'pivot01'.
- * See also "pivot01"'s documentation.
+ * A backend function for SUgAR's pseudofunction \c 'pivot01'.
  *
- * @usage
- * col1 - Column whose values are to be pivoted.
- * tabl - Table in which foreign_col resides.
- * foreign_col - Column whose values are to be used for generating columns in
- *               the pivot table. Use NULL to indicate that 'col1' should be
- *               used.
- * formatspec -  Format to give pivot-table column names. By default,
- *               or if formatspec is sent a NULL,
- *               'pivot01' uses '{c}_{v}' with this parameter. This means,
+ * @par Syntax
+ * <pre class="syntax">
+ * FUNCTION __sugar_pivot_expand(col1 TEXT, tabl TEXT,
+ *                               foreign_col TEXT, formatspec TEXT,
+ *                               colchoice TEXT)
+ * RETURNS TEXT;
+ * </pre>
+ *
+ * @param col1 Column whose values are to be pivoted.
+ * @param tabl Table in which \a foreign_col resides.
+ * @param foreign_col Column whose values are to be used for generating
+ *               columns in the pivot table. Use \c NULL to indicate that
+ *               \a col1 should be used.
+ * @param formatspec Format to give pivot-table column names. By default,
+ *               or if \a formatspec is sent a \c NULL, \c 'pivot01' uses
+ *               <code>'{c}_{v}'</code> with this parameter. This means,
  *               "lowercase name of the column to pivot, followed by an
  *               underscore, followed by the lowercased column value".
- *               formatspec accepts any string as input and will handle
- *               embedded instances of "{c}" and "{v}" as above. It will also
- *               handle embedded instances of "{C}" and "{V}" to mean the
+ *               \a formatspec accepts any string as input and will handle
+ *               embedded instances of <code>"{c}"</code> and <code>"{v}"</code>
+ *               as above. It will also handle embedded instances of
+ *               <code>"{C}"</code> and <code>"{V}"</code> to mean the
  *               same but keeping the original case rather than lowercasing.
  *               Additionally, this parameter can accept the name of a
  *               function, in which case it will run the function with two
  *               parameters (the column name and the column value) and will
  *               use whatever string the function returns as the name of the
  *               column in the pivot table. For this to make sense, the
- *               formatspec function should be at least STABLE and preferably
- *               IMMUTABLE.
- * colchoice -   Choice of columns to output in the pivot (i.e., which columns
- *               not to suppress). By default, 'pivot01' uses 'all_vals()'
- *               with this parameter, indicating that no column should be
- *               suppressed. Other choices are 'freq_vals(n)', which outputs
- *               columns for the n most frequent values only and
- *               'all_but_one()', with outputs all values except an arbitrarily
- *               chosen one. 'colchoice' is given as a textual string with a SQL
+ *               \a formatspec function should be at least \c STABLE and
+ *               preferably \c IMMUTABLE.
+ * @param colchoice Choice of columns to output in the pivot (i.e., which
+ *               columns not to suppress). By default, \c 'pivot01' uses
+ *               <code>'all_vals()'</code> with this parameter, indicating that
+ *               no column should be suppressed. Other choices are
+ *               <code>'freq_vals(n)'</code>, which outputs columns for the \a n
+ *               most frequent values only and <code>'all_but_one()'</code>,
+ *               which outputs all values except an arbitrarily chosen one.
+ *               \a colchoice is given as a textual string with a SQL
  *               query to be executed, whose return results are the values for
- *               which columns need to be generated. Instances of '{col}' and
- *               '{tabl}' appearing in the string are replaced with the names of
- *               the 'foreign_col' and 'tabl' parameters, respectively, before
- *               the query is evaluated. (The options 'all_vals()' and
- *               'freq_vals(n)') are SQL functions that, when evaluated, return
- *               such a query string. Either SQL functions or literal strings
- *               can be given as inputs to the function.)
+ *               which columns need to be generated. Instances of
+ *               <code>'{col}'</code> and <code>'{tabl}'</code> appearing in the
+ *               string are replaced with the names of the \a foreign_col and
+ *               \a tabl parameters, respectively, before the query is
+ *               evaluated. (The options <code>'all_vals()'</code> and
+ *               <code>'freq_vals(n)')</code> are SQL functions that, when
+ *               evaluated, return such a query string. Either SQL functions or
+ *               literal strings can be given as inputs to the function.)
  *
+ * @sa grp_pivot01
  */
  
 CREATE OR REPLACE FUNCTION SUGAR_SCHEMA.__sugar_pivot_expand(col1 TEXT, tabl TEXT,
@@ -1551,68 +3124,76 @@ $$;
 /**
  * @internal
  * @brief __sugar_pivot_expand_compress: Backend function for SUgAR's
- *                                       pseudofunction 'pivot'.
+ *                                       pseudofunction \c 'pivot'.
  *
  * @about
- * A backend function for SUgAR's pseudofunction 'pivot'.
- * See also "pivot"'s documentation.
+ * A backend function for SUgAR's pseudofunction \c 'pivot'.
  *
- * @usage
- * col1 - Column whose values determine which pivot-table columns specific
- *        col2 values should be placed in.
- * tabl - Table in which foreign_col resides.
- * col2 - Column whose values are to be used as values in the pivot table.
- * agg -  Aggregate, used to aggregate all col2 values that need to be mapped
- *        into a single pivot-table cell. By default, 'pivot' calls this
- *        function with 'unique_element' as its agg value. This maps values
- *        into cells as long as there are no collisions, but throws an
+ * @par Syntax
+ * <pre class="syntax">
+ * FUNCTION __sugar_pivot_expand_compress(col1 TEXT,
+ *                                        tabl TEXT,
+ *                                        col2 TEXT, agg TEXT, defaultval TEXT,
+ *                                        foreign_col TEXT,
+ *                                        formatspec TEXT, colchoice TEXT)
+ * RETURNS TEXT;
+ * </pre>
+ *
+ * @param col1 Column whose values determine which pivot-table columns
+ *        specific \a col2 values should be placed in.
+ * @param tabl Table in which \a foreign_col resides.
+ * @param col2 Column whose values are to be used as values in the pivot
+ *        table.
+ * @param agg Aggregate, used to aggregate all \a col2 values that need to be
+ *        mapped into a single pivot-table cell. By default, \c 'pivot' calls
+ *        this function with \c 'unique_element' as its \a agg value. This maps
+ *        values into cells as long as there are no collisions, but throws an
  *        exception if any cell needs more than one element mapped into it.
- *        SUgAR also provides 'choose_any' that chooses an arbitrary non-NULL
- *        element, effectively doing the same thing as 'unique_element' but
+ *        SUgAR also provides \c 'choose_any' that chooses an arbitrary non-NULL
+ *        element, effectively doing the same thing as \c 'unique_element' but
  *        suppressing the exception. Any aggregate, including standard
- *        aggregates such as 'sum', can be used here.
- * defaultval -  Value to be used for pivot-table cells for which no values
- *               were assigned. Default is NULL. For example, if the user calls
- *               'pivot' with 'sum' as the 'agg' parameter, indicating that
- *               any values mapped into a single cell should be summed together,
- *               a logical choice for defaultval would be 0, to indicate that
- *               the 'sum' of zero elements is zero.
- * foreign_col - Column whose values are to be used for generating columns in
- *               the pivot table. Use NULL to indicate that 'col1' should be
- *               used.
- * formatspec -  Format to give pivot-table column names. By default,
- *               or if formatspec is sent a NULL,
- *               'pivot' uses '{c}_{v}' with this parameter. This means,
- *               "lowercase name of the column to pivot, followed by an
- *               underscore, followed by the lowercased column value".
- *               formatspec accepts any string as input and will handle
- *               embedded instances of "{c}" and "{v}" as above. It will also
- *               handle embedded instances of "{C}" and "{V}" to mean the
- *               same but keeping the original case rather than lowercasing.
- *               Additionally, this parameter can accept the name of a
- *               function, in which case it will run the function with two
- *               parameters (the column name and the column value) and will
- *               use whatever string the function returns as the name of the
- *               column in the pivot table. For this to make sense, the
- *               formatspec function should be at least STABLE and preferably
- *               IMMUTABLE.
- * colchoice -   Choice of columns to output in the pivot (i.e., which columns
- *               not to suppress). By default, 'pivot' uses 'all_vals()'
- *               with this parameter, indicating that no column should be
- *               suppressed. Other choices are 'freq_vals(n)', which outputs
- *               columns for the n most frequent values only and
- *               'all_but_one()', which outputs all columns except an
- *               arbitrarily chosen one. 'colchoice' is
- *               given as a textual string with a SQL query to be executed,
- *               whose return results are the values for which columns need to
- *               be generated. Instances of '{col}' and '{tabl}' appearing in
- *               the string are replaced with the names of the 'foreign_col'
- *               and 'tabl' parameters, respectively, before the query is
- *               evaluated. (The options 'all_vals()', 'freq_vals(n)', etc.) are
- *               SQL functions that, when evaluated, return such a query string.
- *               Either SQL functions or literal strings can be given as
- *               inputs to the function.)
+ *        aggregates such as \c 'sum', can be used here.
+ * @param defaultval Value to be used for pivot-table cells for which no 
+ *        values were assigned. Default is \c NULL. For example, if the user
+ *        calls \c 'pivot' with \c 'sum' as the \a agg parameter, indicating
+ *        that any values mapped into a single cell should be summed together,
+ *        a logical choice for \a defaultval would be \c 0, to indicate that
+ *        the \c 'sum' of zero elements is zero.
+ * @param foreign_col Column whose values are to be used for generating
+ *        columns in the pivot table. Use \c NULL to indicate that \a col1
+ *        should be used.
+ * @param formatspec Format to give pivot-table column names. By default, or
+ *        if \a formatspec is sent a \c NULL, \c 'pivot' uses
+ *        <code>'{c}_{v}'</code> with this parameter. This means, "lowercase
+ *        name of the column to pivot, followed by an underscore, followed by
+ *        the lowercased column value". \a formatspec accepts any string as
+ *        input and will handle embedded instances of <code>"{c}"</code> and
+ *        <code>"{v}"</code> as above. It will also handle embedded instances of
+ *        <code>"{C}"</code> and <code>"{V}"</code> to mean the same but keeping
+ *        the original case rather than lowercasing. Additionally, this
+ *        parameter can accept the name of a function, in which case it will run
+ *        the function with two parameters (the column name and the column
+ *        value) and will use whatever string the function returns as the name
+ *        of the column in the pivot table. For this to make sense, the
+ *        \a formatspec function should be at least \c STABLE and preferably
+ *        \c IMMUTABLE.
+ * @param colchoice Choice of columns to output in the pivot (i.e., which
+ *        columns not to suppress). By default, \c 'pivot' uses
+ *        <code>'all_vals()'</code> with this parameter, indicating that no
+ *        column should be suppressed. Other choices are
+ *        <code>'freq_vals(n)'</code>, which outputs columns for the \a n most
+ *        frequent values only and <code>'all_but_one()'</code>, which outputs
+ *        all columns except an arbitrarily chosen one. \a colchoice is given as
+ *        a textual string with a SQL query to be executed, whose return results
+ *        are the values for which columns need to be generated. Instances of
+ *        <code>'{col}'</code> and <code>'{tabl}'</code> appearing in the string
+ *        are replaced with the names of the \a foreign_col and \a tabl
+ *        parameters, respectively, before the query is evaluated. (The options
+ *        <code>'all_vals()'</code>, <code>'freq_vals(n)'</code>, etc.) are SQL
+ *        functions that, when evaluated, return such a query string. Either SQL
+ *        functions or literal strings can be given as inputs to the function.)
  *
+ * @sa grp_pivot
  */
 
 CREATE OR REPLACE FUNCTION SUGAR_SCHEMA.__sugar_pivot_expand_compress(col1 TEXT,
@@ -1669,42 +3250,68 @@ AS $$
 $$;
 
 /**
- * @brief sugar_db: A table containing the full specification of the SUgAR
- *                  library's various pseudofunctions and pseudo-aggregates.
- *
- * @about
- * The SUgAR library is mainly composed of two parts: the 'sugar' function,
- * which is a shallow SQL parser, and the sugar_db, which is a table defining
- * which parsed elements should be replaced and what they should be replaced
- * with. The sugar_db table is the definitive source for what SUgAR
- * pseudofunctions are defined and how they are defined, in the sense that
- * adding a line to sugar_db adds a pseudofunction to the library.
- * This design supports the original intent for SUgAR to be easily extendable.
- *
- * @usage
- * funcname - The name of the SUgAR function. Case insensitive.
- * argnum   - The number of arguments to the function. SUgAR has no typing.
- *            A function's signature is only its name and the number of
- *            arguments it receives.
- * template - A string, indicating how calls to the function are handled.
- *            If 'dynamic' is set to 'false', SUgAR uses this string as a
- *            replacement value, instead of the original function call. The
- *            string may include '{1}', '{2}', etc., in which case these
- *            strings are replaced by the 1st, 2nd, etc. parameter to the
- *            pseudofunction call.
- *            If 'dynamic' is set to 'true', the resulting string, after
- *            parameter replacement, is not substituted back into the original
- *            query. Rather, it is treated as a standalone SQL query and is
- *            evaluated. Its return value is expected to be a string, and this
- *            string is placed in the original query, instead of the original
- *            function call. We refer to this as a dynamic SUgAR function.
- * dynamic  - Determines whether the SUgAR function is static or dynamic.
- *            See the explanation of the 'template' parameter, above.
- *
- * Note:
- * The documentation of the various functions appears in sugar_help_db.
- * Run "SELECT SUGAR_SCHEMA.sugar('usage');" for more on SUgAR documentation.
- *
+@addtogroup grp_sugar_db
+
+@brief The SUgAR library's pseudofunction database.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#sugar_db_syntax">Syntax</a>
+<li class="level1"><a href="#sugar_db_usage">Usage</a>
+</ul>
+</div>
+
+@about
+\c 'sugar_db' is a table containing the full specification of the SUgAR
+library's various pseudofunctions and pseudo-aggregates.
+
+@anchor sugar_db_syntax
+@par Syntax
+<pre class="syntax">
+TABLE sugar_db(
+  funcname VARCHAR NOT NULL CHECK(funcname<>''),
+  argnum INTEGER NOT NULL,
+  template VARCHAR NULL,
+  dynamic BOOLEAN NOT NULL
+);
+</pre>
+
+The following are the columns of \c 'sugar_db'.
+
+@param funcname The name of the SUgAR function. Case insensitive.
+@param argnum The number of arguments to the function. SUgAR has no typing.
+           A function's signature is only its name and the number of
+           arguments it receives.
+@param template A string, indicating how calls to the function are handled.
+           If \a dynamic is set to \c 'false', SUgAR uses this string as a
+           replacement value, instead of the original function call. The
+           string may include <code>'{1}'</code>, <code>'{2}'</code>, etc., in
+           which case these strings are replaced by the 1st, 2nd, etc.
+           parameter to the pseudofunction call.
+           If \a dynamic is set to \c 'true', the resulting string, after
+           parameter replacement, is not substituted back into the original
+           query. Rather, it is treated as a standalone SQL query and is
+           evaluated. Its return value is expected to be a string, and this
+           string is placed in the original query, instead of the original
+           function call. We refer to this as a dynamic SUgAR function.
+@param dynamic Determines whether the SUgAR function is static or dynamic.
+           See the explanation of the \a template parameter, above.
+
+@anchor sugar_db_usage
+@usage
+The SUgAR library is mainly composed of two parts: the \c 'sugar' function,
+which is a shallow SQL parser, and the \c sugar_db, which is a table defining
+which parsed elements should be replaced and what they should be replaced
+with. The \c sugar_db table is the definitive source for what SUgAR
+pseudofunctions are defined and how they are defined, in the sense that
+adding a line to \c sugar_db adds a pseudofunction to the library.
+This design supports the original intent for SUgAR to be easily extendable.
+
+@note
+The documentation of the various functions appears in \c sugar_help_db.
+Run <code>"SELECT sugar('usage');"</code> for more on SUgAR documentation.
+
+@sa grp_sugar, grp_sugar_help_db
  */
 
 DROP TABLE IF EXISTS SUGAR_SCHEMA.sugar_db;
@@ -1745,24 +3352,47 @@ INSERT INTO SUGAR_SCHEMA.sugar_db VALUES
 ;
 
 /**
- * @brief sugar_help_db: A table containing documentation for SUgAR functions.
- *
- * @about
- * The table 'sugar_help_db' is the definitive source of documentation for
- * SUgAR functions.
- * Much as SUgAR functions can be added to the library by appending their
- * definitions to the table 'sugar_db', so can documentation be added for them
- * by adding it to sugar_help_db. This documentation then becomes accessible
- * via calls to SUGAR_SCHEMA.SUgAR('usage').
- *
- * @usage
- * funcname  - The name of the SUgAR function. Case insensitive.
- * brief_doc - A brief documentation string, in the style of the Unix 'apropos'.
- * full_doc  - The complete function documentation, as a string.
- *
- * Note:
- * Run "SELECT SUGAR_SCHEMA.sugar('usage','sugar_db');" for help on how to
- * implement new SUgAR pseudofunctions.
+@addtogroup grp_sugar_help_db
+
+@brief SUgAR's built-in documentation system.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#sugar_help_db_syntax">Syntax</a>
+</ul>
+</div>
+
+@about
+The table \c 'sugar_help_db' is the definitive source of documentation for
+SUgAR functions.
+Much as SUgAR functions can be added to the library by appending their
+definitions to the table \c 'sugar_db', so can documentation be added for them
+by adding it to \c sugar_help_db. This documentation then becomes accessible
+via calls to <code>sugar('usage')</code>.
+
+@anchor sugar_help_db_syntax
+@par Syntax
+<pre class="syntax">
+TABLE sugar_help_db(
+  funcname VARCHAR NOT NULL CHECK(funcname<>''),
+  brief_doc VARCHAR NULL,
+  full_doc VARCHAR NULL
+);
+</pre>
+
+The following are the columns of \c 'sugar_help_db'.
+
+@param funcname The name of the SUgAR function. Case insensitive.
+@param brief_doc A brief documentation string, in the style of the Unix
+         'apropos'.
+@param full_doc The complete function documentation, as a string.
+
+@note
+Run <code>"SELECT sugar('usage','sugar_db');"</code> for help on how to
+implement new SUgAR pseudofunctions.
+
+@sa grp_sugar, grp_sugar_db
+
  */
 
 CREATE TABLE SUGAR_SCHEMA.sugar_help_db(
@@ -1852,7 +3482,7 @@ Usage
 =====
 The purpose of this pseudoaggregate is to allow a user to conveniently pass
 columnar values into procedural languages, by aggregating them into arrays and
-sending them to the procedure language function call in a single invocation.
+sending them to the procedural language function call in a single invocation.
 In the procedural language function requires more than one parameter, the
 pseudoaggregate can be called separately for each parameter.
 
@@ -1873,6 +3503,11 @@ The operator precedence of '@' is fairly low, ensuring that '@ x+3' means the
 same thing as '@(x+3)', which is probably the correct interpretation. To
 override this behavior, simply use parentheses: '@(x)+3'.
 
+Warning:
+The '@' SUgAR operator conflicts with the standard PostgreSQL '@' operator
+whose meaning is absolute-value taking. When using SUgAR, opt for
+'abs()', instead.
+
 Example
 =======
 
@@ -1887,7 +3522,7 @@ user-#          f::float8/100 + random()/10 AS eps
 user-#          FROM generate_series(-500,499,1) b(f);
 INSERT 0 1000
 user=#
-user=# -- We define a new procedure language function, to calculate
+user=# -- We define a new procedural language function, to calculate
 user=# -- the slope of a linear model regression line. Most conveniently,
 user=# -- this function accepts its parameters in the form of two arrays.
 user=# CREATE OR REPLACE FUNCTION r_regr_slope(x float8[], y float8[])
@@ -2652,193 +4287,6 @@ table (the order they will appear in, in a 'SELECT *').
 $SUGARDOC$)
 ;
 
-/**
- * @brief SUgAR: Syntactic Up-grade for Analytic Routines
- *
- * @about
- * SUgAR is the main function for the SUgAR library. It accepts a textual
- * parameter, and this parameter is expected to be a SQL query, which is
- * subsequently executed in the database.
- * Before executing it, however, SUgAR performs shallow parsing of the SQL
- * code, extracts function calls to functions which it recognizes and
- * replaces them by dynamically-generated code. This second-order parsing
- * supplements the underlying SQL syntax, which, natively, does not have
- * such parsing abilities. The result is a far more powerful syntax, able
- * to easily support common analytics activities (such as pivoting) that
- * are notoriously difficult to support with native SQL.
- *
- * The functions that SUgAR recognizes, which we call 'SUgAR functions', are
- * not part of the definition of the SUgAR function. Rather, they are defined
- * inside the tables sugar_db and and sugar_help_db. This makes SUgAR 100%
- * extendable.
- *
- * Because SUgAR's functions can do things that normal SQL functions cannot,
- * they are not, technically, functions. We refer to them as 'pseudofunctions'.
- * However, we do distinguish between SUgAR functions that can appear in
- * places where one would normally expect a function, those that can appear
- * where one would normally expect an aggregate and those that can appear where
- * one would normally expect a window function. We refer to these as
- * pseudofunctions, pseudo-aggregates and pseudo-window-functions, respectively.
- * We note that GPDB does not currently support user-defined window functions,
- * so SUgAR's pseudo-window-functions are the only way to define such UDWFs,
- * even though this particular SUgAR feature does not require breaking the
- * SQL standard.
- *
- *
- * Getting Help on SUgAR and the 'sugar' function
- * ==============================================
- * All SQL functions in the SUGAR_SCHEMA schema (except 'sugar_version()',
- * aggregate functions and internal functions) can be called with no parameters
- * or with the parameter '' for a brief usage message (unless this conflicts
- * with their regular functionality), as well as with the single textual
- * parameter 'usage' for their full documentation.
- * In particular, this is true for 'sugar', the main function of the SUgAR
- * library.
- *
- * The following are additional methods to get help regarding the SUgAR library,
- * the 'sugar' function and the SUgAR pseudofunctions.
- *
- * SELECT sugar();
- * SELECT sugar('');
- *                   A brief description of the 'sugar' function, including
- *                   how to get further help.
- *
- * SELECT sugar('about');
- *                   Overview of the SUgAR library.
- *
- * SELECT sugar('list');
- *                   Listing of the various SUgAR pseudofunctions supported,
- *                   with a brief apropos-style description of each.
- *                   (Note that this function lists only pseudofunctions, not
- *                   regular SQL functions. So, for example, to get help on
- *                   the SQL function 'proportional_trans', use
- *                   "SELECT proportional_trans('usage');", instead.
- *                   All SQL functions in the SUgAR library provide help when
- *                   invoked with either no parameters or with the single
- *                   textual parameter 'usage'.)
- *
- * SELECT sugar('list','<func_pattern>');
- *                   With '<func_pattern>' being a pattern (possibly
- *                   simply being the name of a pseudofunction), the function
- *                   returns a brief apropos-style description of each
- *                   SUgAR pseudofunction matching the pattern.
- *                   The supported pattern format is the PostgreSQL 'LIKE'.
- *
- * SELECT sugar('usage');
- *                   A full description of the 'sugar' function, including
- *                   usage examples.
- *
- * SELECT sugar('usage','<funcname>');
- *                   Get usage help on any particular pseduofunction.
- *                   (In this case: <funcname>.)
- *                   Use "SELECT sugar('usage','sugar_db');" and
- *                   "SELECT sugar('usage','sugar_help_db');" to get usage
- *                   help regarding the two database tables used by SUgAR.
- *
- * SELECT sugar_version();
- *                   Get the version-string describing the version number of
- *                   the SUgAR library.
- *                 
- *
- * AN IMPORTANT NOTE REGARDING SCHEMA QUALIFIERS
- * =============================================
- * By default, all SUgAR's pseudofunctions, exactly like all other functions,
- * must have full schema qualifications. So, for example, one would to use
- * the SUgAR query
- *
- *   CREATE TABLE outtable AS
- *     SELECT patient_id AS id, name,
- *       SUGAR_SCHEMA.pivot(diagnosis_code, patient_table, from_date,
- *         SUGAR_SCHEMA.unique_element)
- *     FROM patient_table GROUP BY (id,name)
- *   DISTRIBUTED BY (id);
- *
- * rather than
- *
- *   CREATE TABLE outtable AS
- *     SELECT patient_id AS id, name,
- *       pivot(diagnosis_code, patient_table, from_date,
- *         unique_element)
- *     FROM patient_table GROUP BY (id,name)
- *   DISTRIBUTED BY (id);
- *
- * This is consistent with the SQL method of keeping the namespace clean.
- * However, it is possible to get SUgAR to recognize both the qualified and
- * the unqualified pseudofunction names. The way to do so is to add
- * SUGAR_SCHEMA to the search_path (again, consistent with standard SQL
- * methods).
- *
- * Because SUgAR's typing is not consistent with SQL typing, it was not
- * possible for SUgAR's schema resolution to be exactly identical to SQL's.
- * For example, if SUGAR_SCHEMA is on the search_path after another schema
- * that also defines 'pivot', SUgAR would nevertheless treat 'pivot' as the
- * SUgAR pseudofunction, rather than the function appearing earlier on the
- * path. The general rule is that SUgAR will only recognize the qualified
- * names if SUGAR_SCHEMA is not on the path, but will recognize both versions
- * of the names if it is on the path. The position of SUGAR_SCHEMA on the path
- * does not change the treatment of pseudofunctions. For the purpose of
- * pseudofunctions, SUGAR_SCHEMA is always treated as the first element on the
- * path. (For regular functions appearing in SUGAR_SCHEMA, standard SQL rules
- * apply, of course.)
- *
- * Note that in either case, SUgAR's name resolution is case insensitive.
- *
- * @usage
- * orig_query - the SUgAR query to be executed.
- *
- * Notes:
- * 1. See above regarding schema name resolution in pseudofunctions.
- * 2. See sugar_db for an exact description of how SUgAR queries are parsed.
- * 3. SUgAR can be invoked with the parameter 'usage', to receive usage
- *    instructions for itself and for its pseudofunctions. The usage
- *    instructions for the pseudofunctions are taken from the table
- *    sugar_help_db.
- * 4. A limitation when using SUgAR is that it cannot return tables.
- *    SUgAR's return value is a text parameter, usually the empty string but
- *    may include usage messages from SUgAR if the user asks for these.
- *    To use SUgAR effectively, the SQL query which is the parameter to
- *    the SUgAR function (we refer to it as the 'sugar-coated' query) should
- *    be a table creation query, rather than a select query. Thus, in addition
- *    to the basic sugar-coating (enveloping your query inside a 'sugar(...)'
- *    string, usage of SUgAR typically involves the following idiom:
- *
- *    DROP TABLE IF EXISTS outtable;
- *    SELECT sugar('CREATE TABLE outtable AS ...');
- *    SELECT * FROM outtable;
- *
- * @examp
- * user=# DROP TABLE IF EXISTS outtable;
- * DROP TABLE
- * user=#
- * user=# SELECT SUGAR_SCHEMA.sugar($$
- * user$#   CREATE TABLE outtable AS
- * user$#     SELECT x,
- * user$#            SUGAR_SCHEMA.zscore(x) AS col_zscore,
- * user$#            SUGAR_SCHEMA.zscore(x,PARTITION BY x%3) AS win_zscore
- * user$#     FROM generate_series(1,10) x
- * user$#     DISTRIBUTED RANDOMLY;
- * user$# $$);
- *  sugar 
- * -------
- *  
- * (1 row)
- * 
- * user=# SELECT * FROM outtable ORDER BY x;
- *  x  |       col_zscore        |       win_zscore        
- * ----+-------------------------+-------------------------
- *   1 |     -1.4863010829205868 |     -1.1618950038622251
- *   2 | -1.15601195338267862269 | -1.00000000000000000000
- *   3 | -0.82572282384477044478 | -1.00000000000000000000
- *   4 | -0.49543369430686226687 | -0.38729833462074168704
- *   5 | -0.16514456476895408896 |  0.00000000000000000000
- *   6 |  0.16514456476895408896 |  0.00000000000000000000
- *   7 |  0.49543369430686226687 |  0.38729833462074168704
- *   8 |  0.82572282384477044478 |  1.00000000000000000000
- *   9 |  1.15601195338267862269 |  1.00000000000000000000
- *  10 |      1.4863010829205868 |      1.1618950038622251
- * (10 rows)
- * 
- */
 
 CREATE OR REPLACE FUNCTION SUGAR_SCHEMA.sugar(
     orig_query VARCHAR
@@ -2922,8 +4370,8 @@ AS $FUNCBODY$
   code sent to it, followed by re-dressing of the SQL, as per instructions
   that are external to the function.
   All of SUgAR's pseudofunctions are defined in the table
-  'SUGAR_SCHEMA.sugar_db'. This table includes also brief descriptions for
-  each function. The complete documentation for SUgAR pseudofunctions is
+  'SUGAR_SCHEMA.sugar_db'.
+  The complete documentation for SUgAR pseudofunctions is
   available in the table 'SUGAR_SCHEMA.sugar_help_db'. The purpose of this is
   to make SUgAR 100% extendable. Any future pseudofunction that you want to add
   can extend the syntax supported by 'sugar' simply by adding the relevant rows
@@ -3030,6 +4478,12 @@ AS $FUNCBODY$
   Note that the operator precedence of '@' is fairly low, so '@x+3' is the
   same as '@(x+3)'. This is usually the desired behavior. If the reverse
   behavior is required, one can always use parentheses: '@(x)+3'.
+
+  Warning
+  =======
+  The SUgAR '@' operator conflicts with the standard PostgreSQL
+  '@' denoting absolute value. When using SUgAR, denote absolute
+  value taking by 'abs()', instead.
 
 
   Additional convenience functions in SUgAR (all in the SUGAR_SCHEMA schema)
@@ -3194,7 +4648,7 @@ Note:
    the SUgAR function (we refer to it as the 'sugar-coated' query) should
    be a table creation query, rather than a select query. Thus, in addition
    to the basic sugar-coating (enveloping your query inside a 'sugar(...)'
-   string, usage of SUgAR typically involves the following idiom:
+   string), usage of SUgAR typically involves the following idiom:
 
    DROP TABLE IF EXISTS outtable;
    SELECT sugar('CREATE TABLE outtable AS ...');
@@ -3332,6 +4786,8 @@ user=# SELECT * FROM outtable ORDER BY x;
   9 |  1.15601195338267862269 |  1.00000000000000000000
  10 |      1.4863010829205868 |      1.1618950038622251
 (10 rows)
+
+See also: sugar_db, sugar_help_db
 """
 
   if orig_query.lower()=="list":

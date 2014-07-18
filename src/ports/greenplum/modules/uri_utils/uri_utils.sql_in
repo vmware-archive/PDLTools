@@ -1,29 +1,71 @@
--- File: uri_utils.sql
--- Implementation of URI handling utility.
+/* ----------------------------------------------------------------------- *//**
+
+@file uri_utils.sql_in
+
+@brief A set of utilities for parsing and extracting URIs from text.
+
+@author Written by Michael Brand, wrapping functionality from the <code>uriparser</code> library [under new BSD license].
+@date 22 Aug 2013
+
+ *//* ----------------------------------------------------------------------- */
+
+/**
+@addtogroup grp_uri_type
+
+@brief Information about a URI.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#uri_type_syntax">Syntax</a>
+<li class="level1"><a href="#uri_type_usage">Usage</a>
+</ul>
+</div>
+
+@about
+A URI (URL or URN) is represented by its components:
+<code>scheme://userInfo\@hostText:portText/path?query#fragment</code>.
+
+@anchor uri_type_syntax
+@par Syntax
+<pre class="syntax">
+TYPE uri_type AS (
+  scheme text,
+  userInfo text,            
+  hostText text,
+  IPv4 bytea,
+  IPv6 bytea,
+  ipFuture text,
+  portText text,
+  path text[],
+  query text,
+  fragment text,
+  absolutePath boolean,
+  key text[],
+  value text[]
+);
+</pre>
+
+@anchor uri_type_usage
+@usage
+If the host name is numeric in either IPv4 or IPv6 format, it is parsed and
+represented in either the \c "IPv4" or \c "IPv6" element. \c "ipFuture" is
+meant to support additional formats in the future.
+
+\c "path" is stored as an array of path components, so \c "/usr/local/lib" is
+parsed as <code>['usr','local','lib']</code>.
+
+\c "absolutePath" is a Boolean, indicating whether a file path is absolute
+or relative.
+
+\c "key" and \c "value", if not \c NULL, are parsed versions of the query
+string. <code>key[i]</code> and <code>value[i]</code> hold the information for
+the <code>i</code>'th key-value pair in the query string.
+
+@sa grp_uri_array_type
+ */
 
 DROP TYPE IF EXISTS DSTOOLS_SCHEMA.uri_type CASCADE;
 
-/**
- * @brief uri_type: Information about a URI.
- *
- * @usage
- * A URI (URL or URN) is represented by its components:
- * scheme://userInfo@hostText:portText/path?query#fragment
- *
- * If the host name is numeric in either IPv4 or IPv6 format, it is parsed and
- * represented in either the "IPv4" or "IPv6" element. "ipFuture" is meant to
- * support additional formats in the future.
- *
- * "path" is stored as an array of path components, so "/usr/local/lib" is
- * parsed as ['usr','local','lib'].
- *
- * "absolutePath" is a Boolean, indicating whether a file path is absolute
- * or relative.
- *
- * "key" and "value", if not NULL, are parsed versions of the query string.
- * key[i] and value[i] hold the information for the i'th key-value pair in
- * the query string.
- */
 CREATE TYPE DSTOOLS_SCHEMA.uri_type AS (
   scheme text,
   userInfo text,            
@@ -43,17 +85,53 @@ CREATE TYPE DSTOOLS_SCHEMA.uri_type AS (
 DROP TYPE IF EXISTS DSTOOLS_SCHEMA.uri_array_type CASCADE;
 
 /**
- * @brief uri_array_type: Information about an ordered collection of URI.
- *
- * @usage
- * Same as uri_type, but each element is an array, holding data for the
- * entire collection.
- *
- * Additionally:
- * "path" is kept unparsed, as a single "/"-separated string, for each URI.
- * key-value pairs are not extracted from the query.
- * The original uri is kept in the variable "uri", in its original form.
+@addtogroup grp_uri_array_type
+
+@brief Information about an ordered collection of URI.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#uri_array_type_syntax">Syntax</a>
+<li class="level1"><a href="#uri_array_type_usage">Usage</a>
+</ul>
+</div>
+
+@about
+Same as \ref grp_uri_type, but each element is an array, holding data for an
+entire collection.
+
+@anchor uri_array_type_syntax
+@par Syntax
+<pre class="syntax">
+TYPE uri_array_type AS (
+  scheme text[],
+  userInfo text[],
+  hostText text[],
+  IPv4 bytea[],
+  IPv6 bytea[],
+  ipFuture text[],
+  portText text[],
+  path text[],
+  query text[],
+  fragment text[],
+  absolutePath boolean[],
+  uri text[]
+);
+</pre>
+
+@anchor uri_array_type_usage
+@usage
+
+The storage format for \c uri_array_type is very similar to that of
+\c uri_type, but with the following differences:
+
+\c "path" is kept unparsed, as a single <code>"/"</code>-separated string, for
+each URI. Key-value pairs are not extracted from the query.
+The original uri is kept in the variable \c "uri", in its original form.
+
+@sa grp_uri_type
  */
+
 CREATE TYPE DSTOOLS_SCHEMA.uri_array_type AS (
   scheme text[],
   userInfo text[],
@@ -70,28 +148,57 @@ CREATE TYPE DSTOOLS_SCHEMA.uri_array_type AS (
 );
 
 /**
- * @brief parse_uri: Parse a URI into its components.
- *
- * @about
- * A row function, parsing URIs in text format to parsed URIs in uri_type.
- *
- * @prereq external library: uriparser.
- *
- * @usage
- * uri - original URI in text form.
- * normalize - Boolean stating whether parsed URI should be returned in
- *             normalized form (e.g. with lowercase domain name and consistent
- *             handling of special characters).
- * parse_query - Boolean stating whether query portion should be separated into
- *               key-value pairs. If not, "key" and "value are returned NULLs.
- *
- * @examp
- * SELECT DSTOOLS_SCHEMA.parse_uri('http://myself:password@www.goPivotal.com:80/%7ehello/to/you/index.html?who=I&whom=me#here',true,true);
- *                                                        parse_uri                                                        
- * ------------------------------------------------------------------------------------------------------------------------
- *  (http,myself:password,www.gopivotal.com,,,,80,"{~hello,to,you,index.html}",who=I&whom=me,here,f,"{who,whom}","{I,me}")
- * (1 row)
+@addtogroup grp_parse_uri
+
+@brief Parse a URI into its components.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#parse_uri_syntax">Syntax</a>
+<li class="level1"><a href="#parse_uri_usage">Usage</a>
+<li class="level1"><a href="#parse_uri_example">Example</a>
+</ul>
+</div>
+
+@about
+A row function, parsing URIs in text format to parsed URIs in uri_type.
+
+@anchor parse_uri_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION parse_uri(uri text, normalize boolean, parse_query boolean)
+RETURNS uri_type;
+</pre>
+
+@param uri Original URI in text form.
+@param normalize Boolean stating whether parsed URI should be returned in
+            normalized form (e.g. with lowercase domain name and consistent
+            handling of special characters).
+@param parse_query Boolean stating whether query portion should be separated
+             into key-value pairs. If not, \c "key" and \c "value are returned
+             <code>NULL</code>s.
+
+@returns The parsed URI.
+
+@anchor parse_uri_usage
+@usage
+Returns a \c uri_type. Note that the fields \c "key" and \c "value" include the
+actual decoded content of the key-value parameters. As such, they are not
+affected by the question of whether \c "normalize" is true or false.
+
+@anchor parse_uri_example
+@examp
+@verbatim
+user=# SELECT parse_uri('http://myself:password@www.goPivotal.com:80/%7ehello/to/you/index.html?who=I&whom=me#here',true,true);
+                                                       parse_uri                                                        
+------------------------------------------------------------------------------------------------------------------------
+ (http,myself:password,www.gopivotal.com,,,,80,"{~hello,to,you,index.html}",who=I&whom=me,here,f,"{who,whom}","{I,me}")
+(1 row)
+@endverbatim
+
+@sa grp_uri_type
  */
+
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.parse_uri(uri text, normalize boolean,
                                    parse_query boolean)
 RETURNS DSTOOLS_SCHEMA.uri_type
@@ -149,30 +256,60 @@ SELECT DSTOOLS_SCHEMA.parse_uri('http://myself:password@www.goPivotal.com:80/%7e
 ------------------------------------------------------------------------------------------------------------------------
  (http,myself:password,www.gopivotal.com,,,,80,"{~hello,to,you,index.html}",who=I&whom=me,here,f,"{who,whom}","{I,me}")
 (1 row)
+
+See also: uri_type
 $__STRING__$ END;
 $$;
 
 /**
- * @brief extract_uri: Extract all URIs embedded in text input.
- *
- * @about
- * A row function, extracting uri_array_type from a text field.
- *
- * @prereq external library: uriparser.
- *
- * @usage
- * txt - Text from which URIs are to be extracted.
- * normalize - Boolean stating whether parsed URIs should be returned in
- *             normalized form (e.g. with lowercase domain names and consistent
- *             handling of special characters).
- *
- * @examp
- * SELECT DSTOOLS_SCHEMA.extract_uri('First go to http://[0123:4567:89ab:cdef:0123:4567:89ab:cdef]/ then go to https://192.165.0.1/ and repeat.',true);
- *                                                                                                                                                            extract_uri                                                                                                                                                           
- * ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- *  ("{http,https}","{"""",""""}","{0123:4567:89ab:cdef:0123:4567:89ab:cdef,192.165.0.1}","{"""",300245000001}","{001043105147211253315357001043105147211253315357,""""}","{"""",""""}","{"""",""""}","{"""",""""}","{"""",""""}","{"""",""""}","{f,f}","{http://[0123:4567:89ab:cdef:0123:4567:89ab:cdef]/,https://192.165.0.1/}")
- * (1 row)
+@addtogroup grp_extract_uri
+
+@brief Extract all URIs embedded in text input.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#extract_uri_syntax">Syntax</a>
+<li class="level1"><a href="#extract_uri_usage">Usage</a>
+<li class="level1"><a href="#extract_uri_example">Example</a>
+</ul>
+</div>
+
+@about
+A row function, extracting \c uri_array_type from a text field.
+
+@anchor extract_uri_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION extract_uri(txt text, normalize boolean)
+RETURNS uri_array_type;
+</pre>
+
+@param txt Text from which URIs are to be extracted.
+@param normalize Boolean stating whether parsed URIs should be returned in
+            normalized form (e.g. with lowercase domain names and consistent
+            handling of special characters).
+
+@returns The extracted URIs.
+
+@anchor extract_uri_usage
+@usage
+Returns a \c uri_array_type. Note that the \c "uri" field keeps the original URI
+exactly in the form that it was in the original text, regardless of whether
+\c "normalize" is \c "true" or \c "false".
+
+@anchor extract_uri_example
+@examp
+@verbatim
+user=# SELECT extract_uri('First go to http://[0123:4567:89ab:cdef:0123:4567:89ab:cdef]/ then go to https://192.165.0.1/ and repeat.',true);
+                                                                                                                                                           extract_uri                                                                                                                                                           
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ ("{http,https}","{"""",""""}","{0123:4567:89ab:cdef:0123:4567:89ab:cdef,192.165.0.1}","{"""",300245000001}","{001043105147211253315357001043105147211253315357,""""}","{"""",""""}","{"""",""""}","{"""",""""}","{"""",""""}","{"""",""""}","{f,f}","{http://[0123:4567:89ab:cdef:0123:4567:89ab:cdef]/,https://192.165.0.1/}")
+(1 row)
+@endverbatim
+
+@sa grp_uri_array_type
  */
+
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.extract_uri(txt text, normalize boolean)
 RETURNS DSTOOLS_SCHEMA.uri_array_type
 AS 'MODULE_PATHNAME','extract_uri'
@@ -228,26 +365,56 @@ SELECT DSTOOLS_SCHEMA.extract_uri('First go to http://[0123:4567:89ab:cdef:0123:
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  ("{http,https}","{"""",""""}","{0123:4567:89ab:cdef:0123:4567:89ab:cdef,192.165.0.1}","{"""",300245000001}","{001043105147211253315357001043105147211253315357,""""}","{"""",""""}","{"""",""""}","{"""",""""}","{"""",""""}","{"""",""""}","{f,f}","{http://[0123:4567:89ab:cdef:0123:4567:89ab:cdef]/,https://192.165.0.1/}")
 (1 row)
+
+See also: uri_array_type
 $__STRING__$ END;
 $$;
 
 
 /**
- * @brief parse_domain: Parse a URI domain name into its components.
- *
- * @about
- * A row function, parsing a textual hierarchical domain name into components.
- *
- * @usage
- * domainname - Domain name to be parsed.
- *
- * @examp
- * SELECT DSTOOLS_SCHEMA.parse_domain('www.gopivotal.com');
- *     parse_domain     
- * ---------------------
- *  {www,gopivotal,com}
- * (1 row)
+@addtogroup grp_parse_domain
+
+@brief Parse a URI domain name into its components.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#parse_domain_syntax">Syntax</a>
+<li class="level1"><a href="#parse_domain_usage">Usage</a>
+<li class="level1"><a href="#parse_domain_example">Example</a>
+</ul>
+</div>
+
+@about
+A row function, parsing a textual hierarchical domain name into components.
+
+@anchor parse_domain_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION parse_domain(domainname text)
+RETURNS text[];
+</pre>
+
+@param domainname Domain name to be parsed.
+
+@returns Array of domain components.
+
+@anchor parse_domain_usage
+@usage
+The function splits a textual domain name into its components. This is a
+useful convenience function when, for example, only top-level domains are of
+interest.
+
+@anchor parse_domain_example
+@examp
+@verbatim
+user=# SELECT parse_domain('www.gopivotal.com');
+    parse_domain     
+---------------------
+ {www,gopivotal,com}
+(1 row)
+@endverbatim
  */
+
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.parse_domain(domainname text)
 RETURNS text[]
 IMMUTABLE

@@ -15,3 +15,7 @@ modules:
       depends: ['common']
     - name: sugar
       depends: ['common']
+    - name: complex
+      depends: ['common']
+    - name: plr_placeholder
+      depends: ['common'] 

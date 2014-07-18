@@ -1,0 +1,15 @@
+/* ----------------------------------------------------------------------- *//**
+
+@file plr_sample.sql_in
+
+@brief Placeholder for functions written in PL/R.
+
+ *//* ----------------------------------------------------------------------- */
+
+
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.plr_cor(x float8[], y float8[])
+    RETURNS float8
+AS
+$$
+    return (cor(x,y));
+$$ language plr;

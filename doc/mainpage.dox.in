@@ -1,32 +1,205 @@
 /**
 @mainpage
-DS Tools is a library of reusable tools for use by Data Scientists. We at Pivotal Data Labs often supplement the functionality provided by [MADlib](http://madlib.net) - our opensource library of in-database machine learning algorithms, by writing `UDFs` in procedural languages such as <B>PL/Python</B>, <B>PL/R</B> and <B>PL/PERL</B>, to solve data science problems for our customers. <B>DSTools</B> is a collection of such libraries packaged for re-usability.
+<B>DS Tools</B> is a library of reusable tools for use by Data Scientists.
 
-@defgroup grp_distmetrics Distance Metric Implementations
-@{A collection of methods for computing various distance metrics @}
+It is provided and maintained by Pivotal Data Labs, and includes tools that
+facilitate Big Data analytics using the SQL command-line, when using
+Pivotal's GPDB. <B>DS Tools</B> includes convenience tools, parallelized
+algorithms and the <B>SUgAR</B> library (enabling second-order SQL parsing).
+
+<B>DS Tools</B> is a non-free library. It is proprietary to Pivotal and
+embodies intellectual property that belongs to Pivotal, including
+patent-pending material. It is provided to customers of Pivotal Data Labs as
+part of Pivotal's differentiated Data Science services. PDL's <B>DS Tools</B>
+customers are granted copyright and a license for their own internal use.
+
+Call any function without parameters (or with the single parameter
+<code>'usage'</code>, as a string) for online help. Use
+<code>"dstools_version()"</code> to get the library's version number.
+
+@defgroup grp_tools_module Tools
+@{
+A collection of convenience functions.
+
+    @defgroup grp_uriutils URI Utils
+    @{
+        @brief A set of utilities for parsing and extracting URIs from text.
+
+A set of utilities for parsing and extracting URIs from text.
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 22 Aug 2013, wrapping functionality from the <code>uriparser</code> library [under new BSD license].)
+
+        @sa Module source file: uri_utils.sql_in.
+
+        @prereq
+External library: uriparser
+
+        @defgroup grp_uri_type uri_type (Type)
+        @defgroup grp_uri_array_type uri_array_type (Type)
+        @defgroup grp_parse_uri parse_uri
+        @defgroup grp_extract_uri extract_uri
+        @defgroup grp_parse_domain parse_domain
+    @}
+
     @defgroup grp_editdist Edit Distance
-    @ingroup grp_distmetrics
+    @{
+        @brief Calculators for generalized edit distance metrics.
 
-    @defgroup grp_levendist Levenshtein Distance
-    @ingroup grp_distmetrics
+Implementation of Levenshtein, Demerau-Levenshtein, Optimal Alignment
+and related edit distance metrics (and non-distance metrics).
 
-    @defgroup grp_demaraulevdist Demarau Levenshtein Distance
-    @ingroup grp_distmetrics
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 19 Feb 2014.)
 
-    @defgroup grp_optimaligndist Optimal Alignment Distance
-    @ingroup grp_distmetrics
+        @sa Module source file: edit_distance.sql_in.
 
-@defgroup grp_ccomp Connected Components Implementation
-@{A collection of methods for computing the connected components in a graph @}
-    @defgroup grp_ccomp_hawq Connected Components in HAWQ
-    @ingroup grp_ccomp
-    @defgroup grp_ccomp_perl Connected Components in Perl
-    @ingroup grp_ccomp
+        @defgroup grp_edit_distance edit_distance
+        @defgroup grp_edit_distance_unsafe edit_distance_unsafe
+        @defgroup grp_levenshtein_distance levenshtein_distance
+        @defgroup grp_demerau_levenshtein_distance demerau_levenshtein_distance
+        @defgroup grp_optimal_alignment_distance optimal_alignment_distance
+    @}
 
-@defgroup grp_sessionize Sessionization
-@{A collection of methods for Sessionization of Webserver Logs @}
-    @defgroup grp_sessionize_url Sessionization
-    @ingroup grp_sessionize
+    @defgroup grp_anonymization Anonymization
+    @{
+        @brief Implementation of anonymization utility.
 
+Implementation of anonymization utility.
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 9 Dec 2013.)
+
+        @sa Module source file: anonymization.sql_in.
+
+        @prereq
+PL/pgSQL, PL/PythonU
+
+        @defgroup grp_create_anonymization_table create_anonymization_table
+        @defgroup grp_anonymize anonymize
+        @defgroup grp_deanonymize deanonymize
+    @}
+
+    @defgroup grp_sessionization Sessionization
+    @{
+        @brief Utility to partition event streams into sessions by timeouts and identifiers.
+
+Utility to partition event streams into sessions by timeouts and identifiers.
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 22 Aug 2013, based on code by Jin Yu.)
+        
+        @sa Module source file: session.sql_in.
+
+        @prereq
+PL/Perl
+
+        @defgroup grp_session_split session_split
+    @}
+
+    @defgroup grp_complexnumbers Complex Numbers
+    @{
+        @brief Implementation of a user-defined Complex type.
+
+Implementation of a user-defined Complex type.
+
+(Written by Kevin Yun Liu, 1 Apr 2012. Adapted for DS Tools by [Srivatsan Ramanujam](mailto:sramanujam@gopivotal.com).)
+
+        @sa Module source file: complex_type.sql_in.
+
+        @defgroup grp_complex complex (Type)
+    @}
+@}
+
+@defgroup grp_algorithms_module Algorithms
+@{
+A collection of machine-learning algorithms.
+
+    @defgroup grp_ccomp Connected Components
+    @{
+        @brief Implementation of (patent pending) connected components algorithm.
+
+Two implementations of (patent pending) connected components algorithm.
+Use \ref grp_connected_components for increased speed on GPDB, when PL/Perl is
+available. The variant \ref grp_connected_components_no_udfs was originally
+programmed for an old version of HAWQ that did not allow user-defined
+functions. It works in pure PL/pgSQL, without UDAs or sub-function calls.
+However, it requires roughly twice as many passes over the data.
+Today, its main advantage is
+in that it can work on a wide variety of vertex ID types, whereas
+\ref grp_connected_components can only run on \c INTEGER and \c BIGINT vertices.
+
+Having said this, timing measurements are inconclusive as to whether the
+"no udf" version really is substantially slower than the PL/Perl version, and
+some measurements seem to even imply the reverse.
+These measurements have not been investigated closely. In both implementations,
+all heavy lifting is done in SQL.
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 14 Nov 2012.)
+
+        @sa Module source files: connected_components_perl.sql_in, connected_components_hawq.sql_in.
+
+        @prereq
+PL/Perl (function \ref grp_connected_components only),
+PL/pgSQL (function \ref grp_connected_components_no_udfs only)
+
+        @defgroup grp_connected_components connected_components
+        @defgroup grp_connected_components_no_udfs connected_components_no_udfs
+    @}
+@}
+
+@defgroup grp_sugar_module SUgAR - Syntactic Upgrades for Analytics Routines
+@{
+A library of routines powered by second-order SQL parsing.
+
+    @sa Module source file: sugar.sql_in.
+
+    @prereq
+MADlib (\ref grp_pvalue only)
+
+    @defgroup grp_sugar_framework The SUgAR Framework
+    @{
+        @brief What SUgAR is, how to use and how to extend it.
+
+What SUgAR is, how to use and how to extend it.
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+
+        @defgroup grp_sugar_introduction Introduction
+        @defgroup grp_sugar sugar
+        @defgroup grp_sugar_db sugar_db (Table)
+        @defgroup grp_sugar_help_db sugar_help_db (Table)
+    @}
+
+    @defgroup grp_sugar_funcs SUgAR Pseudofunctions
+    @{
+        @brief The SUgAR pseudofunctions available out-of-the-box.
+
+The SUgAR pseudofunctions available out-of-the-box.
+
+        @defgroup grp_opat "@" (Pseudo-operator)
+        @defgroup grp_zscore zscore (Pseudo-window-function)
+        @defgroup grp_pvalue pvalue (Pseudo-window-function)
+        @defgroup grp_normalize normalize (Pseudo-window-function)
+        @defgroup grp_proportion proportion (Pseudo-window-function)
+        @defgroup grp_pivot01 pivot01 (Pseudofunction)
+        @defgroup grp_pivot pivot (Pseudo-aggregate)
+        @defgroup grp_glob glob (Pseudofunction)
+    @}
+
+    @defgroup grp_helper Helper Routines
+    @{
+        @brief Various convenience functions, used or useful with SUgAR.
+
+Various convenience functions, used or useful with SUgAR.
+
+(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+
+        @defgroup grp_proportional_trans proportional_trans
+        @defgroup grp_invprop_trans invprop_trans
+        @defgroup grp_clamp clamp
+        @defgroup grp_all_vals all_vals
+        @defgroup grp_freq_vals freq_vals
+        @defgroup grp_all_but_one all_but_one
+        @defgroup grp_choose_any choose_any (Aggregate)
+        @defgroup grp_unique_element unique_element (Aggregate)
+    @}
+@}
 
 */

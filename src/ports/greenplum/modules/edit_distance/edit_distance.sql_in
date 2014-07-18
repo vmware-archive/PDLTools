@@ -1,84 +1,270 @@
 
 /* ----------------------------------------------------------------------- *//**
- *
- * @file edit_distance.sql_in
- *
- * @brief Implementationof Levenshtein, Demerau-Levenshtein, Optimal Alighment
- *        and related edit distance metrics (and non-distance metrics).
- *
- * @sa For a brief introduction to distance metrics, see the
- *     module description \ref grp_distmetrics.
- *
+
+@file edit_distance.sql_in
+
+@brief Implementation of Levenshtein, Demerau-Levenshtein, Optimal Alighment
+       and related edit distance metrics (and non-distance metrics).
+
+@author Written by Michael Brand
+@date 19 Feb 2014
+
  *//* ----------------------------------------------------------------------- */
 
 /**
- * @addtogroup grp_editdist
- *
- * @brief An edit distance calculator.
+@addtogroup grp_edit_distance
 
- * A row function, taking two strings and calculating their edit distance.
- * Costs for various edit operations, including the transposition of
- * characters that are adjacent in both the input and output, are user-defined.
- * This function is "unsafe" in the sense that it assumes certain qualities
- * about the user-defined costs without checking them. Scroll below for a
- * complete list of these assumptions.
- *
- * @param str1, str2 (text) The two strings to be compared. Edits make str1 into str2.
- * @param ins_cost  (int) Cost to insert a character.
- * @param del_cost  (int) Cost to delete a character.
- * @param sub_cost  (int) Cost to substitute a character by another.
- * @param tp_cost   (int) Cost to transpose two adjacent characters.
- * @param final_tp_cost (int) Cost to transpose two adjacent characters, on the assumption
- *                that no other transformation occurs on these characters or
- *                anything between them throughout the editing process.
- * @param spec_sub_cost (int) Cost for special substitution.
- * @param spec_sub_from (text) String giving the "from" list for substitution of characters
- *                that receives special weighing spec_sub_cost.
- * @param spec_sub_to (text) String with "to" list corresponding to the previous "from".
- *
- * @returns The edit distance (integer)
- *
- * @par Assumptions
- *   -# All costs are assumed to be nonnegative.
- *   -# final_tp_cost <= tp_cost
- *   -# ins_cost+del_cost <= 2*final_tp_cost
- *   -# max(sub_cost,special_sub_cost) <= final_tp_cost
- * When these assumptions are voided, the result may be incorrect.
- *
- * @note Even though we use the term "distance", the result is not
- * necessarily a distance metric. It is only a distance metric if all of the
- * following conditions hold:
- *    -# final_tp_cost = tp_cost;
- *    -# ins_cost = del_cost; and
- *    -# the spec_sub_from and spec_sub_to lists are symmetric.
- *
- * @par Examples
- * <pre class="example">
- * SELECT DSTOOLS_SCHEMA.edit_distance_unsafe(
- *                           'demerau',
- *                           'levenshtein',
- *                           1,
- *                           1,
- *                           1,
- *                           1,
- *                           1,
- *                           1,
- *                           '01OIIL',
- *                           'OI01LI'
- *                       );
- * </pre>
- *
- * @par Results
- * <pre class="results">
- * edit_distance_unsafe
- * \----------------------
- *       9
- * (1 row)
- * </pre>
- * @par Related Topics
- *
- * File edit_distance.sql_in, source file for the SQL functions
- *
+@brief An edit distance calculator.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#edit_distance_syntax">Syntax</a>
+<li class="level1"><a href="#edit_distance_usage">Usage</a>
+<li class="level1"><a href="#edit_distance_example">Example</a>
+</ul>
+</div>
+
+@about
+A row function, taking two strings and calculating their edit distance.
+Costs for various edit operations, including the transposition of
+characters that are adjacent in both the input and output, are user-defined.
+This function is "safe" in the sense that it verifies certain assumptions
+about the user-defined costs and throws an exception if they do not hold
+true, rather than returning an erroneous value. See
+<A HREF="#edit_distance_usage">"Usage"</A> for a
+complete list of these assumptions.
+
+@anchor edit_distance_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION edit_distance(str1 text, str2 text,
+                    ins_cost integer, del_cost integer, sub_cost integer,
+                    tp_cost integer, final_tp_cost integer,
+                    spec_sub_cost integer, spec_sub_from text, spec_sub_to text)
+RETURNS integer;
+</pre>
+<pre class="syntax">
+FUNCTION edit_distance(str1 text, str2 text,
+                    ins_cost integer, del_cost integer, sub_cost integer,
+                    tp_cost integer, final_tp_cost integer)
+RETURNS integer;
+</pre>
+<pre class="syntax">
+FUNCTION edit_distance(str1 text, str2 text,
+                       ins_cost integer, del_cost integer, sub_cost integer,
+                       tp_cost integer)
+RETURNS integer;
+</pre>
+
+@param str1, str2 The two strings to be compared.
+                  Edits make \a str1 into \a str2.
+@param ins_cost   Cost to insert a character.
+@param del_cost   Cost to delete a character.
+@param sub_cost   Cost to substitute a character by another.
+@param tp_cost    Cost to transpose two adjacent characters.
+@param final_tp_cost Cost to transpose two adjacent characters, on the
+               assumption that no other transformation occurs on these
+               characters or anything between them throughout the editing
+               process.
+@param spec_sub_cost Cost for special substitution.
+@param spec_sub_from String giving the "from" list for substitution of
+               characters that receives special weighing \a spec_sub_cost.
+@param spec_sub_to String with "to" list corresponding to the previous
+               "from".
+
+@returns The edit distance.
+
+@anchor edit_distance_usage
+@usage
+Given two strings, \a str1 and \a str2, it is possible to transform the former into
+the latter by a sequence of edit operations such as insertion of a new
+character, deletion of an existing character, substitution of one character by
+another and transposition of the order of two adjacent characters.
+
+Suppose that each one of these operations is associated with a cost
+(in the form of a nonnegative integer), then the cost of a sequence of
+operations can be measured as the sum of the costs of its individual parts.
+
+There may be many sequences transforming \a str1 to \a str2, each with its own
+cost. The minimum of these costs is called the "edit distance" from \a str1
+to \a str2.
+
+The particular edit distance implementation given here allows each one of the
+operations discussed above to be assigned a cost. Furthermore, one can
+assign the following special costs:
+
+  - \a final_tp_cost is the cost of transposing two adjacent characters, given that these characters are at no point involved in any other type of operation.
+  - \a spec_sub_cost is the cost of making a character-to-character substitution that is one of a special list of substitutions defined by \a spec_sub_from and \a spec_sub_to. A substitution is "special" if it takes the <em>i</em>'th character in \a spec_sub_from and transforms it to the <em>i</em>'th character in \a spec_sub_to. For example, if <code>spec_sub_from="OI"</code> and <code>spec_sub_to="01"</code>, then the list of special substitutions is the list of common character to numeral substitutions, namely the transformation of an <code>"O"</code> to a <code>"0"</code> and of an <code>"I"</code> to a <code>"1"</code>. Note that the list is directional and case sensitive. So, for example, the above does not cover <code>"o"</code>-to-<code>"0"</code> or <code>"0"</code>-to-<code>"O"</code> substitutions. If we had wanted to include these, they would have had to be added to the list explicitly.
+
+The function makes the following assumptions:
+  - All costs are assumed to be nonnegative.
+  - \f$\textit{final_tp_cost} \le \textit{tp_cost}\f$.
+  - \f$\textit{ins_cost}+\textit{del_cost} \le 2\textit{final_tp_cost}\f$.
+  - \f$\max(\textit{sub_cost},\textit{special_sub_cost}) \le \textit{final_tp_cost}\f$.
+
+When these assumptions are voided, an exception is thrown.
+
+@note Even though we use the term "distance", the result is not
+necessarily a distance metric. It is only a distance metric if all of the
+following conditions hold:
+  -# \f$\textit{final_tp_cost} = \textit{tp_cost}\f$;
+  -# \f$\textit{ins_cost} = \textit{del_cost}\f$; and
+  -# the \c spec_sub_from and \c spec_sub_to lists are symmetric.
+
+The variants of \c edit_distance that accept less parameters are equivalent
+to the long-form \c edit_distance, except for the fact that some
+operations (such as special substitution) cannot be used. The user can reach
+the same effect (although, perhaps with reduced run-time efficiency) by
+assigning to these operations sufficiently high costs.
+
+For example, a user can make sure that the only type of transpositions used
+are "final" transpositions by assigning to \a tp_cost the value
+<code>length(str1)*del_cost+length(str2)*ins_cost</code>. Because there is always an
+insertion-deletion path from \a str1 to \a str2 of that cost, assigning this as the
+cost for a single transposition ensures that the optimal path from \a str1 to
+\a str2 can always be found without any use of a non-final transpositon.
+
+@anchor edit_distance_example
+@examp
+@verbatim
+user=# SELECT edit_distance('demerau','levenshtein',1,1,1,1,1,1,'01OIIL','OI01LI');
+
+ edit_distance
+---------------
+             9
+(1 row)
+@endverbatim
+
+@sa grp_edit_distance_unsafe
+
+ */
+
+/**
+@addtogroup grp_edit_distance_unsafe
+
+@brief An edit distance calculator.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#edit_distance_unsafe_syntax">Syntax</a>
+<li class="level1"><a href="#edit_distance_unsafe_usage">Usage</a>
+<li class="level1"><a href="#edit_distance_unsafe_example">Example</a>
+</ul>
+</div>
+
+@about
+A row function, taking two strings and calculating their edit distance.
+Costs for various edit operations, including the transposition of
+characters that are adjacent in both the input and output, are user-defined.
+This function is "unsafe" in the sense that it assumes certain qualities
+about the user-defined costs without checking them. See
+<A HREF="#edit_distance_unsafe_usage">"Usage"</A> for a
+complete list of these assumptions.
+
+@anchor edit_distance_unsafe_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION edit_distance_unsafe(str1 text, str2 text,
+                    ins_cost integer, del_cost integer, sub_cost integer,
+                    tp_cost integer, final_tp_cost integer,
+                    spec_sub_cost integer, spec_sub_from text, spec_sub_to text)
+RETURNS integer;
+</pre>
+<pre class="syntax">
+FUNCTION edit_distance_unsafe(str1 text, str2 text,
+                    ins_cost integer, del_cost integer, sub_cost integer,
+                    tp_cost integer, final_tp_cost integer)
+RETURNS integer;
+</pre>
+<pre class="syntax">
+FUNCTION edit_distance_unsafe(str1 text, str2 text,
+                    ins_cost integer, del_cost integer, sub_cost integer,
+                    tp_cost integer)
+RETURNS integer;
+</pre>
+
+@param str1, str2 The two strings to be compared.
+                  Edits make \a str1 into \a str2.
+@param ins_cost   Cost to insert a character.
+@param del_cost   Cost to delete a character.
+@param sub_cost   Cost to substitute a character by another.
+@param tp_cost    Cost to transpose two adjacent characters.
+@param final_tp_cost Cost to transpose two adjacent characters, on the
+               assumption that no other transformation occurs on these
+               characters or anything between them throughout the editing
+               process.
+@param spec_sub_cost Cost for special substitution.
+@param spec_sub_from String giving the "from" list for substitution of
+               characters that receives special weighing \a spec_sub_cost.
+@param spec_sub_to String with "to" list corresponding to the previous
+               "from".
+
+@returns The edit distance.
+
+@anchor edit_distance_unsafe_usage
+@usage
+Given two strings, \a str1 and \a str2, it is possible to transform the former into
+the latter by a sequence of edit operations such as insertion of a new
+character, deletion of an existing character, substitution of one character by
+another and transposition of the order of two adjacent characters.
+
+Suppose that each one of these operations is associated with a cost
+(in the form of a nonnegative integer), then the cost of a sequence of
+operations can be measured as the sum of the costs of its individual parts.
+
+There may be many sequences transforming \a str1 to \a str2, each with its own
+cost. The minimum of these costs is called the "edit distance" from \a str1
+to \a str2.
+
+The particular edit distance implementation given here allows each one of the
+operations discussed above to be assigned a cost. Furthermore, one can
+assign the following special costs:
+
+  - \a final_tp_cost is the cost of transposing two adjacent characters, given that these characters are at no point involved in any other type of operation.
+  - \a spec_sub_cost is the cost of making a character-to-character substitution that is one of a special list of substitutions defined by \a spec_sub_from and \a spec_sub_to. A substitution is "special" if it takes the <em>i</em>'th character in \a spec_sub_from and transforms it to the <em>i</em>'th character in \a spec_sub_to. For example, if <code>spec_sub_from="OI"</code> and <code>spec_sub_to="01"</code>, then the list of special substitutions is the list of common character to numeral substitutions, namely the transformation of an <code>"O"</code> to a <code>"0"</code> and of an <code>"I"</code> to a <code>"1"</code>. Note that the list is directional and case sensitive. So, for example, the above does not cover <code>"o"</code>-to-<code>"0"</code> or <code>"0"</code>-to-<code>"O"</code> substitutions. If we had wanted to include these, they would have had to be added to the list explicitly.
+
+The function makes the following assumptions:
+  - All costs are assumed to be nonnegative.
+  - \f$\textit{final_tp_cost} \le \textit{tp_cost}\f$.
+  - \f$\textit{ins_cost}+\textit{del_cost} \le 2\textit{final_tp_cost}\f$.
+  - \f$\max(\textit{sub_cost},\textit{special_sub_cost}) \le \textit{final_tp_cost}\f$.
+
+When these assumptions are voided, the result may be incorrect.
+
+@note Even though we use the term "distance", the result is not
+necessarily a distance metric. It is only a distance metric if all of the
+following conditions hold:
+  -# \f$\textit{final_tp_cost} = \textit{tp_cost}\f$;
+  -# \f$\textit{ins_cost} = \textit{del_cost}\f$; and
+  -# the \c spec_sub_from and \c spec_sub_to lists are symmetric.
+
+The variants of \c edit_distance_unsafe that accept less parameters are equivalent
+to the long-form \c edit_distance_unsafe, except for the fact that some
+operations (such as special substitution) cannot be used. The user can reach
+the same effect (although, perhaps with reduced run-time efficiency) by
+assigning to these operations sufficiently high costs.
+
+For example, a user can make sure that the only type of transpositions used
+are "final" transpositions by assigning to \a tp_cost the value
+<code>length(str1)*del_cost+length(str2)*ins_cost</code>. Because there is always an
+insertion-deletion path from \a str1 to \a str2 of that cost, assigning this as the
+cost for a single transposition ensures that the optimal path from \a str1 to
+\a str2 can always be found without any use of a non-final transpositon.
+
+@anchor edit_distance_unsafe_example
+@examp
+@verbatim
+user=# SELECT edit_distance_unsafe('demerau','levenshtein',1,1,1,
+                                   1,1,1,'01OIIL','OI01LI');
+
+ edit_distance_unsafe
+----------------------
+                    9
+(1 row)
+@endverbatim
+
+@sa grp_edit_distance
+
  */
 
 ------------------------------------------------------------------------
@@ -99,8 +285,6 @@ RETURNS integer
 AS 'MODULE_PATHNAME', 'edit_distance_unsafe13'
 LANGUAGE C IMMUTABLE STRICT;
 
-------------------------------------------------------------------------
--- Overloaded functions
 ------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance(
@@ -187,30 +371,55 @@ LANGUAGE C IMMUTABLE STRICT;
 ------------------------------------------------------------------------
 
 /**
- * @addtogroup grp_levendist
- * @brief levenshtein_distance: a Levenshtein distance calculator.
- *
- * @about
- * A row function, taking two strings and calculating their edit distance by
- * insertion, deletion and substitution operators, each of which is performed
- * at a unit of cost.
- *
- * @usage
- * str1, str2 - the two strings to be compared. Edits make str1 into str2.
- *
- * Returns the edit distance (integer).
- *
- * Note that, even though we use the term "distance", the result is not
- * necessarily a distance metric. It is only a distance metric if
- * ins_cost = del_cost.
- *
- * @examp
- * SELECT DSTOOLS_SCHEMA.levenshtein_distance('demerau','levenshtein');
- *
- *  levenshtein_distance
- * ----------------------
- *                     9
- * (1 row)
+@addtogroup grp_levenshtein_distance
+
+@brief A Levenshtein distance calculator.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#levenshtein_distance_syntax">Syntax</a>
+<li class="level1"><a href="#levenshtein_distance_usage">Usage</a>
+<li class="level1"><a href="#levenshtein_distance_example">Example</a>
+</ul>
+</div>
+
+@about
+A row function, taking two strings and calculating their Levenshtein distance.
+
+@anchor levenshtein_distance_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION levenshtein_distance(str1 text, str2 text)
+RETURNS integer;
+</pre>
+
+@param str1, str2 The two strings to be compared.
+                  Edits make \a str1 into \a str2.
+
+@returns The Levenshtein distance between the two strings.
+
+@anchor levenshtein_distance_usage
+@usage
+Given two strings, \a str1 and \a str2, it is possible to transform the former into
+the latter by a sequence of character insertions,
+deletions and substitutions.
+
+The Levenshtein distance is the minimum number of such edit operations that
+is required to make \a str1 into \a str2.
+
+@anchor levenshtein_distance_example
+@examp
+@verbatim
+user=# SELECT levenshtein_distance('demerau','levenshtein');
+
+ levenshtein_distance
+----------------------
+                    9
+(1 row)
+@endverbatim
+
+@sa grp_demerau_levenshtein_distance, grp_optimal_alignment_distance
+
  */
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.levenshtein_distance(
@@ -222,26 +431,56 @@ AS 'MODULE_PATHNAME','levenshtein_distance'
 LANGUAGE C IMMUTABLE STRICT;
 
 /**
- * @addtogroup grp_demaraulevdist
- * @brief demerau_levenshtein_distance: Demerau-Levenshtein distance calculator.
- *
- * @about
- * A row function, taking two strings and calculating their edit distance by
- * insertion, deletion, substitution and transposition operators, each of which
- * is performed at a unit of cost.
- *
- * @usage
- * str1, str2 - the two strings to be compared. Edits make str1 into str2.
- *
- * Returns the edit distance (integer).
- *
- * @examp
- * SELECT DSTOOLS_SCHEMA.demerau_levenshtein_distance('demerau','levenshtein');
- *
- *  demerau_levenshtein_distance
- * ------------------------------
- *                             9
- * (1 row)
+@addtogroup grp_demerau_levenshtein_distance
+
+@brief A Demerau-Levenshtein distance calculator.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#demerau_levenshtein_distance_syntax">Syntax</a>
+<li class="level1"><a href="#demerau_levenshtein_distance_usage">Usage</a>
+<li class="level1"><a href="#demerau_levenshtein_distance_example">Example</a>
+</ul>
+</div>
+
+@about
+A row function, taking two strings and calculating their Demerau-Levenshtein
+distance.
+
+@anchor demerau_levenshtein_distance_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION demerau_levenshtein_distance(str1 text, str2 text)
+RETURNS integer;
+</pre>
+
+@param str1, str2 The two strings to be compared.
+                  Edits make \a str1 into \a str2.
+
+@returns The Demerau-Levenshtein distance between the two strings.
+
+@anchor demerau_levenshtein_distance_usage
+@usage
+Given two strings, \a str1 and \a str2, it is possible to transform the former into
+the latter by a sequence of character insertions,
+deletions, substitutions and transposition of pairs of adjacent characters.
+
+The Demerau-Levenshtein distance is the minimum number of such edit operations
+that is required to make \a str1 into \a str2.
+
+@anchor demerau_levenshtein_distance_example
+@examp
+@verbatim
+user=# SELECT demerau_levenshtein_distance('demerau','levenshtein');
+
+ demerau_levenshtein_distance
+------------------------------
+                            9
+(1 row)
+@endverbatim
+
+@sa grp_levenshtein_distance, grp_optimal_alignment_distance
+
  */
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.demerau_levenshtein_distance(
@@ -253,38 +492,66 @@ AS 'MODULE_PATHNAME','demerau_levenshtein_distance'
 LANGUAGE C IMMUTABLE STRICT;
 
 /**
- * @addtogroup grp_optimaligndist
- * @brief optimal_alignment_distance: an optimal alignment distance calculator.
- *
- * @about
- * A row function, taking two strings and calculating their edit distance by
- * insertion, deletion, substitution and transposition operators, each of which
- * is performed at a unit of cost. It differs from the Demerau-Levenshtein
- * distance in that characters which have been transposed cannot partake in
- * any other edit operation.
- *
- * @usage
- * str1, str2 - the two strings to be compared. Edits make str1 into str2.
- *
- * Returns the edit distance (integer).
- *
- * @examp
- * SELECT DSTOOLS_SCHEMA.optimal_alignment_distance('demerau','levenshtein');
- *
- *  optimal_alignment_distance
- * ----------------------------
- *                           9
- * (1 row)
- */
+@addtogroup grp_optimal_alignment_distance
 
-------------------------------------------------------------------------------------------
+@brief An Optimal Alignment distance calculator.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#optimal_alignment_distance_syntax">Syntax</a>
+<li class="level1"><a href="#optimal_alignment_distance_usage">Usage</a>
+<li class="level1"><a href="#optimal_alignment_distance_example">Example</a>
+</ul>
+</div>
+
+@about
+A row function, taking two strings and calculating their Optimal Alignment
+distance.
+
+@anchor optimal_alignment_distance_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION optimal_alignment_distance(str1 text, str2 text)
+RETURNS integer;
+</pre>
+
+@param str1, str2 The two strings to be compared.
+                  Edits make \a str1 into \a str2.
+
+@returns The Optimal Alignment distance between the two strings.
+
+@anchor optimal_alignment_distance_usage
+@usage
+Given two strings, \a str1 and \a str2, it is possible to transform the former into
+the latter by a sequence of character insertions,
+deletions, substitutions and the transposition of pairs of adjacent characters,
+under the restriction that characters that were once transposed can no longer
+undergo any further edit operation.
+
+The Optimal Alignment distance is the minimum number of such edit operations
+that is required to make \a str1 into \a str2.
+
+@anchor optimal_alignment_distance_example
+@examp
+@verbatim
+user=# SELECT optimal_alignment_distance('demerau','levenshtein');
+
+ optimal_alignment_distance
+----------------------------
+                          9
+(1 row)
+@endverbatim
+
+@sa grp_levenshtein_distance, grp_demerau_levenshtein_distance
+
+ */
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.optimal_alignment_distance(str1 text, str2 text)
 RETURNS integer
 AS 'MODULE_PATHNAME','optimal_alignment_distance'
 LANGUAGE C IMMUTABLE STRICT;
 
-------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance_unsafe()
 RETURNS VARCHAR
@@ -305,7 +572,7 @@ For full usage instructions, run "DSTOOLS_SCHEMA.edit_distance_unsafe(''usage'')
 '::VARCHAR;
 $$;
 
-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance_unsafe(option VARCHAR)
 RETURNS VARCHAR
@@ -353,6 +620,8 @@ spec_sub_cost - cost for special substitution.
 spec_sub_from - string giving the "from" list for substitution of characters
                 that receives special weighing spec_sub_cost.
 spec_sub_to - string with "to" list corresponding to the previous "from".
+
+Returns the edit distance.
 
 Usage
 =====
@@ -426,9 +695,11 @@ SELECT DSTOOLS_SCHEMA.edit_distance_unsafe(''demerau'',''levenshtein'',1,1,1,
                     9
 (1 row)
 
+See also: edit_distance
 ' END;
 $$;
 
+-------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance()
 RETURNS VARCHAR
@@ -449,6 +720,8 @@ if they do not hold true, rather than returning an erroneous value.
 For full usage instructions, run "DSTOOLS_SCHEMA.edit_distance(''usage'')".
 '::VARCHAR;
 $$;
+
+-------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance(option VARCHAR)
 RETURNS VARCHAR
@@ -497,6 +770,8 @@ spec_sub_cost - cost for special substitution.
 spec_sub_from - string giving the "from" list for substitution of characters
                 that receives special weighing spec_sub_cost.
 spec_sub_to - string with "to" list corresponding to the previous "from".
+
+Returns the edit distance.
 
 Usage
 =====
@@ -570,9 +845,11 @@ SELECT DSTOOLS_SCHEMA.edit_distance(''demerau'',''levenshtein'',1,1,1,1,1,
              9
 (1 row)
 
+See also: edit_distance_unsafe
 ' END;
 $$;
 
+-------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.levenshtein_distance()
 RETURNS VARCHAR
@@ -588,6 +865,8 @@ A row function, taking two strings and calculating their Levenshtein distance.
 For full usage instructions, run "DSTOOLS_SCHEMA.levenshtein_distance(''usage'')".
 '::VARCHAR;
 $$;
+
+-------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.levenshtein_distance(option VARCHAR)
 RETURNS VARCHAR
@@ -607,6 +886,8 @@ RETURNS integer
 
 str1, str2 - the two strings to be compared. Edits make str1 into str2.
 
+Returns the Levenshtein distance between the two strings.
+
 Usage
 =====
 Given two strings, str1 and str2, it is possible to transform the former into
@@ -624,8 +905,11 @@ SELECT DSTOOLS_SCHEMA.levenshtein_distance(''demerau'',''levenshtein'');
                     9
 (1 row)
 
+See also: demerau_levenshtein_distance, optimal_alignment_distance
 ' END;
 $$;
+
+-------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.demerau_levenshtein_distance()
 RETURNS VARCHAR
@@ -643,6 +927,8 @@ For full usage instructions, run
 "DSTOOLS_SCHEMA.demerau_levenshtein_distance(''usage'')".
 '::VARCHAR;
 $$;
+
+-------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.demerau_levenshtein_distance(option VARCHAR)
 RETURNS VARCHAR
@@ -663,6 +949,8 @@ RETURNS integer
 
 str1, str2 - the two strings to be compared. Edits make str1 into str2.
 
+Returns the Demerau-Levenshtein distance between the two strings.
+
 Usage
 =====
 Given two strings, str1 and str2, it is possible to transform the former into
@@ -681,8 +969,11 @@ SELECT DSTOOLS_SCHEMA.demerau_levenshtein_distance(''demerau'',''levenshtein'');
                             9
 (1 row)
 
+See also: levenshtein_distance, optimal_alignment_distance
 ' END;
 $$;
+
+-------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.optimal_alignment_distance()
 RETURNS VARCHAR
@@ -720,6 +1011,8 @@ RETURNS integer
 
 str1, str2 - the two strings to be compared. Edits make str1 into str2.
 
+Returns the Optimal Alignment distance between the two strings.
+
 Usage
 =====
 Given two strings, str1 and str2, it is possible to transform the former into
@@ -740,6 +1033,7 @@ SELECT DSTOOLS_SCHEMA.optimal_alignment_distance(''demerau'',''levenshtein'');
                           9
 (1 row)
 
+See also: levenshtein_distance, demerau_levenshtein_distance
 ' END;
 $$;
 
