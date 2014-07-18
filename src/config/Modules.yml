@@ -17,5 +17,6 @@ modules:
       depends: ['common']
     - name: complex
       depends: ['common']
-    - name: plr_placeholder
-      depends: ['common'] 
+#    - name: plr_placeholder
+#      depends: ['common'] 
+#  PL/R package disabled until PL/R will be part of Continuous Integration tool.

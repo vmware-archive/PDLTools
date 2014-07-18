@@ -7,7 +7,7 @@ Description: DS Tools is a library of tools for Data Scientists.
 PostInstall:
 - Master: "echo 'Please run the following command to deploy DS Tools';
            echo 'usage:  dspack install [-s schema_name] [-S sugar_schema_name]';
-           echo '                       -c user@host:port/database';
+           echo '                       [-M madlib_schema_name] -c user@host:port/database';
            echo 'Example:';
            echo '   $ $GPHOME/dstools/bin/dspack install -s dstools -c gpadmin@mdw:5432/testdb';
            echo '   This will install DSTools objects into a Greenplum database named \"testdb\"';
@@ -15,8 +15,9 @@ PostInstall:
            echo '   \"gpadmin\" and will prompt for password. The target schema for the main';
            echo '   library will be \"dstools\" (specified here explicitly) and the target';
            echo '   schema for the SUgAR library, packaged with it, will be \"sugarlib\"';
-           echo '   (specified here implicitly). In both cases, these schema choices are';
-           echo '   the default options.';
+           echo '   (specified here implicitly). MADlib objects will be searched for in the';
+           echo '   \"madlib\" schema (also specified here implicitly).';
+           echo '   In all cases, these schema choices are the default options.';
            echo '';
            echo 'To uninstall the package, use \"gppkg -r\".';
            echo 'For additional options run:';
