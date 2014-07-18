@@ -98,17 +98,17 @@ assign the following special costs:
 
 The function makes the following assumptions:
   - All costs are assumed to be nonnegative.
-  - \f$\textit{final_tp_cost} \le \textit{tp_cost}\f$.
-  - \f$\textit{ins_cost}+\textit{del_cost} \le 2\textit{final_tp_cost}\f$.
-  - \f$\max(\textit{sub_cost},\textit{special_sub_cost}) \le \textit{final_tp_cost}\f$.
+  - \f$\textit{final\_tp\_cost} \le \textit{tp\_cost}\f$.
+  - \f$\textit{ins\_cost}+\textit{del\_cost} \le 2\textit{final\_tp\_cost}\f$.
+  - \f$\max(\textit{sub\_cost},\textit{special\_sub\_cost}) \le \textit{final\_tp\_cost}\f$.
 
 When these assumptions are voided, an exception is thrown.
 
 @note Even though we use the term "distance", the result is not
 necessarily a distance metric. It is only a distance metric if all of the
 following conditions hold:
-  -# \f$\textit{final_tp_cost} = \textit{tp_cost}\f$;
-  -# \f$\textit{ins_cost} = \textit{del_cost}\f$; and
+  -# \f$\textit{final\_tp\_cost} = \textit{tp\_cost}\f$;
+  -# \f$\textit{ins\_cost} = \textit{del\_cost}\f$; and
   -# the \c spec_sub_from and \c spec_sub_to lists are symmetric.
 
 The variants of \c edit_distance that accept less parameters are equivalent
@@ -225,17 +225,17 @@ assign the following special costs:
 
 The function makes the following assumptions:
   - All costs are assumed to be nonnegative.
-  - \f$\textit{final_tp_cost} \le \textit{tp_cost}\f$.
-  - \f$\textit{ins_cost}+\textit{del_cost} \le 2\textit{final_tp_cost}\f$.
-  - \f$\max(\textit{sub_cost},\textit{special_sub_cost}) \le \textit{final_tp_cost}\f$.
+  - \f$\textit{final\_tp\_cost} \le \textit{tp\_cost}\f$.
+  - \f$\textit{ins\_cost}+\textit{del\_cost} \le 2\textit{final\_tp\_cost}\f$.
+  - \f$\max(\textit{sub\_cost},\textit{special\_sub\_cost}) \le \textit{final\_tp\_cost}\f$.
 
 When these assumptions are voided, the result may be incorrect.
 
 @note Even though we use the term "distance", the result is not
 necessarily a distance metric. It is only a distance metric if all of the
 following conditions hold:
-  -# \f$\textit{final_tp_cost} = \textit{tp_cost}\f$;
-  -# \f$\textit{ins_cost} = \textit{del_cost}\f$; and
+  -# \f$\textit{final\_tp\_cost} = \textit{tp\_cost}\f$;
+  -# \f$\textit{ins\_cost} = \textit{del\_cost}\f$; and
   -# the \c spec_sub_from and \c spec_sub_to lists are symmetric.
 
 The variants of \c edit_distance_unsafe that accept less parameters are equivalent
