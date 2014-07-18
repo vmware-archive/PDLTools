@@ -8,7 +8,7 @@ Srivatsan Ramanujam
 
 Usage:
 ======
-python dspack.py [-s schema_name] [-S SUgAR_schema_name] -c <username>@<hostname>:<port>/<databasename>
+python dspack.py [-s schema_name] [-S SUgAR_schema_name] [-M MADlib_schema_name] -c <username>@<hostname>:<port>/<databasename>
 '''
 
 import os, sys, datetime, getpass, re, subprocess, tempfile, glob
@@ -153,11 +153,12 @@ def ____run_sql_query(sql, show_error):
 
 	return results
 
-def __run_sql_file(schema, sugar_schema, dsdir_mod_py, module, sqlfile,
-                   tmpfile, logfile, pre_sql):
+def __run_sql_file(schema, sugar_schema, madlib_schema, dsdir_mod_py, module,
+                   sqlfile, tmpfile, logfile, pre_sql):
     """Run SQL file
             @param schema name of the target schema
             @param sugar_schema name of SUgARlib schema
+            @param madlib_schema name of MADlib schema
             @param dsdir_mod_py name of the module dir with Python code
             @param module  name of the module
             @param sqlfile name of the file to parse
@@ -189,6 +190,7 @@ def __run_sql_file(schema, sugar_schema, dsdir_mod_py, module, sqlfile,
                   '-P',
                   '-DDSTOOLS_SCHEMA=' + schema,
                   '-DSUGAR_SCHEMA=' + sugar_schema,
+                  '-DMADLIB_SCHEMA=' + madlib_schema,
                   '-DDSTOOLS_VERSION=' + rev,
                   '-DSUGAR_VERSION=' + sugar_rev,
                   '-DPLPYTHON_LIBDIR=' + dsdir_mod_py,
@@ -538,7 +540,7 @@ def __db_update_migration_history(schema,backup_schema,curr_rev,
                 % schema.upper(), False)
         raise Exception
 
-def __db_create_objects(schema, sugar_schema,
+def __db_create_objects(schema, sugar_schema, madlib_schema,
                         backup_schema, backup_sugar_schema,old_sugar):
     """
     Create DS Tools DB objects in the schema
@@ -622,7 +624,8 @@ def __db_create_objects(schema, sugar_schema,
             tmpfile = cur_tmpdir + '/' + os.path.basename(sqlfile) + '.tmp'
             logfile = cur_tmpdir + '/' + os.path.basename(sqlfile) + '.log'
 
-            retval = __run_sql_file(schema, sugar_schema, dsdir_mod_py, module,
+            retval = __run_sql_file(schema, sugar_schema, madlib_schema,
+                                    dsdir_mod_py, module,
                                     sqlfile, tmpfile, logfile, None)
             # Check the exit status
             if retval != 0:
@@ -783,14 +786,18 @@ def __db_drop_backup_schema(backup_schema,is_newer):
     except:
       __info("Unable to drop schema %s." % backup_schema.upper(),True)
 
-def __db_install(schema, sugar_schema):
+def __db_install(schema, sugar_schema, madlib_schema):
     """
     Install DS Tools
         @param schema dstools schema name
         @param sugar_schema name of SUgARlib schema
+        @param madlib_schema name of MADlib schema
     """
     __info("Installing dstools into %s schema and SUgAR into %s schema..."
            % (schema.upper(),sugar_schema.upper()), True)
+
+    __info("Looking for MADlib installation in %s schema..."
+           % (madlib_schema.upper()), True)
 
     (backup_schema,dstools_newer)=__check_prev_install(schema,rev)
     if dstools_newer==-1 or dstools_newer==2:
@@ -849,7 +856,7 @@ def __db_install(schema, sugar_schema):
 
     # Create dstools objects
     try:
-        __db_create_objects(schema, sugar_schema,
+        __db_create_objects(schema, sugar_schema, madlib_schema,
                             backup_schema, backup_sugar_schema,sugar_newer==3)
     except:
         __db_rollback(sugar_schema, backup_sugar_schema)
@@ -896,12 +903,14 @@ def main():
                 formatter_class=argparse.RawTextHelpFormatter,
                 epilog="""Example:
 
-  $ dspack install -s dstools -S SUgARlib -c gpadmin@mdw:5432/testdb
+  $ dspack install -s dstools -S SUgARlib -M MADlib -c gpadmin@mdw:5432/testdb
 
   This will install DSTools objects into a Greenplum database called TESTDB
   running on server MDW:5432. Installer will try to login as GPADMIN
   and will prompt for password. The target schema will be "SUgARlib" for
-  the SUgAR library and "dstools" for all else.
+  the SUgAR library and "dstools" for all else. Functionality borrowed from
+  MADlib will assume that MADlib is (or will be) installed in the "MADlib"
+  schema.
 """)
 
     parser.add_argument(
@@ -929,6 +938,9 @@ def main():
 
     parser.add_argument('-S', '--sugar_schema', nargs=1, dest='sugar_schema', metavar='SUGAR_SCHEMA', default='SUgARlib',
                          help="Target schema for the SUgAR objects.")
+
+    parser.add_argument('-M', '--madlib_schema', nargs=1, dest='madlib_schema', metavar='MADLIB_SCHEMA', default='MADlib',
+                         help="Schema to search for MADlib objects.")
 
     parser.add_argument('-v', '--verbose', dest='verbose',
                         action="store_true", help="Verbose mode.")
@@ -961,6 +973,12 @@ def main():
         sugar_schema = args.sugar_schema[0].lower()
     else:
         sugar_schema = args.sugar_schema.lower()
+
+    '''Parse MADLIB_SCHEMA'''
+    if len(args.madlib_schema[0]) > 1:
+        madlib_schema = args.madlib_schema[0].lower()
+    else:
+        madlib_schema = args.madlib_schema.lower()
 
     '''Fetch connection params from the connection string'''
     connStr = "" if args.connstr is None else args.connstr[0]
@@ -1018,11 +1036,13 @@ def main():
     portspecs = configyml.get_modules(dstoolsdir_conf)
 
     if(args.command[0]=='install'):
-        install(py_min_ver, perl_min_ver, perl_max_ver, plr_min_ver, schema, sugar_schema)
+        install(py_min_ver, perl_min_ver, perl_max_ver, plr_min_ver, schema,
+                sugar_schema, madlib_schema)
     elif(args.command[0]=='install-check'):
-        install_check(schema, sugar_schema, args)
+        install_check(schema, sugar_schema, madlib_schema, args)
 
-def install(py_min_ver, perl_min_ver, perl_max_ver, plr_min_ver, schema, sugar_schema):
+def install(py_min_ver, perl_min_ver, perl_max_ver, plr_min_ver, schema,
+            sugar_schema, madlib_schema):
     '''
         Install dspack
     '''
@@ -1031,12 +1051,12 @@ def install(py_min_ver, perl_min_ver, perl_max_ver, plr_min_ver, schema, sugar_s
         __plpy_check(py_min_ver)
         __plperl_check(perl_min_ver,perl_max_ver)
         __plr_check(plr_min_ver)
-        __db_install(schema, sugar_schema)
+        __db_install(schema, sugar_schema, madlib_schema)
     except:
         __error("DSTools installation failed.", True)
 
 
-def install_check(schema, sugar_schema, args):
+def install_check(schema, sugar_schema, madlib_schema, args):
 	'''
 	Run install checks
 	'''
@@ -1123,8 +1143,8 @@ def install_check(schema, sugar_schema, args):
 
 		# Run the SQL
 		run_start = datetime.datetime.now()
-		retval = __run_sql_file(schema, sugar_schema, dsdir_mod_py,
-                                        module,
+		retval = __run_sql_file(schema, sugar_schema, madlib_schema,
+                                        dsdir_mod_py, module,
 					sqlfile, tmpfile, logfile, pre_sql)
 		# Runtime evaluation
 		run_end = datetime.datetime.now()

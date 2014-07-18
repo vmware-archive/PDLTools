@@ -499,7 +499,7 @@ pvalue(x,w)
 <code>pvalue(\a x)</code> over window \a w.
 
 @param x Column of values.
-@w Window.
+@param w Window.
 
 @returns The pvalue of \a x, as a <code>DOUBLE PRECISION</code> number.
 
@@ -1312,6 +1312,8 @@ t_stats      | {-0.160500005549937,11.3250496228615,0.613604885434856,-0.0874976
 p_values     | {0.887233259077507,0.0077068431068974,0.60196716636129,0.938247879753775,0.349968878299479,0.422646611284083,0.315802891138953,0.798683313344773,0.425231263503929}
 condition_no | 9683.22896325205
 @endverbatim
+
+(Here, "madlib" is assumed to be the schema where MADlib is installed.)
 
 Note that the order in which the columns appear in the glob (and therefore also
 the order of the coefficients) is the same as their order in the original
@@ -3329,8 +3331,8 @@ INSERT INTO SUGAR_SCHEMA.sugar_db VALUES
   ('@',2,'(SUGAR_SCHEMA.__sugar_fast_agg({1}) over ({2}))',false),
   ('zscore',1,'SUGAR_SCHEMA.invprop_trans({1},stddev({1}) over (), avg({1}) over ())',false),
   ('zscore',2,'SUGAR_SCHEMA.invprop_trans({1},stddev({1}) over ({2}), avg({1}) over ({2}))',false),
-  ('pvalue',1,'MADlib.normal_cdf(SUGAR_SCHEMA.invprop_trans({1},stddev({1}) over (), avg({1}) over ()))',false),
-  ('pvalue',2,'MADlib.normal_cdf(SUGAR_SCHEMA.invprop_trans({1},stddev({1}) over ({2}), avg({1}) over ({2})))',false),
+  ('pvalue',1,'MADLIB_SCHEMA.normal_cdf(SUGAR_SCHEMA.invprop_trans({1},stddev({1}) over (), avg({1}) over ()))',false),
+  ('pvalue',2,'MADLIB_SCHEMA.normal_cdf(SUGAR_SCHEMA.invprop_trans({1},stddev({1}) over ({2}), avg({1}) over ({2})))',false),
   ('normalize',1,'SUGAR_SCHEMA.invprop_trans({1},(max({1}) over ())-(min({1}) over ()), min({1}) over ())',false),
   ('normalize',2,'SUGAR_SCHEMA.invprop_trans({1},(max({1}) over ({2}))-(min({1}) over ({2})), min({1}) over ({2}))',false),
   ('proportion',1,'(({1})*1.0/(sum({1}) over ()))',false),
@@ -4229,7 +4231,7 @@ user=# -- We now build a model based on the pivot-column dummy variables.
 user=#
 user=# SELECT SUGAR_SCHEMA.sugar($$
 user$#   CREATE TABLE model_table AS SELECT
-user$#     (madlib.linregr(price,array[
+user$#     (MADLIB_SCHEMA.linregr(price,array[
 user$#       SUGAR_SCHEMA.glob('pivot_table','myschema',
 user$#                         '(region|gender|style)_%')])).*
 user$#     FROM pivot_table
@@ -4259,7 +4261,7 @@ user=# -- variable and the row number.
 user=#
 user=# SELECT SUGAR_SCHEMA.sugar($$
 user$#   CREATE TABLE model_table2 AS SELECT
-user$#     (madlib.linregr(price,array[
+user$#     (MADLIB_SCHEMA.linregr(price,array[
 user$#       SUGAR_SCHEMA.glob('pivot_table','myschema',
 user$#                         '%','price|row_num')])).*
 user$#     FROM pivot_table
