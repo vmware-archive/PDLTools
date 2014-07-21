@@ -36,7 +36,7 @@ pre.syntax {
         padding: 4px 6px;
         margin: 4px 8px 4px 2px;
         overflow: auto;
-        word-wrap: normal;
+        word-wrap: break-word;
         font-size:  9pt;
         line-height: 125%;
         font-family: monospace, fixed;
