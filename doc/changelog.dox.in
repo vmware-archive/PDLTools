@@ -1,0 +1,41 @@
+/**
+
+@page changelog
+
+## DS Tools Revision History
+
+### DS Tools 1.2 (packaged with SUgAR 0.4.4) -- Current version
+
+- Switched to Doxygen-based documentation (HTML+PDF)
+- Added Complex number support
+- MADlib schema can now be specified explicitly in install.
+
+### DS Tools 1.1.2 (packaged with SUgAR 0.4.3)
+
+- Added column globbing in SUgAR (pseudofunction 'glob').
+- Added ability to generate all-columns-but-one in pivoting.
+- Dos2unix on all files, to avoid '\r' in 'usage' printouts.
+
+### DS Tools 1.1.1 (packaged with SUgAR 0.4.2)
+
+- Fixed bugs in Connected Components to do with schema name scoping.
+- Installation now GRANTs USAGE on the schemas created.
+- Documentation improvements in SUgAR and in the DS
+- Tools installer.
+- DS Tools now packaged for both GPDB 4.2 and GPDB 4.3.
+
+### DS Tools 1.1 (packaged with SUgAR 0.4.1)
+
+- Upgrade support added.
+
+### DS Tools 1.0 (packaged with SUgAR 0.4)
+
+- Initial packaged version of DS Tools.
+- All SUgAR documentation has been
+- Completely revamped and rewritten from
+- SUgAR 0.3 (initial release).
+
+
+
+
+*/

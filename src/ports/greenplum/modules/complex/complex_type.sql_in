@@ -70,9 +70,9 @@ SELECT COMPLEX(2,2)/COMPLEX(1,1);
 -- @ (Shorthand for absolute value).
 SELECT @(COMPLEX(5,3);
 
--- Exponentiation, using either "pow" or "^".
+-- Exponentiation, using either "power" or "^".
 SELECT COMPLEX(1,sqrt(3))^3;
-SELECT pow(COMPLEX(1,sqrt(3)),3);
+SELECT power(COMPLEX(1,sqrt(3)),3);
 
 -- Square root.
 SELECT sqrt(COMPLEX(5,3));

@@ -17,6 +17,12 @@ Call any function without parameters (or with the single parameter
 <code>'usage'</code>, as a string) for online help. Use
 <code>"dstools_version()"</code> to get the library's version number.
 
+@note
+By default, all SUgAR library objects are installed into the schema
+`sugarlib` and all other DS Tools objects are installed into the schema
+`dstools`. It is highly recommended to have both schemas on your
+search path.
+
 @defgroup grp_tools_module Tools
 @{
 A collection of convenience functions.

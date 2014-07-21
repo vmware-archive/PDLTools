@@ -22,6 +22,13 @@ configure_file(
     @ONLY
 )
 
+#Change Log
+configure_file(
+    changelog.dox.in
+    "${CMAKE_CURRENT_BINARY_DIR}/changelog.dox"
+    @ONLY
+)
+
 configure_file(
     etc/dstools_extra.css
     "${CMAKE_CURRENT_BINARY_DIR}/etc/dstools_extra.css"
@@ -51,6 +58,7 @@ file(
 set(_DOXYGEN_INPUT_USER
     "\"${CMAKE_CURRENT_BINARY_DIR}/mainpage.dox\""
     "\"${CMAKE_CURRENT_BINARY_DIR}/installpage.dox\""
+    "\"${CMAKE_CURRENT_BINARY_DIR}/changelog.dox\""
     "\"${CMAKE_SOURCE_DIR}/src/modules\""
     "\"${CMAKE_SOURCE_DIR}/src/ports\""
 )
