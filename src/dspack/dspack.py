@@ -1050,7 +1050,7 @@ def install(py_min_ver, perl_min_ver, perl_max_ver, plr_min_ver, schema,
     try:
         __plpy_check(py_min_ver)
         __plperl_check(perl_min_ver,perl_max_ver)
-        __plr_check(plr_min_ver)
+        #__plr_check(plr_min_ver)
         __db_install(schema, sugar_schema, madlib_schema)
     except:
         __error("DSTools installation failed.", True)
