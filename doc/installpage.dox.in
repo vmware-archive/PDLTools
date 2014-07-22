@@ -4,13 +4,9 @@
 
 ## Getting DS Tools
 
-The latest GPPKG version of the DS Tools library can be found here:
-+ [GPPKGs and RPMs for DSTools](http://build-prod.dh.greenplum.com/releases/dstools/)
-
-This address is accessible via the Pivotal VPN.
-
-Navigate to the most recent build to download the GPPKG or RPM for your version of GPDB (4.2 or 4.3).
-
+The latest GPPKG version of the DS Tools library can be found here: 
+1. <A HREF="gppkg/dstools_@DSTOOLS_VERSION_STRING@_gpdb_4.2.gppkg">DSTools-@DSTOOLS_VERSION_STRING@.gppkg for GPDB 4.2</A HREF>
+2. <A HREF="gppkg/dstools_@DSTOOLS_VERSION_STRING@_gpdb_4.3.gppkg">DSTools-@DSTOOLS_VERSION_STRING@.gppkg for GPDB 4.3</A HREF>
 ____
 
 ## Installation of DS Tools
