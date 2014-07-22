@@ -189,13 +189,13 @@ for envfile in ${ENVIRONMENT_FILES}; do
     ln -s dstools-${DSTOOLS_VERSION}-${PULSE_BUILD_NUMBER}-html.tgz dstools-html.tgz
     popd
 
-    pushd doc/user/latex
-    make pdf
-    if [ $? != 0 ]; then
-        echo "FATAL: make pdf failed"
-        exit 1
-    fi
-    popd
+    # pushd doc/user/latex
+    # make pdf
+    # if [ $? != 0 ]; then
+    #     echo "FATAL: make pdf failed"
+    #     exit 1
+    # fi
+    # popd
 
     GPDB_VERSION=`basename $(ls -d deploy/gppkg/4*)`
     RPM=$(ls dstools-*.rpm)
