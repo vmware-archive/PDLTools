@@ -5,6 +5,7 @@
   <navindex>
     <tab type="mainpage" visible="yes" title=""/>
     <!-- tab type="pages" visible="yes" title="" intro=""/ -->
+    <tab type="user" visible="yes" url="@ref gettingstarted" title="Getting Started" intro=""/>
     <tab type="user" visible="yes" url="@ref installpage" title="Installation" intro=""/>
     <tab type="modules" visible="yes" title="" intro=""/>
     <tab type="user" visible="yes" url="@ref changelog" title="Change Log" intro=""/>

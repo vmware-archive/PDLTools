@@ -5,8 +5,18 @@
 ## Getting DS Tools
 
 The latest GPPKG version of the DS Tools library can be found here: 
-1. <A HREF="gppkg/dstools_@DSTOOLS_VERSION_STRING@_gpdb_4.2.gppkg">DSTools-@DSTOOLS_VERSION_STRING@.gppkg for GPDB 4.2</A HREF>
-2. <A HREF="gppkg/dstools_@DSTOOLS_VERSION_STRING@_gpdb_4.3.gppkg">DSTools-@DSTOOLS_VERSION_STRING@.gppkg for GPDB 4.3</A HREF>
+ - <A HREF="gppkg/dstools-@DSTOOLS_VERSION_STRING@-gpdb4.2-rhel5-x86_64.gppkg">DS Tools @DSTOOLS_VERSION_STRING@ GPPKG for GPDB 4.2</A HREF>
+ - <A HREF="gppkg/dstools-@DSTOOLS_VERSION_STRING@-gpdb4.3-rhel5-x86_64.gppkg">DS Tools @DSTOOLS_VERSION_STRING@ GPPKG for GPDB 4.3</A HREF>
+
+Alternatively, DS Tools can be installed from its RPM:
+ - <A HREF="rpm/dstools-@DSTOOLS_VERSION_STRING@-gpdb4.2-Linux.rpm">DS Tools @DSTOOLS_VERSION_STRING@ RPM for GPDB 4.2</A HREF>
+ - <A HREF="rpm/dstools-@DSTOOLS_VERSION_STRING@-gpdb4.3-Linux.rpm">DS Tools @DSTOOLS_VERSION_STRING@ RPM for GPDB 4.3</A HREF>
+
+This documentation is also available as an
+<A HREF="manual/dstools-@DSTOOLS_VERSION_STRING@-manual.tgz">HTML tar ball</A>
+and as a
+<A HREF="manual/dstools-@DSTOOLS_VERSION_STRING@-manual.pdf">PDF</A> file,
+for it to be installed together with the library and available when using it.
 ____
 
 ## Installation of DS Tools
