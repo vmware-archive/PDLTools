@@ -20,8 +20,7 @@
 
 - Fixed bugs in Connected Components to do with schema name scoping.
 - Installation now GRANTs USAGE on the schemas created.
-- Documentation improvements in SUgAR and in the DS
-- Tools installer.
+- Documentation improvements in SUgAR and in the DS Tools installer.
 - DS Tools now packaged for both GPDB 4.2 and GPDB 4.3.
 
 ### DS Tools 1.1 (packaged with SUgAR 0.4.1)

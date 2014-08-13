@@ -15,6 +15,13 @@ configure_file(
     @ONLY
 )
 
+#Getting started
+configure_file(
+    gettingstarted.dox.in
+    "${CMAKE_CURRENT_BINARY_DIR}/gettingstarted.dox"
+    @ONLY
+)
+
 #Installation instructions
 configure_file(
     installpage.dox.in
@@ -57,6 +64,7 @@ file(
 
 set(_DOXYGEN_INPUT_USER
     "\"${CMAKE_CURRENT_BINARY_DIR}/mainpage.dox\""
+    "\"${CMAKE_CURRENT_BINARY_DIR}/gettingstarted.dox\""
     "\"${CMAKE_CURRENT_BINARY_DIR}/installpage.dox\""
     "\"${CMAKE_CURRENT_BINARY_DIR}/changelog.dox\""
     "\"${CMAKE_SOURCE_DIR}/src/modules\""

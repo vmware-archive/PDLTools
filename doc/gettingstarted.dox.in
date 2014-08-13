@@ -1,0 +1,211 @@
+/**
+
+@page gettingstarted
+
+## Getting started with DS Tools
+
+### Welcome to DS Tools!
+
+<B>DS Tools</B> is Pivotal's library of reusable tools for use by
+data scientists. Once installing it (as per the instructions at
+\link installpage Installation\endlink), your target database will have the
+library's objects installed in
+two separate schemas. One schema is for general <B>DS Tools</B> objects
+such as utility functions and algorithms. Another is for a separate library,
+packaged with <B>DS Tools</B>, called <B>SUgAR</B>. By default,
+<B>DS Tools</B> objects are found in the \c dstools schema, while
+<B>SUgAR</B> objects are in the \c sugarlib schema. Both of these values
+can be overridden during installation. Whichever schemas the libraries are
+installed in, it is highly recommended to place them on your path.
+
+<B>DS Tools</B> is a library developed by Pivotal Data Labs data scientists,
+primarily for their own use. It is extended by aggregating
+into it code that was custom-built in customer lab engagements:
+at the end of Pivotal Data Science lab engagements, collateral is collected
+from what was built for the lab and assessed for its reusability potential.
+Code deemed reusable is reworked to fit with <B>DS Tools</B> and
+contributed into the library. This ensures that the knowhow and methodologies
+accumulated over every past customer engagement are available to PDL data
+scientists in every new lab engagement, accelerating lab delivery and
+improving the quality of deliverables. It is also a method to share this knowhow
+and these methodologies with PDL customers.
+
+Thus, <B>DS Tools</B> is an always-evolving library, with new modules programmed
+and added into it all the time, as the need arises.
+
+### What's in the box?
+
+Click on the `Modules` tab to see the contents of the library.
+At its top level,
+<B>DS Tools</B> is composed of \c Tools, \c Algorithms and the SUgAR library.
+
+\ref grp_tools_module are work accelerators in the form of utility functions. Here you will
+find, for example, utilities for \ref grp_anonymization (masking personally
+identifiable information, while still keeping tables consistent and informative
+for research purposes), \ref grp_sessionization (segment streams of events based
+on time and key information) and more. Utilities can come also in the form of
+data types. For example, <B>DS Tools</B> defines the complex data type, for
+storing and manipulating \ref grp_complexnumbers, which is useful in various
+types of analytics. In future, <B>DS Tools</B> may include other types of work
+accelerators as well.
+
+\ref grp_algorithms_module are machine learning algorithms. Most machine learning algorithms
+used by Pivotal data scientists are part of the free MADlib library.
+<B>DS Tools</B> includes algorithms that are not part of MADlib. Some of them,
+such as <B>DS Tools</B>'s \ref grp_ccomp algorithm, cannot become MADlib
+algorithms because they have Pivotal intellectual property associated with them.
+We cannot contribute our patent-pending algorithms to a free library such as
+MADlib, so we make them available through <B>DS Tools</B>, instead. Another
+reason algorithms can get contributed to <B>DS Tools</B> rather than MADlib is
+that <B>DS Tools</B> works by the "release early, release often" methodology.
+PDL lab collateral which is contributed to <B>DS Tools</B> is released
+as soon as it is ready. This ensures that Pivotal data scientists have in their
+arsenal the most up-to-date and most comprehensive set of tools possible.
+
+\ref grp_sugar_module is an entire library, packaged within the DS Tools
+library. <B>SUgAR</B> acknowledges that SQL was not designed with analytics in
+mind. Simple, commonly used analytics techniques such as pivoting cannot be
+supported in SQL. (In SQL, the output type of a query is determined by the
+query, not by the data it runs on, but in pivoting pivot-tables must be
+created whose column names and quantities depend on the data in the tables
+that are pivoted.) <B>SUgAR</B> bridges this gap between the desire to perform
+in-database analytics and the limitations of SQL by providing a thin layer of
+second-order parsing on top of SQL: it lets you write your queries as you
+would have liked to write them, send them to the function \ref grp_sugar as
+string parameters, and have <B>SUgAR</B> make them into one or more SQL
+queries, as is necessary, and run them for you. All heavy lifting is done in
+SQL, in the database, all syntax is familiar syntax, but some
+otherwise-impossible-to-attain features are magically supported.
+
+An overview of <B>SUgAR</B>, what it contains and how to work with it can be
+found in \ref grp_sugar_framework. Examples of what it contains include
+fully-featured pivoting capabilities (\ref grp_pivot), the ability to define
+new window functions conveniently, with examples of window functions
+pre-defined in this way being Z-score, p-value, normalization and
+proportion calculation (see \ref grp_sugar_funcs).
+
+### A SUgARy example
+
+To make the idea of SUgAR more concrete, here's an end-to-end example of
+what working with it looks like. We follow in this the example given
+\link glob_example here\endlink, where the full SQL code is also given.
+
+In this example, we take a table describing shirt sales by region, gender and
+style and begin by dummy variable generation on it. This is the simplest form
+of pivoting, in which each categorical variable, such as region, gender and
+style, is made into multiple 0/1 indicator columns. The <B>SUgAR</B> function
+that performs this is \ref grp_pivot01. Note, however, that if one creates
+dummy variables for every value taken by a categorical column, these column
+values will be, by definition, co-linear. For later analytics, it is often
+useful to ask `pivot01` to generate pivot columns for all values taken by the
+categorical column except one. <B>SUgAR</B>'s pivoting
+functions enable one to write modifiers that determine which columns are
+generated. For example, one can use \ref grp_freq_vals, one such modifier that
+comes built-in with <B>SUgAR</B>, to create pivoted columns for the \a n most
+frequent values in the original table's categorical column.
+
+In this example, we used another built-in modifier: \ref grp_all_but_one.
+This simply chooses one value, arbitrarily, from the column values and omits it
+from the generated pivot table. (One can just as easily choose explicitly
+a column to omit, and this does not even require a modifier. An example of
+this can be found \link all_but_one_example here\endlink.) The resulting query,
+essentially in the way that it is sent to `sugar()`, is
+
+<pre class="example">
+SELECT price,units,cost,row_num,
+     pivot01(region,wiki_table,null,null,all_but_one()),
+     pivot01(gender,wiki_table,null,null,all_but_one()),
+     pivot01(style,wiki_table,null,null,all_but_one())
+FROM wiki_table;
+</pre>
+
+It looks like a SQL query, it feels like a SQL query, but it supports
+pivoting capabilities impossible to attain in SQL.
+
+The purpose of dummy-variable generation is to make data into numerical
+columns, which are handled more easily by machine learning algorithms.
+Continuing the example, we might therefore at this point want to to run some
+type of regression, for example MADlib's linear regression function,
+`madlib.linregr`. This function takes two parameters: a column to be the
+regression's independent column and an array of columns to be the dependent
+columns. In normal SQL, one would have had to populate this array manually,
+naming each one of the dependent columns separately. Here, the dummy variables
+alone form seven columns. In a real-world scenario, the number of columns can
+be much higher. In <B>SUgAR</B>, instead of enumerating over all values, we
+can simply select them all together by use of a regular expression, like so:
+
+<pre class="example">
+glob('pivot_table','myschema','(region|gender|style)_\%')
+</pre>
+
+This is called column globbing, and is handled by <B>SUgAR</B>'s `glob`
+function. (See \ref grp_glob.) The function call selects all columns from
+`myschema.pivot_table` that match the pattern
+<code>'(region|gender|style)_\%'</code>. This
+is the set of all our dummy variables, which were generated by expanding the
+`region`, `gender` and `style` columns. The complete call to the linear
+regression function now looks like this:
+
+<pre class="example">
+SELECT (madlib.linregr(price,array[
+           glob('pivot_table','myschema','(region|gender|style)_\%')
+       ])).*;
+</pre>
+
+Globbing can also be used to de-select. Consider this, for example.
+
+<pre class="example">
+SELECT (madlib.linregr(price,array[
+           glob('pivot_table','myschema','\%','price|row_num')
+       ])).*;
+</pre>
+
+This SELECT call is identical to the previous example, but instead of
+explicitly selecting all dummy variable columns, we're selecting all columns
+(<code>'\%'</code>) except two columns that we want to omit: `price` and
+`row_num`. What to omit is also defined by a regular expression. In this case,
+<code>'price|row_num'</code>.
+
+As you can see, we never actually needed to omit a column from the pivoting
+output at all. It would have been equally possible to simply de-select, using
+`glob`, the unwanted columns prior to sending them to further processing.
+
+### Getting help
+
+There are many ways to get help when using <B>DS Tools</B>.
+This manual is available in HTML, as an
+<A HREF="manual/dstools-@DSTOOLS_VERSION_STRING@-manual.tgz">HTML tar ball</A>
+and as a
+<A HREF="manual/dstools-@DSTOOLS_VERSION_STRING@-manual.pdf">PDF</A> file.
+This is to make sure help is always accessible to you, regardless of what your
+work environment is, even if it is a lab with no access to any outside network.
+Additionally, the library objects themselves provide online help:
+all <B>DS_Tools</B> and all <B>SUgAR</B> functions return a brief usage
+message if invoked without parameters or with the empty string as a parameter
+(unless this interferes with their normal behavior). Invoking a library
+function with the string <code>'usage'</code> gives the full usage instructions.
+For <B>SUgAR</B> pseudofunctions, use
+
+<pre class="example">
+SELECT sugar('usage','<em>funcname</em>');
+</pre>
+
+where <em>funcname</em> is the function to get usage instructions on.
+`sugar()` provides other methods of giving help to the user, for example by
+listing all supported <B>SUgAR</B> functions. See \ref grp_sugar for the
+complete set of options.
+
+Lastly, note that <B>DS Tools</B> and <B>SUgAR</B> manage their version numbers
+independently. To find out which version is installed on your machine
+
+<pre class="example">
+SELECT dstools_version();
+SELECT sugar_version();
+</pre>
+
+The page \ref changelog lists which features were added to the library at
+each version.
+
+Enjoy the library!
+
+*/
