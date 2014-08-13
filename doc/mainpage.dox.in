@@ -111,6 +111,16 @@ Implementation of a user-defined Complex type.
 
         @defgroup grp_complex complex (Type)
     @}
+
+    @defgroup grp_nlp NLP utility functions
+    @{
+        @brief Collection of functions used for NLP tasks.
+Written by [Srivatsan Ramanujam](mailto:sramanujam@pivotal.io), 12 Aug 2014.)
+        @sa Module source file: porter_stemmer.sql_in
+        @prereq
+PL/C
+        @defgroup grp_nlp_stemming Porter Stemmer
+    @}
 @}
 
 @defgroup grp_algorithms_module Algorithms

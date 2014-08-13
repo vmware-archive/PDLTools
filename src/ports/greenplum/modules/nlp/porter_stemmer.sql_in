@@ -1,0 +1,65 @@
+/* ----------------------------------------------------------------------- *//**
+
+@file porter_stemmer.sql_in
+
+@brief The Porter Stemmer. Pre-processing step in NLP pipelines.
+
+@author PL/C Wrapper written by Srivatsan Ramanujam<sramanujam@pivotal.io> 
+        porting original inventor Martin Porter's code 
+        from http://tartarus.org/martin/PorterStemmer/c_thread_safe.txt
+@date 12 Aug 2014
+
+ *//* ----------------------------------------------------------------------- */
+
+
+/**
+@addtogroup grp_nlp_stemming
+
+@brief Apply Porter Stemmer on a token and return the root word
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#stem_token_syntax">Syntax</a>
+<li class="level1"><a href="#stem_token_usage">Usage</a>
+<li class="level1"><a href="#stem_token_example">Example</a>
+</ul>
+</div>
+
+@about
+A row function, that stems a token and returns the root word according to Porter's algorithm
+
+@anchor stem_token_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION nlp_stem_token(token text)
+RETURNS text;
+</pre>
+
+@param token A word to be stemmed
+
+@returns stemmed/root form of the input token
+
+@anchor stem_token_usage
+@usage
+Identifying the root form of a token is a common step in many natural language processing tasks. Porter Stemmer is
+an algorithm that identifies the root form of any given word in English
+
+@anchor stem_token_example
+@examp
+@verbatim
+user=# SELECT nlp_stem_token('pencils');
+ nlp_stem_token 
+----------------
+ pencil
+(1 row)
+user=# SELECT nlp_stem_token('running');
+ nlp_stem_token 
+----------------
+ run
+(1 row)
+@endverbatim
+ */
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.nlp_stem_token(token text)
+RETURNS text
+AS 'MODULE_PATHNAME','plc_stem_token'
+LANGUAGE C IMMUTABLE STRICT;
