@@ -152,6 +152,7 @@ TEST CASE RESULT|Module: session|test_session.sql_in|PASS|Time: 305 milliseconds
 TEST CASE RESULT|Module: connected_components|test_connected_components.sql_in|PASS|Time: 1358 milliseconds
 TEST CASE RESULT|Module: sugar|test_sugar.sql_in|PASS|Time: 3080 milliseconds
 TEST CASE RESULT|Module: complex|test_complex_type.sql_in|PASS|Time: 316 milliseconds
+TEST CASE RESULT|Module: nlp|test_porter_stemmer.sql_in|PASS|Time: 34 milliseconds
 @endverbatim
 
 

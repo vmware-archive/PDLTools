@@ -4,6 +4,10 @@
 
 ## DS Tools Revision History
 
+### DS Tools 1.2.1 (packaged with SUgAR 0.4.4) -- Current version
+- Added Porter Stemmer for stemming words - a common pre-processing step in
+NLP
+
 ### DS Tools 1.2 (packaged with SUgAR 0.4.4) -- Current version
 
 - Switched to Doxygen-based documentation (HTML+PDF)
