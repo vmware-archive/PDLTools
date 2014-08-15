@@ -49,6 +49,7 @@
 #include <sys/time.h>
 #include <funcapi.h>
 #include <utils/builtins.h>
+#include <utils/array.h>
 
 /* You will probably want to move the following declarations to a central
    header file.
@@ -446,12 +447,10 @@ void stemfile(struct stemmer * z, FILE * f)
 /*
 Step an input token and return a string output
 */
-const char *stem_token(text *token) {
-   struct stemmer *z = create_stemmer();
+const char *stem_token(struct stemmer *z, text *token) {
    char *stemmed_token = TextDatumGetCString(token);	
    int indx = stem(z, stemmed_token, strlen(stemmed_token)-1);
    stemmed_token[indx+1]=0;
-   free_stemmer(z);
    return stemmed_token;
 }
 
@@ -462,9 +461,52 @@ PG_FUNCTION_INFO_V1(plc_stem_token);
 Datum plc_stem_token(PG_FUNCTION_ARGS);
 Datum plc_stem_token(PG_FUNCTION_ARGS) 
 {
+  if (PG_ARGISNULL(0)){
+     PG_RETURN_NULL();
+  }
   text *org_token = PG_GETARG_TEXT_P(0); 
-  PG_RETURN_TEXT_P(cstring_to_text(stem_token(org_token)));
+  struct stemmer *z = create_stemmer();  
+  char *result = stem_token(z, org_token);
+  free_stemmer(z);
+  PG_RETURN_TEXT_P(cstring_to_text(result));
 }
+
+/*
+PL/C function processing text[] input
+*/
+PG_FUNCTION_INFO_V1(plc_stem_token_arr);
+Datum plc_stem_token_arr(PG_FUNCTION_ARGS);
+Datum plc_stem_token_arr(PG_FUNCTION_ARGS) 
+{
+  if (PG_ARGISNULL(0)){
+     PG_RETURN_NULL();
+  }
+  /* Prepare elements to receive input text[] */
+  ArrayType *arr = PG_GETARG_ARRAYTYPE_P(0);
+  Datum *dtum;
+  bool *nulls;
+  int ndim;
+  /* Deconstruct input text[] */
+  deconstruct_array(arr, TEXTOID, -1, false, 'i', &dtum, &nulls, &ndim);
+  /* Prepare stemmer */
+  struct stemmer *z = create_stemmer();  
+
+  /* Call stemming code */
+  text **result = (text **) palloc(ndim * sizeof(text * ));
+  for(int i=0; i< ndim; i++) {
+      text *token = dtum[i] == NULL ? NULL : DatumGetTextP(dtum[i]);
+      char *empty;
+      if(token == NULL) {
+          empty =  (char *)palloc(sizeof(char));
+          empty[0] = '\0';
+      }
+      result[i] = (token == NULL) ? cstring_to_text(empty) : cstring_to_text(stem_token(z, token));
+  } 
+  ArrayType *res = construct_array(result, ndim, TEXTOID, -1, false, 'i');
+  free_stemmer(z);
+  PG_RETURN_ARRAYTYPE_P(res);
+}
+
 
 int main(int argc, char * argv[])
 {  int i;

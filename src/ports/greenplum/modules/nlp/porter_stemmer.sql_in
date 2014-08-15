@@ -57,6 +57,13 @@ user=# SELECT nlp_stem_token('running');
 ----------------
  run
 (1 row)
+
+select nlp_stem_token_arr(ARRAY['pencils','running','walking']);
+ nlp_stem_token_arr 
+--------------------
+ {pencil,run,walk}
+(1 row)
+
 @endverbatim
 
 */
@@ -64,3 +71,13 @@ CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.nlp_stem_token(token text)
 RETURNS text
 AS 'MODULE_PATHNAME','plc_stem_token'
 LANGUAGE C IMMUTABLE STRICT;
+
+-----------------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.nlp_stem_token_arr(token_arr text[])
+RETURNS text[]
+AS 'MODULE_PATHNAME','plc_stem_token_arr'
+LANGUAGE C IMMUTABLE STRICT;
+
+-----------------------------------------------------------------------------------
+
