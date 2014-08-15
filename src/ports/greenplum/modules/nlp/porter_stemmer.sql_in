@@ -33,6 +33,9 @@ A row function, that stems a token and returns the root word according to Porter
 <pre class="syntax">
 FUNCTION nlp_stem_token(token text)
 RETURNS text;
+(OR)
+FUNCTION nlp_stem_token_arr(token text[])
+RETURNS text[];
 </pre>
 
 @param token A word to be stemmed
