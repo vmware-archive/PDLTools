@@ -3,7 +3,7 @@ Simple Python based installer of DStools. In time this will involve to become mo
 but perhaps not quite as complex as madpack :-)
 Note: Most of this script has been copied from madpack.py. We've removed irrelevant portions from madpack to build dspack.
 Srivatsan Ramanujam
-<sramanujam@gopivotal.com>
+<sramanujam@pivotal.io>
 28 Jan 2014
 
 Usage:

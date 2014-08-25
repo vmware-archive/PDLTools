@@ -23,5 +23,6 @@ PostInstall:
            echo 'For additional options run:';
            echo '$ dspack --help';
            echo 'Release notes and additional documentation can be found at';
-           echo 'https://sites.google.com/a/gopivotal.com/global-data-science/ds-tools,';
+           echo 'https://sites.google.com/a/pivotal.io/global-data-science/ds-tools,';
+           echo 'as well as on http://pdl-dstools.pa.gopivotal.com/modules.html';
            echo 'accessible through the Pivotal VPN.';"

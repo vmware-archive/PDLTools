@@ -189,10 +189,10 @@ affected by the question of whether \c "normalize" is true or false.
 @anchor parse_uri_example
 @examp
 @verbatim
-user=# SELECT parse_uri('http://myself:password@www.goPivotal.com:80/%7ehello/to/you/index.html?who=I&whom=me#here',true,true);
+user=# SELECT parse_uri('http://myself:password@www.Pivotal.io:80/%7ehello/to/you/index.html?who=I&whom=me#here',true,true);
                                                        parse_uri                                                        
 ------------------------------------------------------------------------------------------------------------------------
- (http,myself:password,www.gopivotal.com,,,,80,"{~hello,to,you,index.html}",who=I&whom=me,here,f,"{who,whom}","{I,me}")
+ (http,myself:password,www.pivotal.io,,,,80,"{~hello,to,you,index.html}",who=I&whom=me,here,f,"{who,whom}","{I,me}")
 (1 row)
 @endverbatim
 
@@ -251,10 +251,10 @@ the questio of whether "normalize" is true or false.
 
 Example
 =======
-SELECT DSTOOLS_SCHEMA.parse_uri('http://myself:password@www.goPivotal.com:80/%7ehello/to/you/index.html?who=I&whom=me#here',true,true);
+SELECT DSTOOLS_SCHEMA.parse_uri('http://myself:password@www.Pivotal.io:80/%7ehello/to/you/index.html?who=I&whom=me#here',true,true);
                                                        parse_uri                                                        
 ------------------------------------------------------------------------------------------------------------------------
- (http,myself:password,www.gopivotal.com,,,,80,"{~hello,to,you,index.html}",who=I&whom=me,here,f,"{who,whom}","{I,me}")
+ (http,myself:password,www.pivotal.io,,,,80,"{~hello,to,you,index.html}",who=I&whom=me,here,f,"{who,whom}","{I,me}")
 (1 row)
 
 See also: uri_type
@@ -407,10 +407,10 @@ interest.
 @anchor parse_domain_example
 @examp
 @verbatim
-user=# SELECT parse_domain('www.gopivotal.com');
+user=# SELECT parse_domain('www.pivotal.io');
     parse_domain     
 ---------------------
- {www,gopivotal,com}
+ {www,pivotal,io}
 (1 row)
 @endverbatim
  */
@@ -437,10 +437,10 @@ domainname - Domain name to be parsed.
 
 Example
 =======
-SELECT DSTOOLS_SCHEMA.parse_domain('www.gopivotal.com');
+SELECT DSTOOLS_SCHEMA.parse_domain('www.pivotal.io');
     parse_domain     
 ---------------------
- {www,gopivotal,com}
+ {www,pivotal,io}
 (1 row)
 $__STRING__$] END;
 $$;

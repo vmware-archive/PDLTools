@@ -1,0 +1,222 @@
+/* ----------------------------------------------------------------------- *//**
+
+@file porter_stemmer.sql_in
+
+@brief The Porter Stemmer. Pre-processing step in NLP pipelines.
+
+@author PL/C Wrapper written by Srivatsan Ramanujam<sramanujam@pivotal.io> 
+        porting original inventor Martin Porter's code 
+        from http://tartarus.org/martin/PorterStemmer/c_thread_safe.txt
+@date 12 Aug 2014
+
+ *//* ----------------------------------------------------------------------- */
+
+
+/**
+@addtogroup grp_nlp_stem_token
+
+@brief Apply Porter Stemmer on a token and return the root word
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#nlp_stem_token_syntax">Syntax</a>
+<li class="level1"><a href="#nlp_stem_token_usage">Usage</a>
+<li class="level1"><a href="#nlp_stem_token_example">Example</a>
+</ul>
+</div>
+
+@about
+A row function, that stems a token and returns the root word according to
+Porter's algorithm
+
+@anchor nlp_stem_token_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION nlp_stem_token(token text)
+RETURNS text;
+</pre>
+
+@param token A word to be stemmed
+
+@returns stemmed/root form of the input token
+
+@anchor nlp_stem_token_usage
+@usage
+Identifying the root form of a token is a common step in many natural language
+processing tasks. Porter Stemmer is an algorithm that identifies the root form
+of any given word in English
+
+@anchor nlp_stem_token_example
+@examp
+@verbatim
+user=# SELECT nlp_stem_token('pencils');
+ nlp_stem_token 
+----------------
+ pencil
+(1 row)
+
+user=# SELECT nlp_stem_token('running');
+ nlp_stem_token 
+----------------
+ run
+(1 row)
+@endverbatim
+
+@sa grp_nlp_stem_token_arr
+
+*/
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.nlp_stem_token(token text)
+RETURNS text
+AS 'MODULE_PATHNAME','plc_stem_token'
+LANGUAGE C IMMUTABLE STRICT;
+
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.nlp_stem_token()
+RETURNS VARCHAR
+IMMUTABLE
+LANGUAGE SQL
+AS
+$$
+SELECT $ABC$
+nlp_stem_token: Apply Porter Stemmer on a token and return the root word.
+
+A row function, that stems a token and returns the root word according to
+Porter's algorithm
+
+Synopsis
+========
+DSTOOLS_SCHEMA.nlp_stem_token(token text)
+RETURNS text
+
+token - A word to be stemmed
+
+Usage
+=====
+Returns the stemmed/root form of the token in the input.
+
+Identifying the root form of a token is a common step in many natural language
+processing tasks. The Porter Stemmer is an algorithm that identifies the root
+form of any given word in English.
+
+Example
+=======
+SELECT DSTOOLS_SCHEMA.nlp_stem_token('running');
+ nlp_stem_token 
+----------------
+ run
+(1 row)
+$ABC$::VARCHAR;
+$$;
+
+-----------------------------------------------------------------------------------
+
+/**
+@addtogroup grp_nlp_stem_token_arr
+
+@brief Apply Porter Stemmer on an array of tokens and returns an array of root words
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#nlp_stem_token_arr_syntax">Syntax</a>
+<li class="level1"><a href="#nlp_stem_token_arr_usage">Usage</a>
+<li class="level1"><a href="#nlp_stem_token_arr_example">Example</a>
+</ul>
+</div>
+
+@about
+A row function, that stems each word from an array of tokens, returning an array of the root words according to Porter's algorithm.
+
+@anchor nlp_stem_token_arr_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION nlp_stem_token_arr(token text[])
+RETURNS text[];
+</pre>
+
+@param token An array of words to be stemmed
+
+@returns An array with stemmed/root forms of each of the tokens in the input.
+
+@anchor nlp_stem_token_arr_usage
+@usage
+Identifying the root form of a token is a common step in many natural language processing tasks. Porter Stemmer is
+an algorithm that identifies the root form of any given word in English.
+In this function it acts separately on each of the tokens given to it in an input array.
+
+@anchor nlp_stem_token_arr_example
+@examp
+@verbatim
+select nlp_stem_token_arr(ARRAY['pencils','running','walking']);
+ nlp_stem_token_arr 
+--------------------
+ {pencil,run,walk}
+(1 row)
+@endverbatim
+
+@sa grp_nlp_stem_token
+
+*/
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.nlp_stem_token_arr(token_arr text[])
+RETURNS text[]
+AS 'MODULE_PATHNAME','plc_stem_token_arr'
+LANGUAGE C IMMUTABLE STRICT;
+
+-----------------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.nlp_stem_token_arr()
+RETURNS VARCHAR
+IMMUTABLE
+LANGUAGE SQL
+AS
+$$
+SELECT $ABC$
+nlp_stem_token_arr: Apply Porter Stemmer on an array of tokens and returns an
+array of root words.
+
+A row function, that stems each word from an array of tokens, returning an array
+of the root words according to Porter's algorithm.
+
+For full usage instructions, run "DSTOOLS_SCHEMA.parse_domain(''usage'')".
+$ABC$::VARCHAR;
+$$;
+
+CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.nlp_stem_token_arr(option VARCHAR)
+RETURNS VARCHAR
+IMMUTABLE
+LANGUAGE SQL
+AS
+$$
+SELECT CASE WHEN $1!='usage' THEN DSTOOLS_SCHEMA.nlp_stem_token_arr() ELSE
+$ABC$
+nlp_stem_token_arr: Apply Porter Stemmer on an array of tokens and returns an
+array of root words.
+
+A row function, that stems each word from an array of tokens, returning an array
+of the root words according to Porter's algorithm.
+
+Synopsis
+========
+DSTOOLS_SCHEMA.nlp_stem_token_arr(token text[])
+RETURNS text[]
+
+token - An array of words to be stemmed
+
+Usage
+=====
+Returns An array with stemmed/root forms of each of the tokens in the input.
+
+Identifying the root form of a token is a common step in many natural language
+processing tasks. The Porter Stemmer is an algorithm that identifies the root
+form of any given word in English. In this function it acts separately on each
+of the tokens given to it in an input array.
+
+Example
+=======
+SELECT DSTOOLS_SCHEMA.nlp_stem_token_arr(ARRAY['pencils','running','walking']);
+ nlp_stem_token_arr 
+--------------------
+ {pencil,run,walk}
+(1 row)
+$ABC$
+END;
+$$;
+

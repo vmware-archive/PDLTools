@@ -9,7 +9,7 @@ as
 	select (t).*
 	from
 	(
-	       select parse_uri($BODY$http://myself:password@www.goPivotal.com:80/%7ehello/to/you/index.html?who=I&whom=me&more=a%20%22''%5E%5e%41#here$BODY$,false,false) as t
+	       select parse_uri($BODY$http://myself:password@www.Pivotal.io:80/%7ehello/to/you/index.html?who=I&whom=me&more=a%20%22''%5E%5e%41#here$BODY$,false,false) as t
 	)test
 )
 select (
@@ -20,7 +20,7 @@ select (
     --Test userinfo
     (select assert((select userinfo from testcase), $BODY$myself:password$BODY$)) AND
     --Test hosttext
-    (select assert((select hosttext from testcase), $BODY$www.goPivotal.com$BODY$)) AND
+    (select assert((select hosttext from testcase), $BODY$www.Pivotal.io$BODY$)) AND
     --Test porttext
     (select assert((select porttext from testcase), $BODY$80$BODY$)) AND
     --Test fragment

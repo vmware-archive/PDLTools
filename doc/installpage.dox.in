@@ -59,7 +59,8 @@ To uninstall the package, use "gppkg -r".
 For additional options run:
 $ dspack --help
 Release notes and additional documentation can be found at
-https://sites.google.com/a/gopivotal.com/global-data-science/ds-tools,
+https://sites.google.com/a/pivotal.io/global-data-science/ds-tools,
+as well as on http://pdl-dstools.pa.gopivotal.com/
 accessible through the Pivotal VPN.
 20140721:05:41:13:021769 gppkg:gp-single-host:gpadmin-[INFO]:-dstools-1.2-gpdb4.2-rhel5-x86_64.gppkg successfully installed.
 @endverbatim

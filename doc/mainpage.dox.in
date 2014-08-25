@@ -33,11 +33,11 @@ A collection of convenience functions.
 
 A set of utilities for parsing and extracting URIs from text.
 
-(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 22 Aug 2013, wrapping functionality from the <code>uriparser</code> library [under new BSD license].)
+(Written by [Michael Brand](mailto:mbrand@pivotal.io), 22 Aug 2013, wrapping functionality from the <code>uriparser</code> library [under new BSD license].)
 
-        @sa Module source file: uri_utils.sql_in.
+@sa Module source file: uri_utils.sql_in.
 
-        @prereq
+@prereq
 External library: uriparser
 
         @defgroup grp_uri_type uri_type (Type)
@@ -54,9 +54,9 @@ External library: uriparser
 Implementation of Levenshtein, Demerau-Levenshtein, Optimal Alignment
 and related edit distance metrics (and non-distance metrics).
 
-(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 19 Feb 2014.)
+(Written by [Michael Brand](mailto:mbrand@pivotal.io), 19 Feb 2014.)
 
-        @sa Module source file: edit_distance.sql_in.
+@sa Module source file: edit_distance.sql_in.
 
         @defgroup grp_edit_distance edit_distance
         @defgroup grp_edit_distance_unsafe edit_distance_unsafe
@@ -71,11 +71,11 @@ and related edit distance metrics (and non-distance metrics).
 
 Implementation of anonymization utility.
 
-(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 9 Dec 2013.)
+(Written by [Michael Brand](mailto:mbrand@pivotal.io), 9 Dec 2013.)
 
-        @sa Module source file: anonymization.sql_in.
+@sa Module source file: anonymization.sql_in.
 
-        @prereq
+@prereq
 PL/pgSQL, PL/PythonU
 
         @defgroup grp_create_anonymization_table create_anonymization_table
@@ -89,11 +89,11 @@ PL/pgSQL, PL/PythonU
 
 Utility to partition event streams into sessions by timeouts and identifiers.
 
-(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 22 Aug 2013, based on code by Jin Yu.)
+(Written by [Michael Brand](mailto:mbrand@pivotal.io), 22 Aug 2013, based on code by Jin Yu.)
         
-        @sa Module source file: session.sql_in.
+@sa Module source file: session.sql_in.
 
-        @prereq
+@prereq
 PL/Perl
 
         @defgroup grp_session_split session_split
@@ -105,21 +105,26 @@ PL/Perl
 
 Implementation of a user-defined Complex type.
 
-(Written by Kevin Yun Liu, 1 Apr 2012. Adapted for DS Tools by [Srivatsan Ramanujam](mailto:sramanujam@gopivotal.com).)
+(Written by Kevin Yun Liu, 1 Apr 2012. Adapted for DS Tools by [Srivatsan Ramanujam](mailto:sramanujam@pivotal.io).)
 
-        @sa Module source file: complex_type.sql_in.
+@sa Module source file: complex_type.sql_in.
 
         @defgroup grp_complex complex (Type)
     @}
 
-    @defgroup grp_nlp NLP utility functions
+    @defgroup grp_stemming Stemming
     @{
-        @brief Collection of functions used for NLP tasks.
-Written by [Srivatsan Ramanujam](mailto:sramanujam@pivotal.io), 12 Aug 2014.)
-        @sa Module source file: porter_stemmer.sql_in
-        @prereq
+        @brief Porter stemming for NLP.
+
+Porter stemming for NLP.
+
+(Written by [Srivatsan Ramanujam](mailto:sramanujam@pivotal.io), porting original inventor Martin Porter's code, 12 Aug 2014.)
+
+@sa Module source file: porter_stemmer.sql_in
+@prereq
 PL/C
-        @defgroup grp_nlp_stemming Porter Stemmer
+        @defgroup grp_nlp_stem_token nlp_stem_token
+        @defgroup grp_nlp_stem_token_arr nlp_stem_token_arr
     @}
 @}
 
@@ -147,11 +152,11 @@ some measurements seem to even imply the reverse.
 These measurements have not been investigated closely. In both implementations,
 all heavy lifting is done in SQL.
 
-(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 14 Nov 2012.)
+(Written by [Michael Brand](mailto:mbrand@pivotal.io), 14 Nov 2012.)
 
-        @sa Module source files: connected_components_perl.sql_in, connected_components_hawq.sql_in.
+@sa Module source files: connected_components_perl.sql_in, connected_components_hawq.sql_in.
 
-        @prereq
+@prereq
 PL/Perl (function \ref grp_connected_components only),
 PL/pgSQL (function \ref grp_connected_components_no_udfs only)
 
@@ -164,9 +169,9 @@ PL/pgSQL (function \ref grp_connected_components_no_udfs only)
 @{
 A library of routines powered by second-order SQL parsing.
 
-    @sa Module source file: sugar.sql_in.
+@sa Module source file: sugar.sql_in.
 
-    @prereq
+@prereq
 MADlib (\ref grp_pvalue only)
 
     @defgroup grp_sugar_framework The SUgAR Framework
@@ -175,7 +180,7 @@ MADlib (\ref grp_pvalue only)
 
 What SUgAR is, how to use and how to extend it.
 
-(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+(Written by [Michael Brand](mailto:mbrand@pivotal.io), 3 Mar 2013.)
 
         @defgroup grp_sugar_introduction Introduction
         @defgroup grp_sugar sugar
@@ -205,7 +210,7 @@ The SUgAR pseudofunctions available out-of-the-box.
 
 Various convenience functions, used or useful with SUgAR.
 
-(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+(Written by [Michael Brand](mailto:mbrand@pivotal.io), 3 Mar 2013.)
 
         @defgroup grp_proportional_trans proportional_trans
         @defgroup grp_invprop_trans invprop_trans

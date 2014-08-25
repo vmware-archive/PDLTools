@@ -373,7 +373,7 @@ a rolling window, etc.. This is to demonstrate the fact that '\@' continues to
 work well even in complex situations.
 -# The example above was adopted from a blog entry by Joe Conway.
 
-(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+(Written by [Michael Brand](mailto:mbrand@pivotal.io), 3 Mar 2013.)
 
  */
 
@@ -461,7 +461,7 @@ their names will reflect internals of the SUgAR implementation, and may
 cause multiple columns to be assigned the same name, which would result in
 a SQL error.
 
-(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+(Written by [Michael Brand](mailto:mbrand@pivotal.io), 3 Mar 2013.)
 
  */
 
@@ -564,7 +564,7 @@ their names will reflect internals of the SUgAR implementation, and may
 cause multiple columns to be assigned the same name, which would result in
 a SQL error.
 
-(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+(Written by [Michael Brand](mailto:mbrand@pivotal.io), 3 Mar 2013.)
 
 @prereq
 MADlib
@@ -663,7 +663,7 @@ their names will reflect internals of the SUgAR implementation, and may
 cause multiple columns to be assigned the same name, which would result in
 a SQL error.
 
-(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+(Written by [Michael Brand](mailto:mbrand@pivotal.io), 3 Mar 2013.)
 
  */
 
@@ -762,7 +762,7 @@ their names will reflect internals of the SUgAR implementation, and may
 cause multiple columns to be assigned the same name, which would result in
 a SQL error.
 
-(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+(Written by [Michael Brand](mailto:mbrand@pivotal.io), 3 Mar 2013.)
 
  */
 
@@ -922,7 +922,7 @@ user=# SELECT * FROM outtable;
 
 @sa grp_pivot, grp_all_vals, grp_freq_vals, grp_all_but_one, grp_choose_any, grp_unique_element
 
-(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+(Written by [Michael Brand](mailto:mbrand@pivotal.io), 3 Mar 2013.)
 
  */
 
@@ -1127,7 +1127,7 @@ user=# SELECT * FROM outtable;
 
 @sa grp_pivot01, grp_all_vals, grp_freq_vals, grp_all_but_one, grp_choose_any, grp_unique_element
 
-(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 3 Mar 2013.)
+(Written by [Michael Brand](mailto:mbrand@pivotal.io), 3 Mar 2013.)
 
  */
 
@@ -1321,7 +1321,7 @@ table (the order they will appear in, in a <code>'SELECT *'</code>).
 
 @sa grp_all_but_one
 
-(Written by [Michael Brand](mailto:mbrand@gopivotal.com), 26 Jun 2014.)
+(Written by [Michael Brand](mailto:mbrand@pivotal.io), 26 Jun 2014.)
 
  */
 

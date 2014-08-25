@@ -13,7 +13,7 @@
         }
     },
     "resources": {
-        "homepage": "https://sites.google.com/a/gopivotal.com/global-data-science/ds-tools",
+        "homepage": "https://sites.google.com/a/pivotal.io/global-data-science/ds-tools",
         "repository": {
             "url":  "https://stash.greenplum.com/scm/ds/dstools.git",
             "web":  "https://stash.greenplum.com/scm/ds/dstools",
