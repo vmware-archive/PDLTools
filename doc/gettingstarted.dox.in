@@ -203,6 +203,12 @@ SELECT dstools_version();
 SELECT sugar_version();
 </pre>
 
+or get them together by
+
+<pre class="example">
+SELECT version();
+</pre>
+
 The page \ref changelog lists which features were added to the library at
 each version.
 

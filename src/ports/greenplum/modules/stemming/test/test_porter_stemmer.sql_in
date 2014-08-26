@@ -1,6 +1,6 @@
 -- File: test_porter_stemmer.sql
 -- Unit test for porter_stemmer.sql
 
-SELECT assert(nlp_stem_token('pencils'),'pencil');
-SELECT assert(nlp_stem_token('running'),'run');
-SELECT assert(nlp_stem_token('run'),'run');
+SELECT assert(stem_token('pencils'),'pencil');
+SELECT assert(stem_token('running'),'run');
+SELECT assert(stem_token('run'),'run');

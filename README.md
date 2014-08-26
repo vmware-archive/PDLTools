@@ -29,10 +29,10 @@ Generating Doxygen User Docs
         3. make
         4. make doc
     This will create the user docs under $BUILD/doc/user/html. You can then rsync this folder to our internal Linux box which automatically serves the documentation
-    at [pdl-dstools-userdocs](http://pdl-dstools.pa.gopivotal.com/)
+    at [pdl-tools-userdocs](http://pdl-tools.pa.pivotal.io/)
  
     For example:
-        rsync $DSTOOLS/build/doc/user/html/* dstools@pdl-dstools.pa.gopivotal.com:/home/dstools/hosting/dstools/doc/user/html/    
+        rsync $DSTOOLS/build/doc/user/html/* dstools@pdl-tools.pa.pivotal.io:/home/dstools/hosting/dstools/doc/user/html/    
 
     You can also generate a PDF of the user doc by running
          * cd build/doc/user/latext && make pdf

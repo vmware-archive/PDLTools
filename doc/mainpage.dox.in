@@ -15,7 +15,8 @@ customers are granted copyright and a license for their own internal use.
 
 Call any function without parameters (or with the single parameter
 <code>'usage'</code>, as a string) for online help. Use
-<code>"dstools_version()"</code> to get the library's version number.
+<code>"dstools_version()"</code> to get the library's version number,
+or <code>"version()"</code> to get component version numbers.
 
 @note
 By default, all SUgAR library objects are installed into the schema
@@ -116,15 +117,15 @@ Implementation of a user-defined Complex type.
     @{
         @brief Porter stemming for NLP.
 
-Porter stemming for NLP.
+The Porter Stemmer. Pre-processing step in NLP pipelines.
 
 (Written by [Srivatsan Ramanujam](mailto:sramanujam@pivotal.io), porting original inventor Martin Porter's code, 12 Aug 2014.)
 
 @sa Module source file: porter_stemmer.sql_in
 @prereq
 PL/C
-        @defgroup grp_nlp_stem_token nlp_stem_token
-        @defgroup grp_nlp_stem_token_arr nlp_stem_token_arr
+        @defgroup grp_stem_token stem_token
+        @defgroup grp_stem_token_arr stem_token_arr
     @}
 @}
 
