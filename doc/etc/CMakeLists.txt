@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# DSTools Documentation Configuration Files
+# PDL Tools Documentation Configuration Files
 # ------------------------------------------------------------------------------
 
 configure_file(user.doxyfile.in user.doxyfile)

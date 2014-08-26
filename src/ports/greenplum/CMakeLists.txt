@@ -28,7 +28,7 @@ include(GreenplumUtils)
 # ======================================================================
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
-set(DSTOOLS_DBAL_SOURCES  ${DSTOOLS_SOURCES})
+set(PDLTOOLS_DBAL_SOURCES  ${PDLTOOLS_SOURCES})
 
 add_sql_files(
     SQL_TARGET_FILES
@@ -78,10 +78,10 @@ function(add_${PORT_LC}_library IN_PORT_VERSION)
     ${${DBMS_UC}_SERVER_INCLUDE_DIR}
     ${${DBMS_UC}_ADDITIONAL_INCLUDE_DIRS})
   
-  add_dstools_connector_library(dstools_${DBMS}
+  add_pdltools_connector_library(pdltools_${DBMS}
     lib
     "${${DBMS_UC}_EXECUTABLE}"
-    ${DSTOOLS_DBAL_SOURCES})
+    ${PDLTOOLS_DBAL_SOURCES})
 
   if(CMAKE_COMPILER_IS_GNUCXX)
     # The source code specifies that we are POSIX.1-2001 compliant:
@@ -90,15 +90,15 @@ function(add_${PORT_LC}_library IN_PORT_VERSION)
     # _POSIX_C_SOURCE being defined in /usr/include/features.h
     # We therefore define HAVE_ERAND48, so that lrand48 is not redeclared
     # in $GP_HOME/include/postgresql/server/port.h.
-    set_source_files_properties(${DSTOOLS_DBAL_SOURCES} PROPERTIES
+    set_source_files_properties(${PDLTOOLS_DBAL_SOURCES} PROPERTIES
       COMPILE_FLAGS "-DHAVE_ERAND48 ${ADDITIONAL_GCC_FLAGS}")
-    get_property(_OLD_VALUE TARGET dstools_${DBMS} PROPERTY LINK_FLAGS)
+    get_property(_OLD_VALUE TARGET pdltools_${DBMS} PROPERTY LINK_FLAGS)
     # If property has not been initialized, _OLD_VALUE is "_OLD_VALUE-NOTFOUND"
-    set_target_properties(dstools_${DBMS} PROPERTIES LINK_FLAGS "${_OLD_VALUE} ${ADDITIONAL_GCC_FLAGS}")
+    set_target_properties(pdltools_${DBMS} PROPERTIES LINK_FLAGS "${_OLD_VALUE} ${ADDITIONAL_GCC_FLAGS}")
   elseif(CMAKE_CXX_COMPILER_ID STREQUAL "SunPro")
     # In syncbitvector.h, an array has zero length. This is non-standard,
     # but most compilers allow it. SunPro needs an extra option.
-    set_source_files_properties(${DSTOOLS_DBAL_SOURCES} PROPERTIES
+    set_source_files_properties(${PDLTOOLS_DBAL_SOURCES} PROPERTIES
       COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -features=zla")
   endif(CMAKE_COMPILER_IS_GNUCXX)
   
@@ -133,7 +133,7 @@ function(add_${PORT_LC}_library IN_PORT_VERSION)
   
   cpack_add_version_component()
 
-  install(TARGETS dstools_${DBMS}
+  install(TARGETS pdltools_${DBMS}
         LIBRARY DESTINATION ports/${PORT_DIR_NAME}/${IN_PORT_VERSION}/lib
         COMPONENT ${DBMS}
     )

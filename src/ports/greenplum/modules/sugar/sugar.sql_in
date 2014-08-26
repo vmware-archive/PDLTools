@@ -1469,7 +1469,7 @@ apply, of course.)
 Note that in either case, SUgAR's name resolution is case insensitive.
 
 Also note that SUgAR's schema is distinct from the schema housing all other
-DS Tools functionality.
+PDL Tools functionality.
 
 @par
 Additional features of the \c 'sugar' function

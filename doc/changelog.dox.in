@@ -2,11 +2,13 @@
 
 @page changelog
 
-## DS Tools Revision History
+## PDL Tools Revision History
 
-### DS Tools 1.2.1 (packaged with SUgAR 0.4.4) -- Current version
-- Added Porter Stemming
-- Path changes to pivotal.io domain
+### PDL Tools 1.2.1 (packaged with SUgAR 0.4.4) -- Current version
+- Added Porter Stemming.
+- Path changes to pivotal.io domain.
+- Added 'version()' function.
+- Name change to PDL Tools.
 
 ### DS Tools 1.2 (packaged with SUgAR 0.4.4)
 

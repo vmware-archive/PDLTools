@@ -48,7 +48,7 @@
  * 
  */
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.__session_sessionization_imp(in_tab VARCHAR,
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__session_sessionization_imp(in_tab VARCHAR,
                                           out_tab VARCHAR,
                                           id VARCHAR,
                                           time_stamp VARCHAR,
@@ -158,7 +158,7 @@ within the clickstream: <code>(Max,0)</code>, <code>(Tori,0)</code> and
 
  */
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.session_split(in_tab VARCHAR,
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.session_split(in_tab VARCHAR,
                                          out_tab VARCHAR,
                                          id VARCHAR,
                                          time_stamp VARCHAR,
@@ -169,10 +169,10 @@ STRICT
 LANGUAGE SQL
 AS
 $$
-SELECT DSTOOLS_SCHEMA.__session_sessionization_imp($1,$2,$3,$4,$5::VARCHAR);
+SELECT PDLTOOLS_SCHEMA.__session_sessionization_imp($1,$2,$3,$4,$5::VARCHAR);
 $$;
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.session_split()
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.session_split()
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
@@ -185,17 +185,17 @@ A table is given with an "id" column and a "time_stamp" column.
 A "session" is a set of rows all associated with the same "id" and all
 having consecutive time_stamps no more than "time_out" apart.
 
-For full usage instructions, run "DSTOOLS_SCHEMA.session_split(''usage'')".
+For full usage instructions, run "PDLTOOLS_SCHEMA.session_split(''usage'')".
 '::VARCHAR;
 $$;
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.session_split(option VARCHAR)
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.session_split(option VARCHAR)
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
 AS
 $$
-SELECT CASE WHEN $1!='usage' THEN DSTOOLS_SCHEMA.session_split() ELSE '
+SELECT CASE WHEN $1!='usage' THEN PDLTOOLS_SCHEMA.session_split() ELSE '
 session_split: Add session indication.
 
 A table is given with an "id" column and a "time_stamp" column.
@@ -204,7 +204,7 @@ having consecutive time_stamps no more than "time_out" apart.
 
 Synopsis
 ========
-DSTOOLS_SCHEMA.session_split(in_tab VARCHAR, out_tab VARCHAR, id VARCHAR,
+PDLTOOLS_SCHEMA.session_split(in_tab VARCHAR, out_tab VARCHAR, id VARCHAR,
                        time_stamp VARCHAR, time_out INTERVAL)
 RETURNS VOID
 
@@ -240,7 +240,7 @@ user=# INSERT INTO clickstream VALUES
          (''Max'', TIMESTAMP ''2013-Aug-23 17:32:37.08'', ''BUY'');
 INSERT 0 4
 
-user=# SELECT DSTOOLS_SCHEMA.session_split(''clickstream'',''tagged_clickstream'',
+user=# SELECT PDLTOOLS_SCHEMA.session_split(''clickstream'',''tagged_clickstream'',
                 ''userid'', ''time_stamp'',''10 MINUTES''::INTERVAL);
  session_split
 ---------------

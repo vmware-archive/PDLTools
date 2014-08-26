@@ -10,14 +10,14 @@
 #    - first looking for "python${VERSION}" in $PATH where
 #      ${VERSION} in {2.7, 2.6}
 #    - Only if that fails, look for "python" in $PATH
-# 2. Pass all arguments to ../dspack/dspack.py
+# 2. Pass all arguments to ../pdlpack/pdlpack.py
 
 PYTHON_PREFIX="python"
 PYTHON_VERSIONS="2.7 2.6"
 
-# create absolute path to dspack.py
+# create absolute path to pdlpack.py
 pushd `dirname $0` > /dev/null
-DSPACK_PATH="$(pwd -P)/../dspack/dspack.py"
+PDLPACK_PATH="$(pwd -P)/../pdlpack/pdlpack.py"
 popd > /dev/null
 
 # Initialization
@@ -33,7 +33,7 @@ fi
 
 errorNoPythonFound() {
     echo "No Python interpreter found. Please install Python 2.6 or higher to" \
-        "run dspack."
+        "run pdlpack."
     exit 1
 }
 
@@ -62,4 +62,4 @@ if test $DID_NOT_FIND_INTERPRETER -ne 0; then
     errorNoPythonFound
 fi
 
-"$PYTHON_EXE_NAME" "${DSPACK_PATH}" "$@"
+"$PYTHON_EXE_NAME" "${PDLPACK_PATH}" "$@"

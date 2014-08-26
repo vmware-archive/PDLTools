@@ -2,54 +2,68 @@
 
 @page installpage
 
-## Getting DS Tools
+## Getting PDL Tools
 
-The latest GPPKG version of the DS Tools library can be found here: 
- - <A HREF="gppkg/dstools-@DSTOOLS_VERSION_STRING@-gpdb4.2-rhel5-x86_64.gppkg">DS Tools @DSTOOLS_VERSION_STRING@ GPPKG for GPDB 4.2</A HREF>
- - <A HREF="gppkg/dstools-@DSTOOLS_VERSION_STRING@-gpdb4.3-rhel5-x86_64.gppkg">DS Tools @DSTOOLS_VERSION_STRING@ GPPKG for GPDB 4.3</A HREF>
+The latest GPPKG version of the PDL Tools library can be found here: 
+ - <A HREF="gppkg/pdltools-@PDLTOOLS_VERSION_STRING@-gpdb4.2-rhel5-x86_64.gppkg">PDL Tools @PDLTOOLS_VERSION_STRING@ GPPKG for GPDB 4.2</A HREF>
+ - <A HREF="gppkg/pdltools-@PDLTOOLS_VERSION_STRING@-gpdb4.3-rhel5-x86_64.gppkg">PDL Tools @PDLTOOLS_VERSION_STRING@ GPPKG for GPDB 4.3</A HREF>
 
-Alternatively, DS Tools can be installed from its RPM:
- - <A HREF="rpm/dstools-@DSTOOLS_VERSION_STRING@-gpdb4.2-Linux.rpm">DS Tools @DSTOOLS_VERSION_STRING@ RPM for GPDB 4.2</A HREF>
- - <A HREF="rpm/dstools-@DSTOOLS_VERSION_STRING@-gpdb4.3-Linux.rpm">DS Tools @DSTOOLS_VERSION_STRING@ RPM for GPDB 4.3</A HREF>
+Alternatively, PDL Tools can be installed from its RPM:
+ - <A HREF="rpm/pdltools-@PDLTOOLS_VERSION_STRING@-gpdb4.2-Linux.rpm">PDL Tools @PDLTOOLS_VERSION_STRING@ RPM for GPDB 4.2</A HREF>
+ - <A HREF="rpm/pdltools-@PDLTOOLS_VERSION_STRING@-gpdb4.3-Linux.rpm">PDL Tools @PDLTOOLS_VERSION_STRING@ RPM for GPDB 4.3</A HREF>
 
 This documentation is also available as an
-<A HREF="manual/dstools-@DSTOOLS_VERSION_STRING@-manual.tgz">HTML tar ball</A>
+<A HREF="manual/pdltools-@PDLTOOLS_VERSION_STRING@-manual.tgz">HTML tar ball</A>
 and as a
-<A HREF="manual/dstools-@DSTOOLS_VERSION_STRING@-manual.pdf">PDF</A> file,
+<A HREF="manual/pdltools-@PDLTOOLS_VERSION_STRING@-manual.pdf">PDF</A> file,
 for it to be installed together with the library and available when using it.
 ____
 
-## Installation of DS Tools
+## Installation of PDL Tools
 
 ### Prerequisites
 
-DS Tools should be installed on a GPDB 4.2 or 4.3. It requires `PL/pgSQL`, `PL/C`, `PL/Python` and `PL/Perl`.
+PDL Tools should be installed on a GPDB 4.2 or 4.3. It requires `PL/pgSQL`, `PL/C`, `PL/Python` and `PL/Perl`.
 The `Python` version should be at least 2.6, and the `Perl` version should be at least 5.008 but lower than 6.0.
 
 <pre class="example">
-gppkg -i dstools-1.2-gpdb4.2-rhel5-x86_64.gppkg
+gppkg -i pdltools-1.2.1-gpdb4.3-rhel5-x86_64.gppkg
 </pre>
 
-For GPDB 4.2 or the equivalent for GPDB 4.3. Run this as gpadmin.
+For GPDB 4.3 or the equivalent for GPDB 4.2. Run this as gpadmin.
 
 @verbatim
-$ gppkg -i dstools-1.2-gpdb4.2-rhel5-x86_64.gppkg
-20140721:05:41:13:021769 gppkg:gp-single-host:gpadmin-[INFO]:-Starting gppkg with args: -i dstools-1.2-gpdb4.2-rhel5-x86_64.gppkg
-20140721:05:41:13:021769 gppkg:gp-single-host:gpadmin-[INFO]:-Installing package dstools-1.2-gpdb4.2-rhel5-x86_64.gppkg
-20140721:05:41:13:021769 gppkg:gp-single-host:gpadmin-[INFO]:-Validating rpm installation cmdStr='rpm --test -i /usr/local/greenplum-db-4.2.1.0/.tmp/dstools-1.2-1.x86_64.rpm --dbpath /usr/local/greenplum-db-4.2.1.0/share/packages/database --prefix /usr/local/greenplum-db-4.2.1.0'
-20140721:05:41:13:021769 gppkg:gp-single-host:gpadmin-[INFO]:-Installing dstools-1.2-gpdb4.2-rhel5-x86_64.gppkg locally
-20140721:05:41:13:021769 gppkg:gp-single-host:gpadmin-[INFO]:-Validating rpm installation cmdStr='rpm --test -i /usr/local/greenplum-db-4.2.1.0/.tmp/dstools-1.2-1.x86_64.rpm --dbpath /usr/local/greenplum-db-4.2.1.0/share/packages/database --prefix /usr/local/greenplum-db-4.2.1.0'
-20140721:05:41:13:021769 gppkg:gp-single-host:gpadmin-[INFO]:-Installing rpms cmdStr='rpm -i /usr/local/greenplum-db-4.2.1.0/.tmp/dstools-1.2-1.x86_64.rpm --dbpath /usr/local/greenplum-db-4.2.1.0/share/packages/database --prefix=/usr/local/greenplum-db-4.2.1.0'
-20140721:05:41:13:021769 gppkg:gp-single-host:gpadmin-[INFO]:-Completed local installation of dstools-1.2-gpdb4.2-rhel5-x86_64.gppkg.
-20140721:05:41:13:021769 gppkg:gp-single-host:gpadmin-[INFO]:-Please run the following command to deploy DS Tools
-usage:  dspack install [-s schema_name] [-S sugar_schema_name]
+$ gppkg -i pdltools-1.2.1-gpdb4.3-rhel5-x86_64.gppkg
+20140826:07:05:22:015733 gppkg:localhost:gpadmin-[INFO]:-Starting gppkg with arg
+s: -i pdltools-1.2.1-gpdb4.3-rhel5-x86_64.gppkg
+20140826:07:05:22:015733 gppkg:localhost:gpadmin-[INFO]:-Installing package pdlt
+ools-1.2.1-gpdb4.3-rhel5-x86_64.gppkg
+20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-Validating rpm installa
+tion cmdStr='rpm --test -i /usr/local/greenplum-db-4.3.0.0/.tmp/pdltools-1.2.1-1
+.x86_64.rpm --dbpath /usr/local/greenplum-db-4.3.0.0/share/packages/database --p
+refix /usr/local/greenplum-db-4.3.0.0'
+20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-Installing pdltools-1.2
+.1-gpdb4.3-rhel5-x86_64.gppkg locally
+20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-Validating rpm installa
+tion cmdStr='rpm --test -i /usr/local/greenplum-db-4.3.0.0/.tmp/pdltools-1.2.1-1
+.x86_64.rpm --dbpath /usr/local/greenplum-db-4.3.0.0/share/packages/database --p
+refix /usr/local/greenplum-db-4.3.0.0'
+20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-Installing rpms cmdStr=
+'rpm -i /usr/local/greenplum-db-4.3.0.0/.tmp/pdltools-1.2.1-1.x86_64.rpm --dbpat
+h /usr/local/greenplum-db-4.3.0.0/share/packages/database --prefix=/usr/local/gr
+eenplum-db-4.3.0.0'
+20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-Completed local install
+ation of pdltools-1.2.1-gpdb4.3-rhel5-x86_64.gppkg.
+20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-Please run the followin
+g command to deploy PDL Tools
+usage:  pdlpack install [-s schema_name] [-S sugar_schema_name]
                        [-M madlib_schema_name] -c user@host:port/database
 Example:
-   $ $GPHOME/dstools/bin/dspack install -s dstools -c gpadmin@mdw:5432/testdb
-   This will install DSTools objects into a Greenplum database named "testdb"
+   $ $GPHOME/pdltools/bin/pdlpack install -s pdltools -c gpadmin@mdw:5432/testdb
+   This will install PDL Tools objects into a Greenplum database named "testdb"
    running on server "mdw" on port 5432. Installer will try to login as
    "gpadmin" and will prompt for password. The target schema for the main
-   library will be "dstools" (specified here explicitly) and the target
+   library will be "pdltools" (specified here explicitly) and the target
    schema for the SUgAR library, packaged with it, will be "sugarlib"
    (specified here implicitly). MADlib objects will be searched for in the
    "madlib" schema (also specified here implicitly).
@@ -57,76 +71,61 @@ Example:
 
 To uninstall the package, use "gppkg -r".
 For additional options run:
-$ dspack --help
+$ pdlpack --help
 Release notes and additional documentation can be found at
-https://sites.google.com/a/pivotal.io/global-data-science/ds-tools,
+https://sites.google.com/a/pivotal.io/global-data-science/pdl-tools,
 as well as on http://pdl-tools.pa.pivotal.io/
 accessible through the Pivotal VPN.
-20140721:05:41:13:021769 gppkg:gp-single-host:gpadmin-[INFO]:-dstools-1.2-gpdb4.2-rhel5-x86_64.gppkg successfully installed.
+20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-pdltools-1.2.1-gpdb4.3-
+rhel5-x86_64.gppkg successfully installed.
 @endverbatim
 
-### Installing DS Tools onto a target database
+### Installing PDL Tools onto a target database
 
 <pre class="example">
-/usr/local/greenplum-db/dstools/bin/dspack install [-s <em>schema name</em>] [-S <em>SUgAR schema name</em>] [-M <em>MADlib schema name</em>] -c <em>user\@host:port/database name</em>
+/usr/local/greenplum-db/pdltools/bin/pdlpack install [-s <em>schema name</em>] [-S <em>SUgAR schema name</em>] [-M <em>MADlib schema name</em>] -c <em>user\@host:port/database name</em>
 </pre>
 
-where <em>database name</em> should be replaced by the name of the database you wish to install to, <em>schema name</em> is the schema to install to, <em>SUgAR schema name</em> is the schema in which to install the SUgAR library, and <em>MADlib schema name</em> is the schema to search for MADlib objects in. By default, <em>schema name</em> would be "dstools", <em>SUgAR schema name</em> would be "sugarlib" and <em>MADlib schema name</em> would be "madlib". Typically, <em>user\@host:port</em> is chosen to be "gpadmin@localhost:5433", as in the example below. MADlib objects do not need to be present during DS Tools installation for it to succeed, though some of the run-time functionality of DS Tools relies on calling MADlib routines.
+where <em>database name</em> should be replaced by the name of the database you wish to install to, <em>schema name</em> is the schema to install to, <em>SUgAR schema name</em> is the schema in which to install the SUgAR library, and <em>MADlib schema name</em> is the schema to search for MADlib objects in. By default, <em>schema name</em> would be "pdltools", <em>SUgAR schema name</em> would be "sugarlib" and <em>MADlib schema name</em> would be "madlib". Typically, <em>user\@host:port</em> is chosen to be "gpadmin@localhost:5433", as in the example below. MADlib objects do not need to be present during PDL Tools installation for it to succeed, though some of the run-time functionality of PDL Tools relies on calling MADlib routines.
 Run this command as gpadmin.
 
 @verbatim
-$ /usr/local/greenplum-db/dstools/bin/dspack install -s dstools -c gpadmin@localhost:5433/exampledb
-dspack.py : INFO : Detected greenplum version 4.2.
-dspack.py : INFO : Testing PL/Python environment...
-dspack.py : INFO : > PL/Python environment OK (version: 2.6.2)
-dspack.py : INFO : Testing PL/Perl environment...
-dspack.py : INFO : > PL/Perl environment OK (version: 5.008008)
-dspack.py : INFO : Testing PL/R environment...
-dspack.py : INFO : > PL/R environment OK (version: 2.13.0)
-dspack.py : INFO : Installing dstools into DSTOOLS schema and SUgAR into SUGARLIB schema...
-dspack.py : INFO : Looking for MADlib installation in MADLIB schema...
-dspack.py : INFO : ***************************************************************************
-dspack.py : INFO : * Schema DSTOOLS already exists and includes library objects.
-dspack.py : INFO : * Installed version is 1.1.2.
-dspack.py : INFO : * Installer will rename it to DSTOOLS_V1_1_2 and will upgrade to version 1.2.
-dspack.py : INFO : ***************************************************************************
-dspack.py : INFO : ***************************************************************************
-dspack.py : INFO : * Schema SUGARLIB already exists and includes library objects.
-dspack.py : INFO : * Installed version is 0.4.3.
-dspack.py : INFO : * Installer will rename it to SUGARLIB_V0_4_3 and will upgrade to version 0.4.4.
-dspack.py : INFO : ***************************************************************************
-dspack.py : INFO : Would you like to continue?
+$ /usr/local/greenplum-db/pdltools/bin/pdlpack install -s pdltools -c gpadmin@localhost:5433/exampledb
+pdlpack.py : INFO : Detected greenplum version 4.3.
+pdlpack.py : INFO : Testing PL/Python environment...
+pdlpack.py : INFO : > PL/Python environment OK (version: 2.6.2)
+pdlpack.py : INFO : Testing PL/Perl environment...
+pdlpack.py : INFO : > PL/Perl environment OK (version: 5.010001)
+pdlpack.py : INFO : Installing pdltools into PDLTOOLS schema and SUgAR into SUGA
+RLIB schema...
+pdlpack.py : INFO : Looking for MADlib installation in MADLIB schema...
+pdlpack.py : INFO : Would you like to continue?
 >>> y
-dspack.py : INFO : > Renaming schema DSTOOLS to DSTOOLS_V1_1_2
-dspack.py : INFO : > Renaming schema SUGARLIB to SUGARLIB_V0_4_3
-dspack.py : INFO : > Creating DSTOOLS schema
-dspack.py : INFO : > Creating SUGARLIB schema
-dspack.py : INFO : > Granting usage on DSTOOLS schema
-dspack.py : INFO : > Granting usage on SUGARLIB schema
-dspack.py : INFO : > Updating DS Tools migration history.
-dspack.py : INFO : > Creating DSTOOLS.MigrationHistory table
-dspack.py : INFO : > Saving data from DSTOOLS_V1_1_2.MigrationHistory table
-dspack.py : INFO : > Writing version info in DSTOOLS.MigrationHistory table
-dspack.py : INFO : > Updating SUgAR migration history.
-dspack.py : INFO : > Creating SUGARLIB.MigrationHistory table
-dspack.py : INFO : > Saving data from SUGARLIB_V0_4_3.MigrationHistory table
-dspack.py : INFO : > Writing version info in SUGARLIB.MigrationHistory table
-dspack.py : INFO : > Creating objects for modules:
-dspack.py : INFO : > - common
-dspack.py : INFO : > - uri_utils
-dspack.py : INFO : > - edit_distance
-dspack.py : INFO : > - anonymization
-dspack.py : INFO : > - session
-dspack.py : INFO : > - connected_components
-dspack.py : INFO : > - sugar
-dspack.py : INFO : > - complex
-dspack.py : INFO : DSTools 1.2 installed successfully in DSTOOLS schema.
-dspack.py : INFO : Keep old schema DSTOOLS_V1_1_2? [Y/N]
->>> n
-dspack.py : INFO : SUgAR 0.4.4 installed successfully in SUGARLIB schema.
-dspack.py : INFO : Keep old schema SUGARLIB_V0_4_3? [Y/N]
->>> n
-dspack.py : INFO : Installation completed successfully.
+pdlpack.py : INFO : > Renaming schema SUGARLIB to SUGARLIB_V0_4_4
+pdlpack.py : INFO : > Creating PDLTOOLS schema
+pdlpack.py : INFO : > Creating SUGARLIB schema
+pdlpack.py : INFO : > Granting usage on PDLTOOLS schema
+pdlpack.py : INFO : > Granting usage on SUGARLIB schema
+pdlpack.py : INFO : > Updating PDL Tools migration history.
+pdlpack.py : INFO : > Creating PDLTOOLS.MigrationHistory table
+pdlpack.py : INFO : > Writing version info in PDLTOOLS.MigrationHistory table
+pdlpack.py : INFO : > Updating SUgAR migration history.
+pdlpack.py : INFO : > Creating SUGARLIB.MigrationHistory table
+pdlpack.py : INFO : > Saving data from SUGARLIB_V0_4_4.MigrationHistory table
+pdlpack.py : INFO : > Writing version info in SUGARLIB.MigrationHistory table
+pdlpack.py : INFO : > Creating objects for modules:
+pdlpack.py : INFO : > - common
+pdlpack.py : INFO : > - uri_utils
+pdlpack.py : INFO : > - edit_distance
+pdlpack.py : INFO : > - anonymization
+pdlpack.py : INFO : > - session
+pdlpack.py : INFO : > - connected_components
+pdlpack.py : INFO : > - sugar
+pdlpack.py : INFO : > - complex
+pdlpack.py : INFO : > - stemming
+pdlpack.py : INFO : PDL Tools 1.2.1 installed successfully in PDLTOOLS schema.
+pdlpack.py : INFO : SUgAR 0.4.4 installed successfully in SUGARLIB schema.
+pdlpack.py : INFO : Installation completed successfully.
 @endverbatim
 
 Note that this installation may be interactive, asking yes/no questions.
@@ -136,7 +135,7 @@ Note that this installation may be interactive, asking yes/no questions.
 Once you've installed the package onto your database, you may want to check that the installation was successful. The `install-check` option give you a method to do so.
 
 <pre class="example">
-/usr/local/greenplum-db/dstools/bin/dspack install-check [-s <em>schema name</em>] [-S <em>SUgAR schema name</em>] [-M <em>MADlib schema name</em>] -c <em>user\@host:port/database name</em>
+/usr/local/greenplum-db/pdltools/bin/pdlpack install-check [-s <em>schema name</em>] [-S <em>SUgAR schema name</em>] [-M <em>MADlib schema name</em>] -c <em>user\@host:port/database name</em>
 </pre>
 
 where <em>database name</em> should be replaced by the name of the database you installed to, and <em>schema name</em>, <em>SUgAR schema name</em> and <em>MADlib schema name</em> are the schemas (with the same defaults as in the installation command).
@@ -144,16 +143,22 @@ where <em>database name</em> should be replaced by the name of the database you 
 Run this command as gpadmin.
 
 @verbatim
-$ /usr/local/greenplum-db/dstools/bin/dspack install-check -s dstools -c gpadmin@localhost:5433/exampledb
-dspack.py : INFO : Detected greenplum version 4.2.
-TEST CASE RESULT|Module: uri_utils|test_uri_utils.sql_in|PASS|Time: 29 milliseconds
-TEST CASE RESULT|Module: edit_distance|test_edit_distance.sql_in|PASS|Time: 35 milliseconds
-TEST CASE RESULT|Module: anonymization|test_anonymization.sql_in|PASS|Time: 660 milliseconds
-TEST CASE RESULT|Module: session|test_session.sql_in|PASS|Time: 305 milliseconds
-TEST CASE RESULT|Module: connected_components|test_connected_components.sql_in|PASS|Time: 1358 milliseconds
-TEST CASE RESULT|Module: sugar|test_sugar.sql_in|PASS|Time: 3080 milliseconds
-TEST CASE RESULT|Module: complex|test_complex_type.sql_in|PASS|Time: 316 milliseconds
-TEST CASE RESULT|Module: nlp|test_porter_stemmer.sql_in|PASS|Time: 34 milliseconds
+$ /usr/local/greenplum-db/pdltools/bin/pdlpack install-check -s pdltools -c gpadmin@localhost:5433/exampledb
+pdlpack.py : INFO : Detected greenplum version 4.3.
+TEST CASE RESULT|Module: uri_utils|test_uri_utils.sql_in|PASS|Time: 58 milliseco
+nds
+TEST CASE RESULT|Module: edit_distance|test_edit_distance.sql_in|PASS|Time: 42 m
+illiseconds
+TEST CASE RESULT|Module: anonymization|test_anonymization.sql_in|PASS|Time: 1143
+ milliseconds
+TEST CASE RESULT|Module: session|test_session.sql_in|PASS|Time: 463 milliseconds
+TEST CASE RESULT|Module: connected_components|test_connected_components.sql_in|P
+ASS|Time: 2807 milliseconds
+TEST CASE RESULT|Module: sugar|test_sugar.sql_in|PASS|Time: 5146 milliseconds
+TEST CASE RESULT|Module: complex|test_complex_type.sql_in|PASS|Time: 461 millise
+conds
+TEST CASE RESULT|Module: stemming|test_porter_stemmer.sql_in|PASS|Time: 39 milli
+seconds
 @endverbatim
 
 
@@ -162,25 +167,25 @@ ____
 
 ## Upgrading
 
-Starting with version 1.1 of DS Tools, upgrading is done using exactly the same commands as a fresh installation. The program will automatically detect the existing version and offer to back it up as part of the upgrade. If the upgrade is unsuccessful for any reason, the system will properly roll back the database to its prior state.
-The DS Tools installer will warn when installing a version that is already installed and will correctly detect and stop the installation when the new version is lower than the target version. If you really want to downgrade to an earlier version of DS Tools, you will want to uninstall and reinstall, as explained below.
+Starting with version 1.1 of PDL Tools, upgrading is done using exactly the same commands as a fresh installation. The program will automatically detect the existing version and offer to back it up as part of the upgrade. If the upgrade is unsuccessful for any reason, the system will properly roll back the database to its prior state.
+The PDL Tools installer will warn when installing a version that is already installed and will correctly detect and stop the installation when the new version is lower than the target version. If you really want to downgrade to an earlier version of PDL Tools, you will want to uninstall and reinstall, as explained below.
 
 ___
 
 
 ## Uninstalling
 
-It is not necessary to uninstall DS Tools as part of a regular upgrade process. However, if you wish to uninstall the library, this section describes how to do so.
+It is not necessary to uninstall PDL Tools as part of a regular upgrade process. However, if you wish to uninstall the library, this section describes how to do so.
 First, uninstall the library from your computer.
 
 <pre class="example">
-gppkg -r dstools-1.2
+gppkg -r pdltools-1.2.1
 </pre>
 
-Then, drop the schemas from your database. Assuming the library was installed into the \c dstools and \c sugarlib schemas, the `psql` command line is
+Then, drop the schemas from your database. Assuming the library was installed into the \c pdltools and \c sugarlib schemas, the `psql` command line is
 
 <pre class="example">
-DROP SCHEMA IF EXISTS dstools CASCADE;
+DROP SCHEMA IF EXISTS pdltools CASCADE;
 DROP SCHEMA IF EXISTS sugarlib CASCADE;
 </pre>
 

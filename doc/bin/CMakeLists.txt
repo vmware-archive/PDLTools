@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# DSTools Documentation Executable Files
+# PDL Tools Documentation Executable Files
 # ------------------------------------------------------------------------------
 
 set(BIN_FILES
@@ -10,7 +10,7 @@ add_files(BIN_TARGET_FILES . "${CMAKE_CURRENT_BINARY_DIR}" ${BIN_FILES})
 add_custom_target(doxyBinFiles ALL DEPENDS ${BIN_TARGET_FILES})
 
 list(APPEND M4_ARGUMENTS
-    "\"-DDSTOOLS_SCHEMA=dstools\""
+    "\"-DPDLTOOLS_SCHEMA=pdltools\""
     "\"-I${CMAKE_BINARY_DIR}/doc/etc\""
 )
 join_strings(_M4_ARGUMENTS " " "${M4_ARGUMENTS}")

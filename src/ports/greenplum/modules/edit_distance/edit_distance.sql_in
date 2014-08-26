@@ -269,7 +269,7 @@ user=# SELECT edit_distance_unsafe('demerau','levenshtein',1,1,1,
 
 ------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance_unsafe(
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.edit_distance_unsafe(
            str1 text, 
            str2 text,
            ins_cost integer, 
@@ -287,7 +287,7 @@ LANGUAGE C IMMUTABLE STRICT;
 
 ------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance(
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.edit_distance(
 	   str1 text, 
            str2 text,
            ins_cost integer, 
@@ -305,7 +305,7 @@ LANGUAGE C IMMUTABLE STRICT;
 
 ------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance_unsafe(
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.edit_distance_unsafe(
            str1 text, str2 text,
            ins_cost integer, del_cost integer, sub_cost integer,
            tp_cost integer, final_tp_cost integer)
@@ -316,7 +316,7 @@ LANGUAGE C IMMUTABLE STRICT;
 
 ------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance(str1 text, str2 text,
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.edit_distance(str1 text, str2 text,
            ins_cost integer, del_cost integer, sub_cost integer,
            tp_cost integer, final_tp_cost integer)
 RETURNS integer
@@ -327,7 +327,7 @@ LANGUAGE C IMMUTABLE STRICT;
 ------------------------------------------------------------------------
 
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance_unsafe(
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.edit_distance_unsafe(
            str1 text, str2 text,
            ins_cost integer, del_cost integer, sub_cost integer,
            tp_cost integer)
@@ -339,7 +339,7 @@ LANGUAGE C IMMUTABLE STRICT;
 ------------------------------------------------------------------------
 
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance(str1 text, str2 text,
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.edit_distance(str1 text, str2 text,
            ins_cost integer, del_cost integer, sub_cost integer,
            tp_cost integer)
 RETURNS integer
@@ -349,7 +349,7 @@ LANGUAGE C IMMUTABLE STRICT;
 
 ------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance(str1 text, str2 text,
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.edit_distance(str1 text, str2 text,
            ins_cost integer, del_cost integer, sub_cost integer)
 RETURNS integer
 AS 'MODULE_PATHNAME',
@@ -358,7 +358,7 @@ LANGUAGE C IMMUTABLE STRICT;
 
 ------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance(
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.edit_distance(
             str1 text, 
             str2 text,
             ins_cost integer, 
@@ -422,7 +422,7 @@ user=# SELECT levenshtein_distance('demerau','levenshtein');
 
  */
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.levenshtein_distance(
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.levenshtein_distance(
          str1 text, 
          str2 text
        )
@@ -483,7 +483,7 @@ user=# SELECT demerau_levenshtein_distance('demerau','levenshtein');
 
  */
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.demerau_levenshtein_distance(
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.demerau_levenshtein_distance(
          str1 text, 
          str2 text
        )
@@ -546,14 +546,14 @@ user=# SELECT optimal_alignment_distance('demerau','levenshtein');
 
  */
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.optimal_alignment_distance(str1 text, str2 text)
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.optimal_alignment_distance(str1 text, str2 text)
 RETURNS integer
 AS 'MODULE_PATHNAME','optimal_alignment_distance'
 LANGUAGE C IMMUTABLE STRICT;
 
 ------------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance_unsafe()
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.edit_distance_unsafe()
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
@@ -568,19 +568,19 @@ characters that are adjacent in both the input and output, are user-defined.
 This function is "unsafe" in the sense that it assumes certain qualities
 about the user-defined costs without checking them.
 
-For full usage instructions, run "DSTOOLS_SCHEMA.edit_distance_unsafe(''usage'')".
+For full usage instructions, run "PDLTOOLS_SCHEMA.edit_distance_unsafe(''usage'')".
 '::VARCHAR;
 $$;
 
 -------------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance_unsafe(option VARCHAR)
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.edit_distance_unsafe(option VARCHAR)
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
 AS
 $$
-SELECT CASE WHEN $1!='usage' THEN DSTOOLS_SCHEMA.edit_distance_unsafe() ELSE '
+SELECT CASE WHEN $1!='usage' THEN PDLTOOLS_SCHEMA.edit_distance_unsafe() ELSE '
 edit_distance_unsafe: an edit distance calculator.
 
 A row function, taking two strings and calculating their edit distance.
@@ -592,18 +592,18 @@ complete list of these assumptions.
 
 Synopsis
 ========
-DSTOOLS_SCHEMA.edit_distance_unsafe(str1 text, str2 text,
+PDLTOOLS_SCHEMA.edit_distance_unsafe(str1 text, str2 text,
            ins_cost integer, del_cost integer, sub_cost integer,
            tp_cost integer, final_tp_cost integer,
            spec_sub_cost integer, spec_sub_from text, spec_sub_to text)
 RETURNS integer
 
-DSTOOLS_SCHEMA.edit_distance_unsafe(str1 text, str2 text,
+PDLTOOLS_SCHEMA.edit_distance_unsafe(str1 text, str2 text,
            ins_cost integer, del_cost integer, sub_cost integer,
            tp_cost integer, final_tp_cost integer)
 RETURNS integer
 
-DSTOOLS_SCHEMA.edit_distance_unsafe(str1 text, str2 text,
+PDLTOOLS_SCHEMA.edit_distance_unsafe(str1 text, str2 text,
            ins_cost integer, del_cost integer, sub_cost integer,
            tp_cost integer)
 RETURNS integer
@@ -687,7 +687,7 @@ str2 can always be found without any use of a non-final transpositon.
 
 Example
 =======
-SELECT DSTOOLS_SCHEMA.edit_distance_unsafe(''demerau'',''levenshtein'',1,1,1,
+SELECT PDLTOOLS_SCHEMA.edit_distance_unsafe(''demerau'',''levenshtein'',1,1,1,
                                            1,1,1,''01OIIL'',''OI01LI'');
 
  edit_distance_unsafe
@@ -701,7 +701,7 @@ $$;
 
 -------------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance()
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.edit_distance()
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
@@ -717,19 +717,19 @@ This function is "safe" in the sense that it verifies certain qualities
 about the user-defined costs and throws an exception
 if they do not hold true, rather than returning an erroneous value.
 
-For full usage instructions, run "DSTOOLS_SCHEMA.edit_distance(''usage'')".
+For full usage instructions, run "PDLTOOLS_SCHEMA.edit_distance(''usage'')".
 '::VARCHAR;
 $$;
 
 -------------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.edit_distance(option VARCHAR)
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.edit_distance(option VARCHAR)
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
 AS
 $$
-SELECT CASE WHEN $1!='usage' THEN DSTOOLS_SCHEMA.edit_distance() ELSE '
+SELECT CASE WHEN $1!='usage' THEN PDLTOOLS_SCHEMA.edit_distance() ELSE '
 edit_distance: an edit distance calculator.
 
 A row function, taking two strings and calculating their edit distance.
@@ -742,18 +742,18 @@ See "Usage" for a complete list of these assumptions.
 
 Synopsis
 ========
-DSTOOLS_SCHEMA.edit_distance(str1 text, str2 text,
+PDLTOOLS_SCHEMA.edit_distance(str1 text, str2 text,
            ins_cost integer, del_cost integer, sub_cost integer,
            tp_cost integer, final_tp_cost integer,
            spec_sub_cost integer, spec_sub_from text, spec_sub_to text)
 RETURNS integer
 
-DSTOOLS_SCHEMA.edit_distance(str1 text, str2 text,
+PDLTOOLS_SCHEMA.edit_distance(str1 text, str2 text,
            ins_cost integer, del_cost integer, sub_cost integer,
            tp_cost integer, final_tp_cost integer)
 RETURNS integer
 
-DSTOOLS_SCHEMA.edit_distance(str1 text, str2 text,
+PDLTOOLS_SCHEMA.edit_distance(str1 text, str2 text,
            ins_cost integer, del_cost integer, sub_cost integer,
            tp_cost integer)
 RETURNS integer
@@ -837,7 +837,7 @@ str2 can always be found without any use of a non-final transpositon.
 
 Example
 =======
-SELECT DSTOOLS_SCHEMA.edit_distance(''demerau'',''levenshtein'',1,1,1,1,1,
+SELECT PDLTOOLS_SCHEMA.edit_distance(''demerau'',''levenshtein'',1,1,1,1,1,
                                      1,''01OIIL'',''OI01LI'');
 
  edit_distance
@@ -851,7 +851,7 @@ $$;
 
 -------------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.levenshtein_distance()
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.levenshtein_distance()
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
@@ -862,26 +862,26 @@ levenshtein_distance: a Levenshtein distance calculator.
 
 A row function, taking two strings and calculating their Levenshtein distance.
 
-For full usage instructions, run "DSTOOLS_SCHEMA.levenshtein_distance(''usage'')".
+For full usage instructions, run "PDLTOOLS_SCHEMA.levenshtein_distance(''usage'')".
 '::VARCHAR;
 $$;
 
 -------------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.levenshtein_distance(option VARCHAR)
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.levenshtein_distance(option VARCHAR)
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
 AS
 $$
-SELECT CASE WHEN $1!='usage' THEN DSTOOLS_SCHEMA.levenshtein_distance() ELSE '
+SELECT CASE WHEN $1!='usage' THEN PDLTOOLS_SCHEMA.levenshtein_distance() ELSE '
 levenshtein_distance: a Levenshtein distance calculator.
 
 A row function, taking two strings and calculating their Levenshtein distance.
 
 Synopsis
 ========
-DSTOOLS_SCHEMA.levenshtein_distance(str1 text, str2 text)
+PDLTOOLS_SCHEMA.levenshtein_distance(str1 text, str2 text)
 RETURNS integer
 
 str1, str2 - the two strings to be compared. Edits make str1 into str2.
@@ -898,7 +898,7 @@ required to make str1 into str2.
 
 Example
 =======
-SELECT DSTOOLS_SCHEMA.levenshtein_distance(''demerau'',''levenshtein'');
+SELECT PDLTOOLS_SCHEMA.levenshtein_distance(''demerau'',''levenshtein'');
 
  levenshtein_distance
 ----------------------
@@ -911,7 +911,7 @@ $$;
 
 -------------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.demerau_levenshtein_distance()
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.demerau_levenshtein_distance()
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
@@ -924,19 +924,19 @@ A row function, taking two strings and calculating their
 Demerau-Levenshtein distance.
 
 For full usage instructions, run
-"DSTOOLS_SCHEMA.demerau_levenshtein_distance(''usage'')".
+"PDLTOOLS_SCHEMA.demerau_levenshtein_distance(''usage'')".
 '::VARCHAR;
 $$;
 
 -------------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.demerau_levenshtein_distance(option VARCHAR)
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.demerau_levenshtein_distance(option VARCHAR)
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
 AS
 $$
-SELECT CASE WHEN $1!='usage' THEN DSTOOLS_SCHEMA.demerau_levenshtein_distance() ELSE '
+SELECT CASE WHEN $1!='usage' THEN PDLTOOLS_SCHEMA.demerau_levenshtein_distance() ELSE '
 demerau_levenshtein_distance: a Demerau-Levenshtein distance calculator.
 
 A row function, taking two strings and calculating their
@@ -944,7 +944,7 @@ Demerau-Levenshtein distance.
 
 Synopsis
 ========
-DSTOOLS_SCHEMA.demerau_levenshtein_distance(str1 text, str2 text)
+PDLTOOLS_SCHEMA.demerau_levenshtein_distance(str1 text, str2 text)
 RETURNS integer
 
 str1, str2 - the two strings to be compared. Edits make str1 into str2.
@@ -962,7 +962,7 @@ that is required to make str1 into str2.
 
 Example
 =======
-SELECT DSTOOLS_SCHEMA.demerau_levenshtein_distance(''demerau'',''levenshtein'');
+SELECT PDLTOOLS_SCHEMA.demerau_levenshtein_distance(''demerau'',''levenshtein'');
 
  demerau_levenshtein_distance
 ------------------------------
@@ -975,7 +975,7 @@ $$;
 
 -------------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.optimal_alignment_distance()
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.optimal_alignment_distance()
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
@@ -988,17 +988,17 @@ A row function, taking two strings and calculating their
 Optimal Alignment distance.
 
 For full usage instructions, run
-"DSTOOLS_SCHEMA.optimal_alignment_distance(''usage'');".
+"PDLTOOLS_SCHEMA.optimal_alignment_distance(''usage'');".
 '::VARCHAR;
 $$;
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.optimal_alignment_distance(option VARCHAR)
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.optimal_alignment_distance(option VARCHAR)
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
 AS
 $$
-SELECT CASE WHEN $1!='usage' THEN DSTOOLS_SCHEMA.optimal_alignment_distance() ELSE '
+SELECT CASE WHEN $1!='usage' THEN PDLTOOLS_SCHEMA.optimal_alignment_distance() ELSE '
 optimal_alignment_distance: an Optimal Alignment distance calculator.
 
 A row function, taking two strings and calculating their
@@ -1006,7 +1006,7 @@ Optimal Alignment distance.
 
 Synopsis
 ========
-DSTOOLS_SCHEMA.optimal_alignment_distance(str1 text, str2 text)
+PDLTOOLS_SCHEMA.optimal_alignment_distance(str1 text, str2 text)
 RETURNS integer
 
 str1, str2 - the two strings to be compared. Edits make str1 into str2.
@@ -1026,7 +1026,7 @@ that is required to make str1 into str2.
 
 Example
 =======
-SELECT DSTOOLS_SCHEMA.optimal_alignment_distance(''demerau'',''levenshtein'');
+SELECT PDLTOOLS_SCHEMA.optimal_alignment_distance(''demerau'',''levenshtein'');
 
  optimal_alignment_distance
 ----------------------------

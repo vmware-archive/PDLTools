@@ -3,7 +3,7 @@
 %define _rpmfilename @CPACK_RPM_FILE_NAME@
 %define _unpackaged_files_terminate_build 0
 %define _topdir @CPACK_RPM_DIRECTORY@
-%define _dstools_version @CPACK_PACKAGE_VERSION@
+%define _pdltools_version @CPACK_PACKAGE_VERSION@
 
 BuildRoot:      @CPACK_RPM_DIRECTORY@/@CPACK_PACKAGE_FILE_NAME@@CPACK_RPM_PACKAGE_COMPONENT_PART_PATH@
 Summary:        @CPACK_RPM_PACKAGE_SUMMARY@

@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# DSTools Documentation
+# PDL Tools Documentation
 # ------------------------------------------------------------------------------
 
 set(DOXYGEN_README_FILE "../README.md" CACHE STRING
@@ -37,8 +37,8 @@ configure_file(
 )
 
 configure_file(
-    etc/dstools_extra.css
-    "${CMAKE_CURRENT_BINARY_DIR}/etc/dstools_extra.css"
+    etc/pdltools_extra.css
+    "${CMAKE_CURRENT_BINARY_DIR}/etc/pdltools_extra.css"
     @ONLY
 )
 

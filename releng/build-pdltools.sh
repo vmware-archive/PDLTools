@@ -1,15 +1,15 @@
 #!/bin/bash
 ## ======================================================================
-## DSTools build script
+## PDL Tools build script
 ## ----------------------------------------------------------------------
 ## Basic steps
 ##
 ##   o Retrieve latest 4.2 installer
 ##   o Deploy new cluster
-##   o Perform DSTools build process
-##   o Perform DSTools packaging processes (rpm & gppkg)
-##   o Use gppkg to install DSTools
-##   o Use dspack to install DSTools
+##   o Perform PDL Tools build process
+##   o Perform PDL Tools packaging processes (rpm & gppkg)
+##   o Use gppkg to install PDL Tools
+##   o Use pdlpack to install PDL Tools
 ##   o Execute install-check tests
 ##   o (optionally) Publish artifacts to:
 ##        http://build-prod.dh.greenplum.com/releases/dstools
@@ -23,14 +23,14 @@ export PATH=${JAVA_HOME}/bin:$PATH
 export PATH=.:~/bin:$PATH
 
 export DBNAME=dstoolsdbtest
-export DSTOOLSUSER=dstoolsuser
-export DSTOOLSUSERPWD=123
-DSTOOLS_VERSION=$( awk '{print $2}' ${BASEDIR}/src/config/Version.yml )
+export PDLTOOLSUSER=dstoolsuser
+export PDLTOOLSUSERPWD=123
+PDLTOOLS_VERSION=$( awk '{print $2}' ${BASEDIR}/src/config/Version.yml )
 
 if [ -n "${SCHEMA}" ]; then
     export SCHEMA_CMD="--schema ${SCHEMA}"
 else
-    export SCHEMA="dstools"
+    export SCHEMA="pdltools"
     export SCHEMA_CMD=""
 fi
 
@@ -154,7 +154,7 @@ for envfile in ${ENVIRONMENT_FILES}; do
 	cat <<-EOF
 		
 		======================================================================
-		Building DSTools
+		Building PDL Tools
 		----------------------------------------------------------------------
 		
 	EOF
@@ -185,8 +185,8 @@ for envfile in ${ENVIRONMENT_FILES}; do
         exit 1
     fi
     pushd doc/user
-    tar zcf dstools-${DSTOOLS_VERSION}-${PULSE_BUILD_NUMBER}-html.tgz html
-    ln -s dstools-${DSTOOLS_VERSION}-${PULSE_BUILD_NUMBER}-html.tgz dstools-html.tgz
+    tar zcf pdltools-${PDLTOOLS_VERSION}-${PULSE_BUILD_NUMBER}-html.tgz html
+    ln -s pdltools-${PDLTOOLS_VERSION}-${PULSE_BUILD_NUMBER}-html.tgz pdltools-html.tgz
     popd
 
     # pushd doc/user/latex
@@ -198,8 +198,8 @@ for envfile in ${ENVIRONMENT_FILES}; do
     # popd
 
     GPDB_VERSION=`basename $(ls -d deploy/gppkg/4*)`
-    RPM=$(ls dstools-*.rpm)
-    RPM_NEW_NAME=`echo ${RPM} | sed -e "s|dstools-\(.*\)-Linux.rpm|dstools-\1-gpdb${GPDB_VERSION}-Linux.rpm|g"`
+    RPM=$(ls pdltools-*.rpm)
+    RPM_NEW_NAME=`echo ${RPM} | sed -e "s|pdltools-\(.*\)-Linux.rpm|pdltools-\1-gpdb${GPDB_VERSION}-Linux.rpm|g"`
     mv -v ${RPM} ${RPM_NEW_NAME}
 
 	cat <<-EOF
@@ -263,54 +263,54 @@ for envfile in ${ENVIRONMENT_FILES}; do
 	cat <<-EOF
 		
 		======================================================================
-		Executing: psql ${DBNAME} -c "CREATE USER ${DSTOOLSUSER} WITH PASSWORD '${DSTOOLSUSERPWD}' CREATEUSER"
+		Executing: psql ${DBNAME} -c "CREATE USER ${PDLTOOLSUSER} WITH PASSWORD '${PDLTOOLSUSERPWD}' CREATEUSER"
 		----------------------------------------------------------------------
 		
 	EOF
 	
-	psql ${DBNAME} -c "CREATE USER ${DSTOOLSUSER} WITH PASSWORD '${DSTOOLSUSERPWD}' CREATEUSER"
+	psql ${DBNAME} -c "CREATE USER ${PDLTOOLSUSER} WITH PASSWORD '${PDLTOOLSUSERPWD}' CREATEUSER"
 	
 	cat <<-EOF
 		
 		======================================================================
-		Executing: psql ${DBNAME} -c "GRANT ALL PRIVILEGES ON DATABASE ${DBNAME} to ${DSTOOLSUSER}"
+		Executing: psql ${DBNAME} -c "GRANT ALL PRIVILEGES ON DATABASE ${DBNAME} to ${PDLTOOLSUSER}"
 		----------------------------------------------------------------------
 		
 	EOF
 	
-	psql ${DBNAME} -c "GRANT ALL PRIVILEGES ON DATABASE ${DBNAME} to ${DSTOOLSUSER}"
+	psql ${DBNAME} -c "GRANT ALL PRIVILEGES ON DATABASE ${DBNAME} to ${PDLTOOLSUSER}"
 	
 	cat <<-EOF
 		
 		======================================================================
-		Executing: gppkg -i deploy/gppkg/*/dstools*.gppkg
+		Executing: gppkg -i deploy/gppkg/*/pdltools*.gppkg
 		----------------------------------------------------------------------
 		
 	EOF
 	
-    gppkg -i deploy/gppkg/*/dstools*.gppkg
+    gppkg -i deploy/gppkg/*/pdltools*.gppkg
     if [ $? != 0 ]; then
         echo "FATAL: gppkg installation failed"
         func_dbstop
         exit 1
     fi
 
-    DSPACK=$GPHOME/dstools/bin/dspack
+    PDLPACK=$GPHOME/pdltools/bin/pdlpack
 		
 	cat <<-EOF
 		
 		======================================================================
-		Executing: ${DSPACK} --verbose --conn ${DSTOOLSUSER}/${DSTOOLSUSERPWD}@localhost:${PGPORT}/${DBNAME} ${SCHEMA_CMD} install
+		Executing: ${PDLPACK} --verbose --conn ${PDLTOOLSUSER}/${PDLTOOLSUSERPWD}@localhost:${PGPORT}/${DBNAME} ${SCHEMA_CMD} install
 		----------------------------------------------------------------------
 		
 	EOF
 		
-    ${DSPACK} --verbose --conn ${DSTOOLSUSER}/${DSTOOLSUSERPWD}@localhost:${PGPORT}/${DBNAME} ${SCHEMA_CMD} install 2>&1 | tee dstools_install.out
+    ${PDLPACK} --verbose --conn ${PDLTOOLSUSER}/${PDLTOOLSUSERPWD}@localhost:${PGPORT}/${DBNAME} ${SCHEMA_CMD} install 2>&1 | tee pdltools_install.out
     RETURN=${PIPESTATUS[0]}
 	if [ "$RETURN" != 0 ]; then
 		cat <<-EOF
 			######################################################################
-			FAILED Executing: dspack installation failed
+			FAILED Executing: pdlpack installation failed
 			######################################################################
 		
 		EOF
@@ -319,17 +319,17 @@ for envfile in ${ENVIRONMENT_FILES}; do
 	cat <<-EOF
 		
 		======================================================================
-		Executing: ${DSPACK} --verbose --conn ${DSTOOLSUSER}/${DSTOOLSUSERPWD}@localhost:${PGPORT}/${DBNAME} ${SCHEMA_CMD} --tmpdir ${BASEDIR} install-check
+		Executing: ${PDLPACK} --verbose --conn ${PDLTOOLSUSER}/${PDLTOOLSUSERPWD}@localhost:${PGPORT}/${DBNAME} ${SCHEMA_CMD} --tmpdir ${BASEDIR} install-check
 		----------------------------------------------------------------------
 		
 	EOF
 		
-    ${DSPACK} --verbose --conn ${DSTOOLSUSER}/${DSTOOLSUSERPWD}@localhost:${PGPORT}/${DBNAME} ${SCHEMA_CMD} --tmpdir ${BASEDIR} install-check 2>&1 | tee dstools_install-check.out
+    ${PDLPACK} --verbose --conn ${PDLTOOLSUSER}/${PDLTOOLSUSERPWD}@localhost:${PGPORT}/${DBNAME} ${SCHEMA_CMD} --tmpdir ${BASEDIR} install-check 2>&1 | tee pdltools_install-check.out
     RETURN=${PIPESTATUS[0]}
 	if [ "$RETURN" != 0 ]; then
 		cat <<-EOF
 			######################################################################
-			FAILED Executing: dspack install-check failed
+			FAILED Executing: pdlpack install-check failed
 			######################################################################
 		
 		EOF
@@ -343,19 +343,19 @@ done
 
 if [ "${PUBLISH}" = "true" ]; then
 
-    RELEASE_DIR=/var/www/html/releases/dstools/${DSTOOLS_VERSION}-${PULSE_BUILD_NUMBER}
+    RELEASE_DIR=/var/www/html/releases/dstools/${PDLTOOLS_VERSION}-${PULSE_BUILD_NUMBER}
 
 	cat <<-EOF
 	
 		======================================================================
-		Executing: Publish artifacts: http://build-prod.dh.greenplum.com/releases/dstools/${DSTOOLS_VERSION}-${PULSE_BUILD_NUMBER}
+		Executing: Publish artifacts: http://build-prod.dh.greenplum.com/releases/dstools/${PDLTOOLS_VERSION}-${PULSE_BUILD_NUMBER}
 		----------------------------------------------------------------------
 	
 	EOF
 
     ssh build@build-prod.dh.greenplum.com mkdir -p ${RELEASE_DIR}
-    scp ${BASEDIR}/build/deploy/gppkg/*/dstools*.gppkg ${BASEDIR}/build/dstools-*Linux.rpm build@build-prod.dh.greenplum.com:${RELEASE_DIR}
-    scp ${BASEDIR}/build/doc/user/dstools-${DSTOOLS_VERSION}-${PULSE_BUILD_NUMBER}-html.tgz build@build-prod.dh.greenplum.com:${RELEASE_DIR}
+    scp ${BASEDIR}/build/deploy/gppkg/*/pdltools*.gppkg ${BASEDIR}/build/pdltools-*Linux.rpm build@build-prod.dh.greenplum.com:${RELEASE_DIR}
+    scp ${BASEDIR}/build/doc/user/pdltools-${PDLTOOLS_VERSION}-${PULSE_BUILD_NUMBER}-html.tgz build@build-prod.dh.greenplum.com:${RELEASE_DIR}
     ssh build@build-prod.dh.greenplum.com ls -al ${RELEASE_DIR}
 
 	cat <<-EOF

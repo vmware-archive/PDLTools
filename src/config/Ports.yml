@@ -1,4 +1,4 @@
-# List of DB Ports to compile DSTools for.
+# List of DB Ports to compile PDL Tools for.
 # 
 # Synopsis:
 # - name   : descriptive name of the new DB port

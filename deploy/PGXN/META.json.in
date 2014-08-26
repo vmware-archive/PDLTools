@@ -1,19 +1,19 @@
 {
-    "name": "dstools",
+    "name": "pdltools",
     "abstract": "A library of tools for Data Scientists over a SQL interface",
     "description": "A library of tools for Data Scientists over a SQL interface",
-    "version": "@DSTOOLS_PGXN_VERSION_STR@",
-    "maintainer": "DS Tools development team",
+    "version": "@PDLTOOLS_PGXN_VERSION_STR@",
+    "maintainer": "PDL Tools development team",
     "license": "proprietary",
     "provides": {
-        "dstools": {
-            "file": "dstools--@DSTOOLS_VERSION_MAJOR@.@DSTOOLS_VERSION_MINOR@.@DSTOOLS_VERSION_PATCH@.sql",
+        "pdltools": {
+            "file": "pdltools--@PDLTOOLS_VERSION_MAJOR@.@PDLTOOLS_VERSION_MINOR@.@PDLTOOLS_VERSION_PATCH@.sql",
             "docfile": "ReadMe.txt",
-            "version": "@DSTOOLS_VERSION_MAJOR@.@DSTOOLS_VERSION_MINOR@.@DSTOOLS_VERSION_PATCH@"
+            "version": "@PDLTOOLS_VERSION_MAJOR@.@PDLTOOLS_VERSION_MINOR@.@PDLTOOLS_VERSION_PATCH@"
         }
     },
     "resources": {
-        "homepage": "https://sites.google.com/a/pivotal.io/global-data-science/ds-tools",
+        "homepage": "https://sites.google.com/a/pivotal.io/global-data-science/pdl-tools",
         "repository": {
             "url":  "https://stash.greenplum.com/scm/ds/dstools.git",
             "web":  "https://stash.greenplum.com/scm/ds/dstools",

@@ -1,12 +1,13 @@
-DSTools
-========
+PDL Tools
+=========
 
-    DSTools is a library of tools for Data Scientists over a SQL interface.
+    PDL Tools is a library of reusable tools used and developed by Pivotal
+Data Labs.
 
 Pre-requisites
 ===============
 
-   The following are the pre-requisites for building the dstools package.
+   The following are the pre-requisites for building the pdltools package.
        1. The cmake compiler (version >= 2.8)
        2. Greenplum Database (GPDB 4.2 or higher)
        3. rpmbuild package if you want to create rpm packages of the installer
@@ -32,12 +33,12 @@ Generating Doxygen User Docs
     at [pdl-tools-userdocs](http://pdl-tools.pa.pivotal.io/)
  
     For example:
-        rsync $DSTOOLS/build/doc/user/html/* dstools@pdl-tools.pa.pivotal.io:/home/dstools/hosting/dstools/doc/user/html/    
+        rsync $PDLTOOLS/build/doc/user/html/* pdltools@pdl-tools.pa.pivotal.io:/home/dstools/hosting/dstools/doc/user/html/
 
     You can also generate a PDF of the user doc by running
-         * cd build/doc/user/latext && make pdf
-    This will generate a PDF titled `refman.pdf` in $DSTOOLS/build/doc/user/latex
-	
+         * cd build/doc/user/latex && make pdf
+    This will generate a PDF titled `refman.pdf` in $PDLTOOLS/build/doc/user/latex
+
 
 Packaging
 ==========
@@ -51,26 +52,26 @@ Packaging
 Installation
 =============
 
-    Installation is a two-step process. First, you will have to install DSTools on the target machine where GPDB is running.
+    Installation is a two-step process. First, you will have to install PDL Tools on the target machine where GPDB is running.
     To do this, you will run the following:
         
-         gppkg -i <dstools gppkg file>
-    This will place all the relevant binaries & SQL files at the appropriate location (usually `$GPHOME/dstools`).
+         gppkg -i <pdltools gppkg file>
+    This will place all the relevant binaries & SQL files at the appropriate location (usually `$GPHOME/pdltools`).
     Next, you will have to install the SQL UDFs in the target database.
 
-    To install dstools into a database of your choice, run the following (consider adding `dspack` in your PATH):
-        `$GPHOME/dstools/bin/dspack install [-s <schema name>] [-S <SUgAR schema name>] [-M <MADlib schema name>] -c <username>@<hostname>:<port>/<database name>`
+    To install pdltools into a database of your choice, run the following (consider adding `pdlpack` in your PATH):
+        `$GPHOME/pdltools/bin/pdlpack install [-s <schema name>] [-S <SUgAR schema name>] [-M <MADlib schema name>] -c <username>@<hostname>:<port>/<database name>`
     
     For example:
-        `$GPHOME/dstools/bin/dspack install -s dstools -c gpadmin@mdw:5432/testdb`
+        `$GPHOME/pdltools/bin/pdlpack install -s pdltools -c gpadmin@mdw:5432/testdb`
 
-    The default schemas are `dstools` for the main schema, `sugarlib` for SUgAR and `madlib` to search for MADlib objects.
+    The default schemas are `pdltools` for the main schema, `sugarlib` for SUgAR and `madlib` to search for MADlib objects.
 
 Running Install Check Tests
 =============================
     
-    Post installation, you can run the unit tests in DSTools with the install-check command like so:
-        `$GPHOME/dstools/bin/dspack install-check -s dstools -c gpadmin@mdw:5432/testdb`
+    Post installation, you can run the unit tests in PDL Tools with the install-check command like so:
+        `$GPHOME/pdltools/bin/pdlpack install-check -s pdltools -c gpadmin@mdw:5432/testdb`
 
     Parameters for `install-check` are the same as parameters for `install`.
 

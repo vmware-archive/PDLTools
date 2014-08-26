@@ -124,7 +124,7 @@ deanonymization process to map back to the original values.
 
  */
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.create_anonymization_table(in_tab VARCHAR,
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.create_anonymization_table(in_tab VARCHAR,
                                           out_tab VARCHAR,
                                           id_col VARCHAR)
 RETURNS VOID
@@ -186,7 +186,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.create_anonymization_table()
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.create_anonymization_table()
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
@@ -199,17 +199,17 @@ A table is given with a column.
 Values are gathered from the columns and a 1-1 conversion table from them
 to anonymized entities is output.
 
-For full usage instructions, run "DSTOOLS_SCHEMA.create_anonymization_table(''usage'')".
+For full usage instructions, run "PDLTOOLS_SCHEMA.create_anonymization_table(''usage'')".
 '::VARCHAR;
 $$;
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.create_anonymization_table(option VARCHAR)
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.create_anonymization_table(option VARCHAR)
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
 AS
 $$
-SELECT CASE WHEN $1!='usage' THEN DSTOOLS_SCHEMA.create_anonymization_table() ELSE
+SELECT CASE WHEN $1!='usage' THEN PDLTOOLS_SCHEMA.create_anonymization_table() ELSE
 $ABC$
 create_anonymization_table: create conversion table for anonymization.
 
@@ -219,7 +219,7 @@ to anonymized entities is output.
 
 Synopsis
 ========
-DSTOOLS_SCHEMA.create_anonymization_table(in_tab VARCHAR, out_tab VARCHAR,
+PDLTOOLS_SCHEMA.create_anonymization_table(in_tab VARCHAR, out_tab VARCHAR,
                                    id_col VARCHAR)
 RETURNS VOID
 
@@ -248,7 +248,7 @@ user-#   ('Max', TIMESTAMP '2013-Aug-23 05:03:01.42', 'Tori'),
 user-#   ('Tori', TIMESTAMP '2013-Aug-23 17:32:37.08', 'Tori');
 INSERT 0 4
 
-user=# SELECT DSTOOLS_SCHEMA.create_anonymization_table(
+user=# SELECT PDLTOOLS_SCHEMA.create_anonymization_table(
 user(#                               'my_schema.clickstream',
 user(#                               'my_schema.anonymization_table', 
 user(#                               'userid');
@@ -264,7 +264,7 @@ user=# SELECT * FROM my_schema.anonymization_table;
  Max  | 6e62042ed0f29c01a2b4ea261db01bae
 (2 rows)
 
-user=# SELECT DSTOOLS_SCHEMA.anonymize('my_schema','clickstream',
+user=# SELECT PDLTOOLS_SCHEMA.anonymize('my_schema','clickstream',
 user(#                          'my_schema.anonymized_clickstream',
 user(#                          array['userid','affected_user'],
 user(#                          'my_schema.anonymization_table');
@@ -283,7 +283,7 @@ user(#                                           ORDER BY time_stamp;
  f7c2d7d11f9d74c7d2dffb87a452b2bb | 2013-08-23 17:32:37.08 | f7c2d7d11f9d74c7d2dffb87a452b2bb
 (4 rows)
 
-user=# SELECT DSTOOLS_SCHEMA.deanonymize('my_schema','clickstream',
+user=# SELECT PDLTOOLS_SCHEMA.deanonymize('my_schema','clickstream',
 user(#                            'my_schema.deanonymized_clickstream',
 user(#                            array['userid','affected_user'],
 user(#                            'my_schema.anonymization_table');
@@ -350,7 +350,7 @@ $$;
  *
  */
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.__anonymize_imp(in_schema VARCHAR,
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__anonymize_imp(in_schema VARCHAR,
                                           in_tab VARCHAR,
                                           out_tab VARCHAR,
                                           id_cols VARCHAR[], anon_tab VARCHAR,
@@ -533,7 +533,7 @@ deanonymization process to map back to the original values.
 
  */
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.anonymize(in_schema VARCHAR,
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.anonymize(in_schema VARCHAR,
                                           in_tab VARCHAR,
                                           out_tab VARCHAR,
                                           id_cols VARCHAR[], anon_tab VARCHAR)
@@ -543,10 +543,10 @@ STRICT
 LANGUAGE SQL
 AS
 $$
-SELECT DSTOOLS_SCHEMA.__anonymize_imp($1,$2,$3,$4,$5,False);
+SELECT PDLTOOLS_SCHEMA.__anonymize_imp($1,$2,$3,$4,$5,False);
 $$;
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.anonymize()
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.anonymize()
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
@@ -558,17 +558,17 @@ anonymize: create an anonymized version of a table.
 A table is given with a set of columns and a conversion table.
 An output table is generated, where the chosen column values are replaced.
 
-For full usage instructions, run "DSTOOLS_SCHEMA.anonymize(''usage'')".
+For full usage instructions, run "PDLTOOLS_SCHEMA.anonymize(''usage'')".
 '::VARCHAR;
 $$;
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.anonymize(option VARCHAR)
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.anonymize(option VARCHAR)
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
 AS
 $$
-SELECT CASE WHEN $1!='usage' THEN DSTOOLS_SCHEMA.anonymize() ELSE
+SELECT CASE WHEN $1!='usage' THEN PDLTOOLS_SCHEMA.anonymize() ELSE
 $ABC$
 anonymize: create an anonymized version of a table.
 
@@ -577,7 +577,7 @@ An output table is generated, where the chosen column values are replaced.
 
 Synopsis
 ========
-DSTOOLS_SCHEMA.anonymize(in_schema VARCHAR, in_tab VARCHAR, out_tab VARCHAR,
+PDLTOOLS_SCHEMA.anonymize(in_schema VARCHAR, in_tab VARCHAR, out_tab VARCHAR,
                    id_cols VARCHAR[], anon_tab VARCHAR)
 RETURNS VOID
 
@@ -609,7 +609,7 @@ user-#   ('Max', TIMESTAMP '2013-Aug-23 05:03:01.42', 'Tori'),
 user-#   ('Tori', TIMESTAMP '2013-Aug-23 17:32:37.08', 'Tori');
 INSERT 0 4
 
-user=# SELECT DSTOOLS_SCHEMA.create_anonymization_table(
+user=# SELECT PDLTOOLS_SCHEMA.create_anonymization_table(
 user(#                               'my_schema.clickstream',
 user(#                               'my_schema.anonymization_table', 
 user(#                               'userid');
@@ -625,7 +625,7 @@ user=# SELECT * FROM my_schema.anonymization_table;
  Max  | 6e62042ed0f29c01a2b4ea261db01bae
 (2 rows)
 
-user=# SELECT DSTOOLS_SCHEMA.anonymize('my_schema','clickstream',
+user=# SELECT PDLTOOLS_SCHEMA.anonymize('my_schema','clickstream',
 user(#                          'my_schema.anonymized_clickstream',
 user(#                          array['userid','affected_user'],
 user(#                          'my_schema.anonymization_table');
@@ -644,7 +644,7 @@ user(#                                           ORDER BY time_stamp;
  f7c2d7d11f9d74c7d2dffb87a452b2bb | 2013-08-23 17:32:37.08 | f7c2d7d11f9d74c7d2dffb87a452b2bb
 (4 rows)
 
-user=# SELECT DSTOOLS_SCHEMA.deanonymize('my_schema','anonymized_clickstream',
+user=# SELECT PDLTOOLS_SCHEMA.deanonymize('my_schema','anonymized_clickstream',
 user(#                            'my_schema.deanonymized_clickstream',
 user(#                            array['userid','affected_user'],
 user(#                            'my_schema.anonymization_table');
@@ -793,7 +793,7 @@ deanonymization process to map back to the original values.
 
  */
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.deanonymize(in_schema VARCHAR,
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.deanonymize(in_schema VARCHAR,
                                           in_tab VARCHAR,
                                           out_tab VARCHAR,
                                           id_cols VARCHAR[], anon_tab VARCHAR)
@@ -803,10 +803,10 @@ STRICT
 LANGUAGE SQL
 AS
 $$
-SELECT DSTOOLS_SCHEMA.__anonymize_imp($1,$2,$3,$4,$5,True);
+SELECT PDLTOOLS_SCHEMA.__anonymize_imp($1,$2,$3,$4,$5,True);
 $$;
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.deanonymize()
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.deanonymize()
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
@@ -818,17 +818,17 @@ deanonymize: create a deanonymized version of a table.
 A table is given with a set of columns and a conversion table.
 An output table is generated, where the chosen column values are replaced.
 
-For full usage instructions, run "DSTOOLS_SCHEMA.deanonymize(''usage'')".
+For full usage instructions, run "PDLTOOLS_SCHEMA.deanonymize(''usage'')".
 '::VARCHAR;
 $$;
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.deanonymize(option VARCHAR)
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.deanonymize(option VARCHAR)
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
 AS
 $$
-SELECT CASE WHEN $1!='usage' THEN DSTOOLS_SCHEMA.deanonymize() ELSE
+SELECT CASE WHEN $1!='usage' THEN PDLTOOLS_SCHEMA.deanonymize() ELSE
 $ABC$
 deanonymize: create a deanonymized version of a table.
 
@@ -837,7 +837,7 @@ An output table is generated, where the chosen column values are replaced.
 
 Synopsis
 ========
-DSTOOLS_SCHEMA.deanonymize(in_schema VARCHAR, in_tab VARCHAR, out_tab VARCHAR,
+PDLTOOLS_SCHEMA.deanonymize(in_schema VARCHAR, in_tab VARCHAR, out_tab VARCHAR,
                      id_cols VARCHAR[], anon_tab VARCHAR)
 RETURNS VOID
 
@@ -869,7 +869,7 @@ user-#   ('Max', TIMESTAMP '2013-Aug-23 05:03:01.42', 'Tori'),
 user-#   ('Tori', TIMESTAMP '2013-Aug-23 17:32:37.08', 'Tori');
 INSERT 0 4
 
-user=# SELECT DSTOOLS_SCHEMA.create_anonymization_table(
+user=# SELECT PDLTOOLS_SCHEMA.create_anonymization_table(
 user(#                               'my_schema.clickstream',
 user(#                               'my_schema.anonymization_table', 
 user(#                               'userid');
@@ -885,7 +885,7 @@ user=# SELECT * FROM my_schema.anonymization_table;
  Max  | 6e62042ed0f29c01a2b4ea261db01bae
 (2 rows)
 
-user=# SELECT DSTOOLS_SCHEMA.anonymize('my_schema','clickstream',
+user=# SELECT PDLTOOLS_SCHEMA.anonymize('my_schema','clickstream',
 user(#                          'my_schema.anonymized_clickstream',
 user(#                          array['userid','affected_user'],
 user(#                          'my_schema.anonymization_table');
@@ -904,7 +904,7 @@ user(#                                           ORDER BY time_stamp;
  f7c2d7d11f9d74c7d2dffb87a452b2bb | 2013-08-23 17:32:37.08 | f7c2d7d11f9d74c7d2dffb87a452b2bb
 (4 rows)
 
-user=# SELECT DSTOOLS_SCHEMA.deanonymize('my_schema','anonymized_clickstream',
+user=# SELECT PDLTOOLS_SCHEMA.deanonymize('my_schema','anonymized_clickstream',
 user(#                            'my_schema.deanonymized_clickstream',
 user(#                            array['userid','affected_user'],
 user(#                            'my_schema.anonymization_table');

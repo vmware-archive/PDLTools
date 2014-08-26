@@ -24,8 +24,8 @@ function(add_gppkg)
     )
     set(GPDB_VERSION ${IN_PORT_VERSION})
     configure_file(
-        dstools.spec.in
-        \"\${CMAKE_CURRENT_BINARY_DIR}/${IN_PORT_VERSION}/SPECS/dstools.spec\"
+        pdltools.spec.in
+        \"\${CMAKE_CURRENT_BINARY_DIR}/${IN_PORT_VERSION}/SPECS/pdltools.spec\"
     )
     configure_file(
         gppkg_spec.yml.in
@@ -33,11 +33,11 @@ function(add_gppkg)
     )
     if(GPPKG_BINARY AND RPMBUILD_BINARY)
         add_custom_target(gppkg_${PORT_VERSION_UNDERSCORE}
-            COMMAND cmake -E create_symlink \"\${DSTOOLS_GPPKG_RPM_SOURCE_DIR}\"
+            COMMAND cmake -E create_symlink \"\${PDLTOOLS_GPPKG_RPM_SOURCE_DIR}\"
                 \"\${CPACK_PACKAGE_FILE_NAME}-gppkg\"
-            COMMAND \"\${RPMBUILD_BINARY}\" -bb SPECS/dstools.spec
-            COMMAND cmake -E rename "RPMS/\${DSTOOLS_GPPKG_RPM_FILE_NAME}"
-                "gppkg/\${DSTOOLS_GPPKG_RPM_FILE_NAME}"
+            COMMAND \"\${RPMBUILD_BINARY}\" -bb SPECS/pdltools.spec
+            COMMAND cmake -E rename "RPMS/\${PDLTOOLS_GPPKG_RPM_FILE_NAME}"
+                "gppkg/\${PDLTOOLS_GPPKG_RPM_FILE_NAME}"
             COMMAND \"\${GPPKG_BINARY}\" --build gppkg
             DEPENDS \"${CMAKE_BINARY_DIR}/\${CPACK_PACKAGE_FILE_NAME}.rpm\"
             WORKING_DIRECTORY \"\${CMAKE_CURRENT_BINARY_DIR}/${IN_PORT_VERSION}\"

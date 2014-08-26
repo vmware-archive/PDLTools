@@ -65,12 +65,12 @@ user=# SELECT stem_token('running');
 @sa grp_stem_token_arr
 
 */
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.stem_token(token text)
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.stem_token(token text)
 RETURNS text
 AS 'MODULE_PATHNAME','plc_stem_token'
 LANGUAGE C IMMUTABLE STRICT;
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.stem_token()
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.stem_token()
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
@@ -84,7 +84,7 @@ Porter's algorithm
 
 Synopsis
 ========
-DSTOOLS_SCHEMA.stem_token(token text)
+PDLTOOLS_SCHEMA.stem_token(token text)
 RETURNS text
 
 token - A word to be stemmed
@@ -99,7 +99,7 @@ form of any given word in English.
 
 Example
 =======
-SELECT DSTOOLS_SCHEMA.stem_token('running');
+SELECT PDLTOOLS_SCHEMA.stem_token('running');
  stem_token 
 ----------------
  run
@@ -160,14 +160,14 @@ select stem_token_arr(ARRAY['pencils','running','walking']);
 @sa grp_stem_token
 
 */
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.stem_token_arr(token_arr text[])
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.stem_token_arr(token_arr text[])
 RETURNS text[]
 AS 'MODULE_PATHNAME','plc_stem_token_arr'
 LANGUAGE C IMMUTABLE STRICT;
 
 -----------------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.stem_token_arr()
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.stem_token_arr()
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
@@ -180,17 +180,17 @@ array of root words.
 A row function, that stems each word from an array of tokens, returning an
 array of the root words according to Porter's algorithm.
 
-For full usage instructions, run "DSTOOLS_SCHEMA.stem_token_arr('usage')".
+For full usage instructions, run "PDLTOOLS_SCHEMA.stem_token_arr('usage')".
 $ABC$::VARCHAR;
 $$;
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.stem_token_arr(option VARCHAR)
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.stem_token_arr(option VARCHAR)
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
 AS
 $$
-SELECT CASE WHEN $1!='usage' THEN DSTOOLS_SCHEMA.stem_token_arr() ELSE
+SELECT CASE WHEN $1!='usage' THEN PDLTOOLS_SCHEMA.stem_token_arr() ELSE
 $ABC$
 stem_token_arr: Apply Porter Stemmer on an array of tokens and return an
 array of root words.
@@ -200,7 +200,7 @@ array of the root words according to Porter's algorithm.
 
 Synopsis
 ========
-DSTOOLS_SCHEMA.stem_token_arr(token text[])
+PDLTOOLS_SCHEMA.stem_token_arr(token text[])
 RETURNS text[]
 
 token - An array of words to be stemmed
@@ -216,7 +216,7 @@ of the tokens given to it in an input array.
 
 Example
 =======
-SELECT DSTOOLS_SCHEMA.stem_token_arr(ARRAY['pencils','running','walking']);
+SELECT PDLTOOLS_SCHEMA.stem_token_arr(ARRAY['pencils','running','walking']);
  stem_token_arr 
 --------------------
  {pencil,run,walk}

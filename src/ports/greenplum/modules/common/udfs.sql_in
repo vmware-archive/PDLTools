@@ -1,7 +1,7 @@
--- A collection of UDFs essential for DSTools
--- These may be required for testing scripts or may be a common folder for UDFs required for DSTools in general
+-- A collection of UDFs essential for PDL Tools
+-- These may be required for testing scripts or may be a common folder for UDFs required for PDL Tools in general
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.assert(actual text, expected text, msg text)
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.assert(actual text, expected text, msg text)
   RETURNS boolean AS
 $BODY$
 BEGIN
@@ -12,21 +12,21 @@ BEGIN
 END
 $BODY$ LANGUAGE plpgsql IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.assert(actual text, expected text)
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.assert(actual text, expected text)
   RETURNS boolean AS
 $BODY$
 BEGIN
-   PERFORM DSTOOLS_SCHEMA.assert(actual, expected, '');
+   PERFORM PDLTOOLS_SCHEMA.assert(actual, expected, '');
    RETURN TRUE;
 END
 $BODY$ LANGUAGE plpgsql IMMUTABLE;
 
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.assert(actual boolean, expected boolean)
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.assert(actual boolean, expected boolean)
   RETURNS boolean AS
 $BODY$
 BEGIN
-   PERFORM DSTOOLS_SCHEMA.assert( 
+   PERFORM PDLTOOLS_SCHEMA.assert( 
                case when actual=True then 'True' else 'False' end, 
                case when expected=True then 'True' else 'False' end, 
                ''
@@ -36,15 +36,15 @@ END
 $BODY$ LANGUAGE plpgsql IMMUTABLE;
 
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.dstools_version()
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.pdltools_version()
 RETURNS VARCHAR AS
 $BODY$
-SELECT 'DSTOOLS_VERSION'::VARCHAR;
+SELECT 'PDLTOOLS_VERSION'::VARCHAR;
 $BODY$ LANGUAGE SQL IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.version()
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.version()
 RETURNS VARCHAR AS
 $BODY$
-SELECT E'DSTools: DSTOOLS_VERSION\nSUgAR: SUGAR_VERSION'::VARCHAR;
+SELECT E'PDL Tools: PDLTOOLS_VERSION\nSUgAR: SUGAR_VERSION'::VARCHAR;
 $BODY$ LANGUAGE SQL IMMUTABLE;
 

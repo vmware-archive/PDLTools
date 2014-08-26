@@ -64,9 +64,9 @@ the <code>i</code>'th key-value pair in the query string.
 @sa grp_uri_array_type
  */
 
-DROP TYPE IF EXISTS DSTOOLS_SCHEMA.uri_type CASCADE;
+DROP TYPE IF EXISTS PDLTOOLS_SCHEMA.uri_type CASCADE;
 
-CREATE TYPE DSTOOLS_SCHEMA.uri_type AS (
+CREATE TYPE PDLTOOLS_SCHEMA.uri_type AS (
   scheme text,
   userInfo text,            
   hostText text,
@@ -82,7 +82,7 @@ CREATE TYPE DSTOOLS_SCHEMA.uri_type AS (
   value text[]
 );
 
-DROP TYPE IF EXISTS DSTOOLS_SCHEMA.uri_array_type CASCADE;
+DROP TYPE IF EXISTS PDLTOOLS_SCHEMA.uri_array_type CASCADE;
 
 /**
 @addtogroup grp_uri_array_type
@@ -132,7 +132,7 @@ The original uri is kept in the variable \c "uri", in its original form.
 @sa grp_uri_type
  */
 
-CREATE TYPE DSTOOLS_SCHEMA.uri_array_type AS (
+CREATE TYPE PDLTOOLS_SCHEMA.uri_array_type AS (
   scheme text[],
   userInfo text[],
   hostText text[],
@@ -199,13 +199,13 @@ user=# SELECT parse_uri('http://myself:password@www.Pivotal.io:80/%7ehello/to/yo
 @sa grp_uri_type
  */
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.parse_uri(uri text, normalize boolean,
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.parse_uri(uri text, normalize boolean,
                                    parse_query boolean)
-RETURNS DSTOOLS_SCHEMA.uri_type
+RETURNS PDLTOOLS_SCHEMA.uri_type
 AS 'MODULE_PATHNAME','parse_uri'
 LANGUAGE C IMMUTABLE STRICT;
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.parse_uri()
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.parse_uri()
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
@@ -216,24 +216,24 @@ parse_uri: Parse a URI into its components.
 
 A row function, parsing URIs in text format to parsed URIs in uri_type.
 
-For full usage instructions, run "DSTOOLS_SCHEMA.parse_uri(''usage'')".
+For full usage instructions, run "PDLTOOLS_SCHEMA.parse_uri(''usage'')".
 $__STRING__$::VARCHAR;
 $$;
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.parse_uri(option VARCHAR)
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.parse_uri(option VARCHAR)
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
 AS
 $$
-SELECT CASE WHEN $1!='usage' THEN DSTOOLS_SCHEMA.parse_uri() ELSE $__STRING__$
+SELECT CASE WHEN $1!='usage' THEN PDLTOOLS_SCHEMA.parse_uri() ELSE $__STRING__$
 parse_uri: Parse a URI into its components.
 
 A row function, parsing URIs in text format to parsed URIs in uri_type.
 
 Synposis
 ========
-DSTOOLS_SCHEMA.parse_uri(uri text, normalize boolean, parse_query boolean)
+PDLTOOLS_SCHEMA.parse_uri(uri text, normalize boolean, parse_query boolean)
 RETURNS uri_type
 
 uri - original URI in text form.
@@ -251,7 +251,7 @@ the questio of whether "normalize" is true or false.
 
 Example
 =======
-SELECT DSTOOLS_SCHEMA.parse_uri('http://myself:password@www.Pivotal.io:80/%7ehello/to/you/index.html?who=I&whom=me#here',true,true);
+SELECT PDLTOOLS_SCHEMA.parse_uri('http://myself:password@www.Pivotal.io:80/%7ehello/to/you/index.html?who=I&whom=me#here',true,true);
                                                        parse_uri                                                        
 ------------------------------------------------------------------------------------------------------------------------
  (http,myself:password,www.pivotal.io,,,,80,"{~hello,to,you,index.html}",who=I&whom=me,here,f,"{who,whom}","{I,me}")
@@ -310,12 +310,12 @@ user=# SELECT extract_uri('First go to http://[0123:4567:89ab:cdef:0123:4567:89a
 @sa grp_uri_array_type
  */
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.extract_uri(txt text, normalize boolean)
-RETURNS DSTOOLS_SCHEMA.uri_array_type
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.extract_uri(txt text, normalize boolean)
+RETURNS PDLTOOLS_SCHEMA.uri_array_type
 AS 'MODULE_PATHNAME','extract_uri'
 LANGUAGE C IMMUTABLE STRICT;
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.extract_uri()
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.extract_uri()
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
@@ -326,17 +326,17 @@ extract_uri: Extract all URIs embedded in text input.
 
 A row function, extracting uri_array_type from a text field.
 
-For full usage instructions, run "DSTOOLS_SCHEMA.extract_uri(''usage'')".
+For full usage instructions, run "PDLTOOLS_SCHEMA.extract_uri(''usage'')".
 $__STRING__$::VARCHAR;
 $$;
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.extract_uri(option VARCHAR)
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.extract_uri(option VARCHAR)
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
 AS
 $$
-SELECT CASE WHEN $1!='usage' THEN DSTOOLS_SCHEMA.extract_uri() ELSE
+SELECT CASE WHEN $1!='usage' THEN PDLTOOLS_SCHEMA.extract_uri() ELSE
 $__STRING__$ 
 extract_uri: Extract all URIs embedded in text input.
 
@@ -344,7 +344,7 @@ A row function, extracting uri_array_type from a text field.
 
 Synposis
 ========
-DSTOOLS_SCHEMA.extract_uri(txt text, normalize boolean)
+PDLTOOLS_SCHEMA.extract_uri(txt text, normalize boolean)
 RETURNS uri_array_type
 
 txt - Text from which URIs are to be extracted.
@@ -360,7 +360,7 @@ exactly in the form that it was in the original text, regardless of whether
 
 Example
 =======
-SELECT DSTOOLS_SCHEMA.extract_uri('First go to http://[0123:4567:89ab:cdef:0123:4567:89ab:cdef]/ then go to https://192.165.0.1/ and repeat.',true);
+SELECT PDLTOOLS_SCHEMA.extract_uri('First go to http://[0123:4567:89ab:cdef:0123:4567:89ab:cdef]/ then go to https://192.165.0.1/ and repeat.',true);
                                                                                                                                                            extract_uri                                                                                                                                                           
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  ("{http,https}","{"""",""""}","{0123:4567:89ab:cdef:0123:4567:89ab:cdef,192.165.0.1}","{"""",300245000001}","{001043105147211253315357001043105147211253315357,""""}","{"""",""""}","{"""",""""}","{"""",""""}","{"""",""""}","{"""",""""}","{f,f}","{http://[0123:4567:89ab:cdef:0123:4567:89ab:cdef]/,https://192.165.0.1/}")
@@ -415,7 +415,7 @@ user=# SELECT parse_domain('www.pivotal.io');
 @endverbatim
  */
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.parse_domain(domainname text)
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.parse_domain(domainname text)
 RETURNS text[]
 IMMUTABLE
 STRICT
@@ -430,14 +430,14 @@ A row function, parsing a textual hierarchical domain name into components.
 
 Synposis
 ========
-DSTOOLS_SCHEMA.parse_domain(domainname text)
+PDLTOOLS_SCHEMA.parse_domain(domainname text)
 RETURNS text[]
 
 domainname - Domain name to be parsed.
 
 Example
 =======
-SELECT DSTOOLS_SCHEMA.parse_domain('www.pivotal.io');
+SELECT PDLTOOLS_SCHEMA.parse_domain('www.pivotal.io');
     parse_domain     
 ---------------------
  {www,pivotal,io}
@@ -445,7 +445,7 @@ SELECT DSTOOLS_SCHEMA.parse_domain('www.pivotal.io');
 $__STRING__$] END;
 $$;
 
-CREATE OR REPLACE FUNCTION DSTOOLS_SCHEMA.parse_domain()
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.parse_domain()
 RETURNS VARCHAR
 IMMUTABLE
 LANGUAGE SQL
@@ -456,7 +456,7 @@ parse_domain: Parse a URI domain into its components.
 
 A row function, parsing a textual hierarchical domain name into components.
 
-For full usage instructions, run "DSTOOLS_SCHEMA.parse_domain(''usage'')".
+For full usage instructions, run "PDLTOOLS_SCHEMA.parse_domain(''usage'')".
 $__STRING__$::VARCHAR;
 $$;
 

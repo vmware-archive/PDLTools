@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# DSTools configuration files (These are configuration files used by the
+# PDL Tools configuration files (These are configuration files used by the
 # installer). End users are not supposed to make modifications.
 # ------------------------------------------------------------------------------
 
@@ -15,7 +15,7 @@ add_custom_target(configFiles ALL DEPENDS ${CONFIG_TARGET_FILES})
 
 
 
-# -- 2. Install config files to $DSTOOLS_ROOT/config ----------------------------
+# -- 2. Install config files to $PDLTOOLS_ROOT/config ----------------------------
 
 install(FILES ${CONFIG_TARGET_FILES}
     DESTINATION config

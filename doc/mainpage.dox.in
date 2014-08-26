@@ -1,27 +1,28 @@
 /**
 @mainpage
-<B>DS Tools</B> is a library of reusable tools for use by Data Scientists.
+<B>PDL Tools</B> is a library of reusable tools for use by Data Scientists
+and Data Engineers.
 
 It is provided and maintained by Pivotal Data Labs, and includes tools that
 facilitate Big Data analytics using the SQL command-line, when using
-Pivotal's GPDB. <B>DS Tools</B> includes convenience tools, parallelized
+Pivotal's GPDB. <B>PDL Tools</B> includes convenience tools, parallelized
 algorithms and the <B>SUgAR</B> library (enabling second-order SQL parsing).
 
-<B>DS Tools</B> is a non-free library. It is proprietary to Pivotal and
+<B>PDL Tools</B> is a non-free library. It is proprietary to Pivotal and
 embodies intellectual property that belongs to Pivotal, including
 patent-pending material. It is provided to customers of Pivotal Data Labs as
-part of Pivotal's differentiated Data Science services. PDL's <B>DS Tools</B>
+part of Pivotal's differentiated Data Science services. PDL's <B>PDL Tools</B>
 customers are granted copyright and a license for their own internal use.
 
 Call any function without parameters (or with the single parameter
 <code>'usage'</code>, as a string) for online help. Use
-<code>"dstools_version()"</code> to get the library's version number,
+<code>"pdltools_version()"</code> to get the library's version number,
 or <code>"version()"</code> to get component version numbers.
 
 @note
 By default, all SUgAR library objects are installed into the schema
-`sugarlib` and all other DS Tools objects are installed into the schema
-`dstools`. It is highly recommended to have both schemas on your
+`sugarlib` and all other PDL Tools objects are installed into the schema
+`pdltools`. It is highly recommended to have both schemas on your
 search path.
 
 @defgroup grp_tools_module Tools
@@ -106,7 +107,7 @@ PL/Perl
 
 Implementation of a user-defined Complex type.
 
-(Written by Kevin Yun Liu, 1 Apr 2012. Adapted for DS Tools by [Srivatsan Ramanujam](mailto:sramanujam@pivotal.io).)
+(Written by Kevin Yun Liu, 1 Apr 2012. Adapted for PDL Tools by [Srivatsan Ramanujam](mailto:sramanujam@pivotal.io).)
 
 @sa Module source file: complex_type.sql_in.
 

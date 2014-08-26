@@ -1,5 +1,5 @@
 # ======================================================================
-# -- DSTools CMake Build Script
+# -- PDL Tools CMake Build Script
 # ======================================================================
 
 # ======================================================================
@@ -27,7 +27,7 @@ set(CPPTEST_URL "${SOURCEFORGE_BASE_URL}/cpptest/files/${CPPTEST_TAR}")
 
 if(NOT CPPTEST_TAR_SOURCE)
   find_file(CPPTEST_TAR_SOURCE ${CPPTEST_TAR}
-    PATHS ${DSTOOLS_THIRD_PARTY}/downloads)
+    PATHS ${PDLTOOLS_THIRD_PARTY}/downloads)
 endif(NOT CPPTEST_TAR_SOURCE)
 
 if(NOT CPPTEST_TAR_SOURCE)
@@ -35,14 +35,14 @@ if(NOT CPPTEST_TAR_SOURCE)
 endif (NOT CPPTEST_TAR_SOURCE)
 
 ExternalProject_Add(EP_cpptest
-  PREFIX ${DSTOOLS_THIRD_PARTY}
-  DOWNLOAD_DIR ${DSTOOLS_THIRD_PARTY}/downloads
+  PREFIX ${PDLTOOLS_THIRD_PARTY}
+  DOWNLOAD_DIR ${PDLTOOLS_THIRD_PARTY}/downloads
   URL ${CPPTEST_TAR_SOURCE}
   URL_MD5 ${CPPTEST_TAR_MD5}
-  CONFIGURE_COMMAND ./configure --with-pic --disable-doc --prefix=${DSTOOLS_THIRD_PARTY}/install
+  CONFIGURE_COMMAND ./configure --with-pic --disable-doc --prefix=${PDLTOOLS_THIRD_PARTY}/install
   BUILD_COMMAND make
   INSTALL_COMMAND make install
-  BINARY_DIR ${DSTOOLS_THIRD_PARTY}/src/EP_cpptest)
+  BINARY_DIR ${PDLTOOLS_THIRD_PARTY}/src/EP_cpptest)
 
 # ======================================================================
 # -- URIParser (third_party)
@@ -56,7 +56,7 @@ set(URIPARSER_URL "${SOURCEFORGE_BASE_URL}/uriparser/files/${URIPARSER_TAR}")
 
 if(NOT URIPARSER_TAR_SOURCE)
   find_file(URIPARSER_TAR_SOURCE ${URIPARSER_TAR}
-    PATHS ${DSTOOLS_THIRD_PARTY}/downloads)
+    PATHS ${PDLTOOLS_THIRD_PARTY}/downloads)
 endif(NOT URIPARSER_TAR_SOURCE)
 
 if(NOT URIPARSER_TAR_SOURCE)
@@ -64,17 +64,17 @@ if(NOT URIPARSER_TAR_SOURCE)
 endif (NOT URIPARSER_TAR_SOURCE)
 
 ExternalProject_Add(EP_uriparser
-  PREFIX ${DSTOOLS_THIRD_PARTY}
-  DOWNLOAD_DIR ${DSTOOLS_THIRD_PARTY}/downloads
+  PREFIX ${PDLTOOLS_THIRD_PARTY}
+  DOWNLOAD_DIR ${PDLTOOLS_THIRD_PARTY}/downloads
   URL ${URIPARSER_TAR_SOURCE}
   URL_MD5 ${URIPARSER_TAR_MD5}
-  CONFIGURE_COMMAND ./configure --with-pic --disable-doc CPPTEST_CFLAGS=-I${DSTOOLS_THIRD_PARTY}/install CPPTEST_LIBS=${DSTOOLS_THIRD_PARTY}/install/lib --prefix=${DSTOOLS_THIRD_PARTY}/install
+  CONFIGURE_COMMAND ./configure --with-pic --disable-doc CPPTEST_CFLAGS=-I${PDLTOOLS_THIRD_PARTY}/install CPPTEST_LIBS=${PDLTOOLS_THIRD_PARTY}/install/lib --prefix=${PDLTOOLS_THIRD_PARTY}/install
   BUILD_COMMAND make
   INSTALL_COMMAND make install
-  BINARY_DIR ${DSTOOLS_THIRD_PARTY}/src/EP_uriparser)
+  BINARY_DIR ${PDLTOOLS_THIRD_PARTY}/src/EP_uriparser)
 
-include_directories(${DSTOOLS_THIRD_PARTY}/install/include)
-link_directories(${DSTOOLS_THIRD_PARTY}/install/lib)
+include_directories(${PDLTOOLS_THIRD_PARTY}/install/include)
+link_directories(${PDLTOOLS_THIRD_PARTY}/install/lib)
 
 # ======================================================================
 # -- Macros to be used by ports
@@ -99,7 +99,7 @@ macro(add_python_files OUT_PYTHON_TARGET_FILES IN_SOURCE_DIR IN_TARGET_DIR)
   file(GLOB_RECURSE PYTHON_FILES
     RELATIVE "${SOURCE_DIR_ABS}"
     "${SOURCE_DIR_ABS}/*.py_in")
-  set(DSTOOLS_PYTHON_M4_PREPROCESSING
+  set(PDLTOOLS_PYTHON_M4_PREPROCESSING
     COMMAND ${CMAKE_COMMAND} -E make_directory "\"\${OUTDIR}\""
     COMMAND ${M4_BINARY} ${M4_ARGUMENTS} ${IN_M4_ARGUMENTS}
     "\"\${CURRENT_PATH}\"" > "\"\${OUTFILE}\"")
@@ -108,7 +108,7 @@ macro(add_python_files OUT_PYTHON_TARGET_FILES IN_SOURCE_DIR IN_TARGET_DIR)
     SOURCE_PREFIX "${SOURCE_DIR_ABS}/"
     TARGET_SUFFIX ".py"
     SOURCE_SUFFIX "[.]py_in"
-    RUN "${DSTOOLS_PYTHON_M4_PREPROCESSING}"
+    RUN "${PDLTOOLS_PYTHON_M4_PREPROCESSING}"
     COMMENT "Preprocessing \${CURRENT_FILE} with m4."
     TARGET_FILE_LIST_REF ${OUT_PYTHON_TARGET_FILES}
     SOURCE_FILE_LIST ${PYTHON_FILES})
@@ -124,8 +124,8 @@ macro(add_sql_files OUT_SQL_TARGET_FILES IN_SOURCE_DIR IN_TARGET_DIR)
  
     # psql of PostgreSQL < 9 does not like byte-order marks
     # TBD: This chunk has been copied & edited from MADlib cmake. Will need to
-    # revisit this later to see if it is even required for DStools
-    set(_DSTOOLS_VERIFY_AND_COPY_COMMAND
+    # revisit this later to see if it is even required for PDL Tools
+    set(_PDLTOOLS_VERIFY_AND_COPY_COMMAND
         COMMAND "${CMAKE_COMMAND}" -E copy "\"\${CURRENT_PATH}\"""\"\${OUTFILE}\"")
 
   batch_add_command(
@@ -133,14 +133,14 @@ macro(add_sql_files OUT_SQL_TARGET_FILES IN_SOURCE_DIR IN_TARGET_DIR)
     SOURCE_PREFIX "${SOURCE_DIR_ABS}/"
     TARGET_SUFFIX ""
     SOURCE_SUFFIX ""
-    RUN "${_DSTOOLS_VERIFY_AND_COPY_COMMAND}"
+    RUN "${_PDLTOOLS_VERIFY_AND_COPY_COMMAND}"
     COMMENT "Validating and copying \${CURRENT_FILE}."
     TARGET_FILE_LIST_REF ${OUT_SQL_TARGET_FILES}
     SOURCE_FILE_LIST ${SQL_FILES})
 endmacro(add_sql_files)
 
 # Add a connector library for a specific DBMS port
-macro(add_dstools_connector_library IN_TARGET_NAME IN_LIB_DIR IN_LIB_LOADER)
+macro(add_pdltools_connector_library IN_TARGET_NAME IN_LIB_DIR IN_LIB_LOADER)
   set(IN_LIBRARY_SOURCES ${ARGN})
  
   add_library(
@@ -150,7 +150,7 @@ macro(add_dstools_connector_library IN_TARGET_NAME IN_LIB_DIR IN_LIB_LOADER)
   add_dependencies(${IN_TARGET_NAME} EP_uriparser)
   set_target_properties(${IN_TARGET_NAME} PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${IN_LIB_DIR}"
-    OUTPUT_NAME "dstools"
+    OUTPUT_NAME "pdltools"
     BUILD_WITH_INSTALL_RPATH YES)
   
   if(APPLE)
@@ -162,22 +162,22 @@ macro(add_dstools_connector_library IN_TARGET_NAME IN_LIB_DIR IN_LIB_LOADER)
   if((NOT APPLE)) 
     set_target_properties(${IN_TARGET_NAME} PROPERTIES
       LINK_FLAGS
-#      "-Wl,-rpath -Wl,\"${DSTOOLS_THIRD_PARTY}\"/install/lib -L\"${DSTOOLS_THIRD_PARTY}\"/install/lib")
-      "-Wl,--whole-archive \"${DSTOOLS_THIRD_PARTY}\"/install/lib/liburiparser.a -Wl,--no-whole-archive")
+#      "-Wl,-rpath -Wl,\"${PDLTOOLS_THIRD_PARTY}\"/install/lib -L\"${PDLTOOLS_THIRD_PARTY}\"/install/lib")
+      "-Wl,--whole-archive \"${PDLTOOLS_THIRD_PARTY}\"/install/lib/liburiparser.a -Wl,--no-whole-archive")
   endif((NOT APPLE))
-endmacro(add_dstools_connector_library)
+endmacro(add_pdltools_connector_library)
 
 # ======================================================================
-# -- Specify files that will be compiled into DSTools core library
+# -- Specify files that will be compiled into PDL Tools core library
 # ======================================================================
 
-file(GLOB_RECURSE DSTOOLS_C_SOURCES
+file(GLOB_RECURSE PDLTOOLS_C_SOURCES
   modules/*.c modules/*.h)
 
-list(APPEND DSTOOLS_SOURCES
-  ${DSTOOLS_C_SOURCES})
+list(APPEND PDLTOOLS_SOURCES
+  ${PDLTOOLS_C_SOURCES})
 
 add_subdirectory(ports)
-add_subdirectory(dspack)
+add_subdirectory(pdlpack)
 add_subdirectory(config)
 add_subdirectory(bin)
