@@ -343,7 +343,7 @@ done
 
 if [ "${PUBLISH}" = "true" ]; then
 
-    RELEASE_DIR=/var/www/html/releases/dstools/${PDLTOOLS_VERSION}-${PULSE_BUILD_NUMBER}
+    RELEASE_DIR=/var/www/html/releases/pdltools/${PDLTOOLS_VERSION}-${PULSE_BUILD_NUMBER}
 
 	cat <<-EOF
 	
