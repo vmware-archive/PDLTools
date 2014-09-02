@@ -80,14 +80,18 @@ accessible through the Pivotal VPN.
 rhel5-x86_64.gppkg successfully installed.
 @endverbatim
 
-### Installing PDL Tools onto a target database
+### Installing PDL Tools onto a target database as 'gpadmin'
+
+Use these instructions to install PDL Tools onto a target database if you are
+able to log in as 'gpadmin'. If not, refer to the next section.
+
+Run the following command as 'gpadmin'.
 
 <pre class="example">
 /usr/local/greenplum-db/pdltools/bin/pdlpack install [-s <em>schema name</em>] [-S <em>SUgAR schema name</em>] [-M <em>MADlib schema name</em>] -c <em>user\@host:port/database name</em>
 </pre>
 
 where <em>database name</em> should be replaced by the name of the database you wish to install to, <em>schema name</em> is the schema to install to, <em>SUgAR schema name</em> is the schema in which to install the SUgAR library, and <em>MADlib schema name</em> is the schema to search for MADlib objects in. By default, <em>schema name</em> would be "pdltools", <em>SUgAR schema name</em> would be "sugarlib" and <em>MADlib schema name</em> would be "madlib". Typically, <em>user\@host:port</em> is chosen to be "gpadmin@localhost:5433", as in the example below. MADlib objects do not need to be present during PDL Tools installation for it to succeed, though some of the run-time functionality of PDL Tools relies on calling MADlib routines.
-Run this command as gpadmin.
 
 @verbatim
 $ /usr/local/greenplum-db/pdltools/bin/pdlpack install -s pdltools -c gpadmin@localhost:5433/exampledb
@@ -130,6 +134,35 @@ pdlpack.py : INFO : Installation completed successfully.
 
 Note that this installation may be interactive, asking yes/no questions.
 
+### Installing PDL Tools onto a target database not as 'gpadmin'
+
+If you are unable to log in as 'gpadmin', you can still install PDL Tools onto
+a database by modifying the instructions from the previous section as follows.
+
+First, make sure that the GPDB 'MASTER_DATA_DIRECTORY' and 'GPHOME' are properly
+set in your '~/.bashrc' file and that '$GPHOME/greenplum_path.sh' is
+subsequently sourced. Here is an example of lines you can add to your
+'~/.bashrc' to create this effect:
+
+<pre class="example">
+\# User specific aliases and functions
+export MASTER_DATA_DIRECTORY=/data/master/gpseg-1
+export GPHOME=/usr/local/greenplum-db
+source $GPHOME/greenplum_path.sh
+</pre>
+
+Next, log into your 'mdw' node. (It is not possible to install PDL Tools
+anywhere but on the local host when not logged in as 'gpadmin'.)
+
+As a final step, run the 'pdlpack' installation command, as described in the
+previous section, making sure that you list 'localhost' as your target
+computer and use your own user name. Here is an example for a typical
+installation on a DCA environment.
+
+@verbatim
+$ /usr/local/greenplum-db/pdltools/bin/pdlpack install -s pdltools -c user@localhost:5432/exampledb
+@endverbatim
+
 ### Checking that the installation was successful (optional)
 
 Once you've installed the package onto your database, you may want to check that the installation was successful. The `install-check` option give you a method to do so.
@@ -140,7 +173,8 @@ Once you've installed the package onto your database, you may want to check that
 
 where <em>database name</em> should be replaced by the name of the database you installed to, and <em>schema name</em>, <em>SUgAR schema name</em> and <em>MADlib schema name</em> are the schemas (with the same defaults as in the installation command).
 
-Run this command as gpadmin.
+Run this command as gpadmin, or follow the instructions in the previous section
+in order to run the command as another user.
 
 @verbatim
 $ /usr/local/greenplum-db/pdltools/bin/pdlpack install-check -s pdltools -c gpadmin@localhost:5433/exampledb
