@@ -14,6 +14,7 @@
 
 #include <postgres.h>
 #include <fmgr.h>
+#include <sys/time.h>
 
 #include <funcapi.h>
 
