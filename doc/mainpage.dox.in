@@ -101,6 +101,23 @@ PL/Perl
         @defgroup grp_session_split session_split
     @}
 
+    @defgroup grp_sampling Stratified Sampling
+    @{
+        @brief A stratified sampling utility.
+
+Utility to perform stratified, randomized, proportional sampling and labeling.
+
+(Written by [Michael Brand](mailto:mbrand@pivotal.io), 3 Sep 2014.)
+        
+@sa Module source file: sampling.sql_in.
+
+@prereq
+PL/Perl
+
+        @defgroup grp_strat_partition strat_partition
+        @defgroup grp_strat_sampling strat_sampling
+    @}
+
     @defgroup grp_complexnumbers Complex Numbers
     @{
         @brief Implementation of a user-defined Complex type.

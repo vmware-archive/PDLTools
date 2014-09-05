@@ -743,7 +743,7 @@ def __check_prev_install(schema,current_rev,is_sugar=False):
           __info("* Installer will rename it to %s and will upgrade to version %s." % (backup_schema.upper(),current_rev), True)
           __info("***************************************************************************", True)
         elif is_newer==0:
-          __info("> Schema %s already exists and includes latst version of the library (%s)." % (schema.upper(),dbrev), verbose)
+          __info("> Schema %s already exists and includes latest version of the library (%s)." % (schema.upper(),dbrev), verbose)
           __info("> Installer will rename it temporarily to %s, will reinstall," % backup_schema.upper(),verbose)
           __info("> and will remove old copy upon successfully re-install.", verbose)
         else:

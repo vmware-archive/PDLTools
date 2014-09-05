@@ -27,33 +27,33 @@ PDL Tools should be installed on a GPDB 4.2 or 4.3. It requires `PL/pgSQL`, `PL/
 The `Python` version should be at least 2.6, and the `Perl` version should be at least 5.008 but lower than 6.0.
 
 <pre class="example">
-gppkg -i pdltools-1.2.1-gpdb4.3-rhel5-x86_64.gppkg
+gppkg -i pdltools-@PDLTOOLS_VERSION_STRING@-gpdb4.3-rhel5-x86_64.gppkg
 </pre>
 
 For GPDB 4.3 or the equivalent for GPDB 4.2. Run this as gpadmin.
 
 @verbatim
-$ gppkg -i pdltools-1.2.1-gpdb4.3-rhel5-x86_64.gppkg
+$ gppkg -i pdltools-@PDLTOOLS_VERSION_STRING@-gpdb4.3-rhel5-x86_64.gppkg
 20140826:07:05:22:015733 gppkg:localhost:gpadmin-[INFO]:-Starting gppkg with arg
-s: -i pdltools-1.2.1-gpdb4.3-rhel5-x86_64.gppkg
+s: -i pdltools-@PDLTOOLS_VERSION_STRING@-gpdb4.3-rhel5-x86_64.gppkg
 20140826:07:05:22:015733 gppkg:localhost:gpadmin-[INFO]:-Installing package pdlt
-ools-1.2.1-gpdb4.3-rhel5-x86_64.gppkg
+ools-@PDLTOOLS_VERSION_STRING@-gpdb4.3-rhel5-x86_64.gppkg
 20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-Validating rpm installa
-tion cmdStr='rpm --test -i /usr/local/greenplum-db-4.3.0.0/.tmp/pdltools-1.2.1-1
+tion cmdStr='rpm --test -i /usr/local/greenplum-db-4.3.0.0/.tmp/pdltools-@PDLTOOLS_VERSION_STRING@-1
 .x86_64.rpm --dbpath /usr/local/greenplum-db-4.3.0.0/share/packages/database --p
 refix /usr/local/greenplum-db-4.3.0.0'
-20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-Installing pdltools-1.2
-.1-gpdb4.3-rhel5-x86_64.gppkg locally
+20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-Installing pdltools-
+@PDLTOOLS_VERSION_STRING@-gpdb4.3-rhel5-x86_64.gppkg locally
 20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-Validating rpm installa
-tion cmdStr='rpm --test -i /usr/local/greenplum-db-4.3.0.0/.tmp/pdltools-1.2.1-1
+tion cmdStr='rpm --test -i /usr/local/greenplum-db-4.3.0.0/.tmp/pdltools-@PDLTOOLS_VERSION_STRING@-1
 .x86_64.rpm --dbpath /usr/local/greenplum-db-4.3.0.0/share/packages/database --p
 refix /usr/local/greenplum-db-4.3.0.0'
 20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-Installing rpms cmdStr=
-'rpm -i /usr/local/greenplum-db-4.3.0.0/.tmp/pdltools-1.2.1-1.x86_64.rpm --dbpat
+'rpm -i /usr/local/greenplum-db-4.3.0.0/.tmp/pdltools-@PDLTOOLS_VERSION_STRING@-1.x86_64.rpm --dbpat
 h /usr/local/greenplum-db-4.3.0.0/share/packages/database --prefix=/usr/local/gr
 eenplum-db-4.3.0.0'
 20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-Completed local install
-ation of pdltools-1.2.1-gpdb4.3-rhel5-x86_64.gppkg.
+ation of pdltools-@PDLTOOLS_VERSION_STRING@-gpdb4.3-rhel5-x86_64.gppkg.
 20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-Please run the followin
 g command to deploy PDL Tools
 usage:  pdlpack install [-s schema_name] [-S sugar_schema_name]
@@ -76,7 +76,7 @@ Release notes and additional documentation can be found at
 https://sites.google.com/a/pivotal.io/global-data-science/pdl-tools,
 as well as on http://pdl-tools.pa.pivotal.io/
 accessible through the Pivotal VPN.
-20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-pdltools-1.2.1-gpdb4.3-
+20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-pdltools-@PDLTOOLS_VERSION_STRING@-gpdb4.3-
 rhel5-x86_64.gppkg successfully installed.
 @endverbatim
 
@@ -127,7 +127,8 @@ pdlpack.py : INFO : > - connected_components
 pdlpack.py : INFO : > - sugar
 pdlpack.py : INFO : > - complex
 pdlpack.py : INFO : > - stemming
-pdlpack.py : INFO : PDL Tools 1.2.1 installed successfully in PDLTOOLS schema.
+pdlpack.py : INFO : > - sampling
+pdlpack.py : INFO : PDL Tools @PDLTOOLS_VERSION_STRING@ installed successfully in PDLTOOLS schema.
 pdlpack.py : INFO : SUgAR 0.4.4 installed successfully in SUGARLIB schema.
 pdlpack.py : INFO : Installation completed successfully.
 @endverbatim
@@ -193,6 +194,8 @@ TEST CASE RESULT|Module: complex|test_complex_type.sql_in|PASS|Time: 461 millise
 conds
 TEST CASE RESULT|Module: stemming|test_porter_stemmer.sql_in|PASS|Time: 39 milli
 seconds
+TEST CASE RESULT|Module: sampling|test_sampling.sql_in|PASS|Time: 1186 milliseco
+nds
 @endverbatim
 
 
@@ -213,7 +216,7 @@ It is not necessary to uninstall PDL Tools as part of a regular upgrade process.
 First, uninstall the library from your computer.
 
 <pre class="example">
-gppkg -r pdltools-1.2.1
+gppkg -r pdltools-@PDLTOOLS_VERSION_STRING@
 </pre>
 
 Then, drop the schemas from your database. Assuming the library was installed into the \c pdltools and \c sugarlib schemas, the `psql` command line is

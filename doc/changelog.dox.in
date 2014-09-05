@@ -4,7 +4,11 @@
 
 ## PDL Tools Revision History
 
-### PDL Tools 1.2.1 (packaged with SUgAR 0.4.4) -- Current version
+### PDL Tools 1.2.2 (packaged with SUgAR 0.4.4) -- Current version
+- Added Stratified sampling.
+- Added installation instructions for non-gpadmin install.
+
+### PDL Tools 1.2.1 (packaged with SUgAR 0.4.4)
 - Added Porter Stemming.
 - Path changes to pivotal.io domain.
 - Added 'version()' function.
