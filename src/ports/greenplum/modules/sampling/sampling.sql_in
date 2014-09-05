@@ -1,0 +1,809 @@
+/* ----------------------------------------------------------------------- *//**
+
+@file sampling.sql_in
+
+@brief A stratified sampling utility.
+
+@author Michael Brand
+@date 3 Sep 2014
+
+ *//* ----------------------------------------------------------------------- */
+
+
+/**
+ * @internal
+ * @brief __sampling_prep_grp: array reformatting.
+ *
+ * @about
+ * An internal function, used by \c strat_partition.
+ * A SQL float8 array is given, and its content is returned in its
+ * C float8 array representation, wrapped as a bytea object.
+ * This is meant to speed up later access to the array data.
+ *
+ * @prereq PL/C
+ *
+ * @par Syntax
+ * <pre class="syntax">
+ * FUNCTION __sampling_prep_grp(threshold float8[])
+ * RETURNS bytea;
+ * </pre>
+ *
+ * @param threshold The array to be reformatted.
+ *
+ * @usage
+ * Returns a C float8 array inside a bytea object.
+ * This function should only be used by \c strat_partition and not directly.
+ *
+ * @sa grp_strat_partition
+ * 
+ */
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__sampling_prep_grp(
+                                         threshold float8[])
+RETURNS bytea
+AS 'MODULE_PATHNAME','__sampling_prep_grp'
+LANGUAGE C IMMUTABLE STRICT;
+
+/**
+ * @internal
+ * @brief __sampling_samp_grp: Determine which segment to assign a row to.
+ *
+ * @about
+ * An internal function, used by \c strat_partition.
+ * A float8 value is given, as well as a float8 array (in the format of a C
+ * array wrapped inside a bytea object). The return value is the number of
+ * values in the array that are smaller than the given value.
+ *
+ * @prereq PL/C
+ *
+ * @par Syntax
+ * <pre class="syntax">
+ * FUNCTION __sampling_samp_grp(val float8, threshold bytea)
+ * RETURNS integer;
+ * </pre>
+ *
+ * @param val The value to compare against.
+ * @param threshold The array of threshold values, in a bytea representation.
+ *
+ * @usage
+ * The function accepts an array of float8 values, processed into the format
+ * provided by \c __sampling_prep_grp and determines how many of the values
+ * are smaller than a given comparison value. This function runs per row and
+ * was therefore optimized for speed. For this reason, it contains no
+ * validation checks for its inputs. All such checks are assumed to have taken
+ * place before calling the function.
+ * In a typical usage scenario, the array is likely to only be a handful of
+ * elements long, for which reason the array elements are compared against
+ * sequentially. Had the array needed to be scalable, a binary search would
+ * have worked better (the array elements are already sorted), but for a
+ * small number of elements sequential is faster.
+ * This function should not be used directly but only by \c strat_partition.
+ *
+ * @sa grp_strat_partition
+ * 
+ */
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__sampling_samp_grp(
+                                            val float8, threshold bytea)
+RETURNS integer
+AS 'MODULE_PATHNAME','__sampling_samp_grp'
+LANGUAGE C IMMUTABLE STRICT;
+
+/**
+@addtogroup grp_strat_partition
+
+@brief Stratified partition of input into random segments of chosen proportions.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#strat_partition_syntax">Syntax</a>
+<li class="level1"><a href="#strat_partition_usage">Usage</a>
+<li class="level1"><a href="#strat_partition_example">Example</a>
+</ul>
+</div>
+
+@about
+A table is given with one or more ID columns and a grouping column.
+Also given are a set of proportions, summing to 1.0 or less.
+The function creates a new table with the ID and grouping columns, and also
+with a new \c out_label column of user-defined name, such that each group is
+partitioned randomly by the labels according to the desired proportions.
+
+@anchor strat_partition_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION strat_partition(in_tab VARCHAR, out_tab VARCHAR,
+                         out_cols VARCHAR, grouping_col VARCHAR,
+                         out_label VARCHAR, proportions float8[])
+RETURNS VOID;
+</pre>
+
+@param in_tab Name of input table.
+@param out_tab Name of output table.
+@param out_cols Columns to reproduce in the output table. These should be given
+                as a comma-separated string. Should not include
+                the grouping column, \c grouping_col.
+@param grouping_col Column to stratify by. Choose NULL for non-stratified.
+@param out_label Name of column to add to the output table, to specify the
+                 output partition.
+@param proportions Array denoting the partitioning proportions.
+
+@anchor strat_partition_usage
+@usage
+The function creates a new table, \c out_tab, containing all columns from
+\c out_cols and the column \c grouping_col, both copied from the input table
+\c in_tab. To these, a new column \c out_label is added, which randomly splits
+each group specified by \c grouping_col into parts of the proportions specified
+by the \c proportions array.
+
+If the \c proportions array is \f$[p_0,p_1,\ldots, p_{k-1}]\f$, where \a k is
+the array's length, the \c out_label value is an integer between 0 and \a k,
+so that in each group, if the size of the group is \a n, the number of
+elements to be labeled \a i or less, for every \a i in the range \f$[0,k)\f$,
+is exactly \f$\lceil (p_0+\cdots+p_i) n \rceil\f$. All the remaining elements
+are labeled \a k. This is proportional partitioning that ensures the following:
+ - The number of elements labeled exactly \a i in each group of size \a n is
+   always either \f$\lceil p_i n \rceil\f$ or \f$\lfloor p_i n \rfloor\f$, and
+   always exactly \f$ p_i n \f$ if \f$ p_i n \f$ is an integer.
+ - If two groups have the same total number of elements, they also have the
+   same number of elements receiving each label.
+ - Partitioning again with the same proportions over the same data
+   will result in the same number of elements receiving each label in each
+   group, though the choice of which elements go to which part will change.
+ - If \f$p_0\f$ is positive, each group will have at least one element
+   labeled 0.
+
+@anchor strat_partition_example
+@examp
+@verbatim
+user=# CREATE TABLE base_table AS SELECT x val1, 2*x val2, (x*x)%3 stratum
+         FROM generate_series(1,20) x
+       DISTRIBUTED BY (val1);
+SELECT 20
+
+user=# SELECT * FROM base_table;
+ val1 | val2 | stratum 
+------+------+---------
+    1 |    2 |       1 
+    3 |    6 |       0 
+    5 |   10 |       1 
+    7 |   14 |       1 
+    9 |   18 |       0 
+   11 |   22 |       1 
+   13 |   26 |       1 
+   15 |   30 |       0 
+   17 |   34 |       1 
+   19 |   38 |       1 
+    2 |    4 |       1 
+    4 |    8 |       1 
+    6 |   12 |       0 
+    8 |   16 |       1 
+   10 |   20 |       1 
+   12 |   24 |       0 
+   14 |   28 |       1 
+   16 |   32 |       1 
+   18 |   36 |       0 
+   20 |   40 |       1 
+(20 rows)
+
+user=# SELECT strat_partition('base_table','labeled_table',
+                'val1,val2', 'stratum','label',ARRAY[0.1,0.4,0.01]);
+ strat_partition
+-----------------
+
+(1 row)
+
+user=# SELECT * FROM labeled_table;
+ val1 | val2 | stratum | label
+------+------+---------+-------
+    1 |    2 |       1 |     1
+    3 |    6 |       0 |     1
+    5 |   10 |       1 |     3
+    7 |   14 |       1 |     3
+    9 |   18 |       0 |     2
+   11 |   22 |       1 |     3
+   13 |   26 |       1 |     3
+   15 |   30 |       0 |     0
+   17 |   34 |       1 |     0
+   19 |   38 |       1 |     1
+    2 |    4 |       1 |     3
+    4 |    8 |       1 |     3
+    6 |   12 |       0 |     1
+    8 |   16 |       1 |     0
+   10 |   20 |       1 |     2
+   12 |   24 |       0 |     3
+   14 |   28 |       1 |     1
+   16 |   32 |       1 |     1
+   18 |   36 |       0 |     3
+   20 |   40 |       1 |     1
+(20 rows)
+@endverbatim
+
+In this example, \c strat_partition successfully divided group 0 to labels
+of sizes [1,2,1,2] and group 1 to labels of sizes [2,5,1,6], as per the
+desired [10%,40%,1%,49%] cut. The parts of size 10% and 1% were
+rounded up to create a whole-number partition, while the parts of size
+40% and 49% were rounded down.
+
+@prereq
+PL/Perl
+
+ */
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.strat_partition(in_tab VARCHAR,
+                                  out_tab VARCHAR,
+                                  out_cols VARCHAR,
+                                  grouping_col VARCHAR,
+                                  out_label VARCHAR,
+                                  proportions float8[])
+RETURNS VOID
+VOLATILE
+LANGUAGE plperl
+AS
+$$
+  my ($in_tab,$out_tab,$out_cols,$grouping_col,$out_label,$proportions)=@_;
+
+  if (!defined($in_tab)||!defined($out_tab)
+      ||!defined($out_cols)||!defined($out_label)||!defined($proportions)) {
+    return undef;
+  }
+
+  if (defined ($grouping_col)) {
+    spi_exec_query(<<"EOT"
+      CREATE TABLE __samp_aux_tab AS (
+        SELECT $out_cols,$grouping_col,random() AS $out_label FROM $in_tab
+      ) DISTRIBUTED BY ($grouping_col);
+EOT
+    );
+  } else {
+    spi_exec_query(<<"EOT"
+      CREATE TABLE __samp_aux_tab AS (
+        SELECT $out_cols,random() AS $out_label FROM $in_tab
+      ) DISTRIBUTED RANDOMLY;
+EOT
+    );
+  }
+
+  my @query=();
+ 
+  my $acc=0.0;
+  foreach $p (@$proportions) {
+    $acc+=$p;
+    push(@query, <<"EOT"
+percentile_disc($acc) WITHIN GROUP (ORDER BY $out_label)
+EOT
+);
+  }
+
+  my $q = join(", ",@query);
+  
+  if (defined($grouping_col)) {
+    $q = <<"EOT"
+      CREATE TABLE __samp_thresh_tab AS (
+        SELECT $grouping_col,
+               PDLTOOLS_SCHEMA.__sampling_prep_grp(ARRAY[
+EOT
+    . $q . << "EOT"
+                 ])  AS $out_label
+          FROM __samp_aux_tab
+          GROUP BY $grouping_col
+      ) DISTRIBUTED BY ($grouping_col);
+EOT
+    ;
+  } else {
+    $q = <<"EOT"
+      CREATE TABLE __samp_thresh_tab AS (
+        SELECT PDLTOOLS_SCHEMA.__sampling_prep_grp(ARRAY[
+EOT
+    . $q . << "EOT"
+                 ])  AS $out_label
+          FROM __samp_aux_tab
+      ) DISTRIBUTED RANDOMLY;
+EOT
+    ;
+  }
+
+  spi_exec_query($q);
+  
+  if (defined($grouping_col)) {
+    spi_exec_query(<<"EOT"
+      CREATE TABLE $out_tab AS (
+        SELECT $out_cols,__samp_thresh_tab.$grouping_col,
+           PDLTOOLS_SCHEMA.__sampling_samp_grp(__samp_aux_tab.$out_label,
+             __samp_thresh_tab.$out_label)
+                 AS $out_label
+          FROM __samp_thresh_tab,__samp_aux_tab
+          WHERE __samp_thresh_tab.$grouping_col = __samp_aux_tab.$grouping_col
+      ) DISTRIBUTED BY ($grouping_col);
+      DROP TABLE __samp_aux_tab;
+      DROP TABLE __samp_thresh_tab;
+EOT
+    );
+  } else {
+    spi_exec_query(<<"EOT"
+      CREATE TABLE $out_tab AS (
+        SELECT $out_cols,
+           PDLTOOLS_SCHEMA.__sampling_samp_grp(__samp_aux_tab.$out_label,
+             __samp_thresh_tab.$out_label)
+                 AS $out_label
+          FROM __samp_thresh_tab,__samp_aux_tab
+      ) DISTRIBUTED RANDOMLY;
+      DROP TABLE __samp_aux_tab;
+      DROP TABLE __samp_thresh_tab;
+EOT
+    );
+  }
+
+  return undef;
+$$;
+
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.strat_partition()
+RETURNS VARCHAR
+IMMUTABLE
+LANGUAGE SQL
+AS
+$$
+SELECT '
+strat_partition: Stratified partition of input into random segments of chosen
+proportions.
+
+A table is given with one or more ID columns and a grouping column.
+Also given are a set of proportions, summing to 1.0 or less.
+The function creates a new table with the ID and grouping columns, and also
+with a new out_label column of user-defined name, such that each group is
+partitioned randomly by the labels according to the desired proportions.
+
+For full usage instructions, run "PDLTOOLS_SCHEMA.strat_partition(''usage'')".
+'::VARCHAR;
+$$;
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.strat_partition(option VARCHAR)
+RETURNS VARCHAR
+IMMUTABLE
+LANGUAGE SQL
+AS
+$$
+SELECT CASE WHEN $1!='usage' THEN PDLTOOLS_SCHEMA.strat_partition() ELSE '
+strat_partition: Stratified partition of input into random segments of chosen
+proportions.
+
+A table is given with one or more ID columns and a grouping column.
+Also given are a set of proportions, summing to 1.0 or less.
+The function creates a new table with the ID and grouping columns, and also
+with a new out_label column of user-defined name, such that each group is
+partitioned randomly by the labels according to the desired proportions.
+
+Synopsis
+========
+PDLTOOLS_SCHEMA.strat_partition(in_tab VARCHAR, out_tab VARCHAR,
+                         out_cols VARCHAR, grouping_col VARCHAR,
+                         out_label VARCHAR, proportions float8[])
+RETURNS VOID
+
+in_tab       - Name of input table.
+out_tab      - Name of output table.
+out_cols     - Columns to reproduce in the output table. These should be given
+                as a comma-separated string. Should not include
+                the grouping column, grouping_col.
+grouping_col - Column to stratify by. Choose NULL for non-stratified.
+out_label    - Name of column to add to the output table, to specify the
+                 output partition.
+proportions  - Array denoting the partitioning proportions.
+
+Usage
+=====
+The function creates a new table, out_tab, containing all columns from
+out_cols and the column grouping_col, both copied from the input table
+in_tab. To these, a new column out_label is added, which randomly splits
+each group specified by grouping_col into parts of the proportions specified
+by the proportions array.
+
+If the proportions array is [p_0,p_1,..., p_{k-1}], where k is
+the array''s length, the out_label value is an integer between 0 and k,
+so that in each group, if the size of the group is n, the number of
+elements to be labeled i or less, for every i in the range [0,k),
+is exactly ceiling((p_0+...+p_i) n). All the remaining elements
+are labeled k. This is proportional partitioning that ensures the following:
+ - The number of elements labeled exactly i in each group of size n is
+   always either ceiling(p_i n) or floor(p_i n), and
+   always exactly p_i n if p_i n is an integer.
+ - If two groups have the same total number of elements, they also have the
+   same number of elements receiving each label.
+ - Partitioning again with the same proportions over the same data
+   will result in the same number of elements receiving each label in each
+   group, though the choice of which elements go to which part will change.
+ - If p_0 is positive, each group will have at least one element
+   labeled 0.
+
+Example
+=======
+user=# CREATE TABLE base_table AS SELECT x val1, 2*x val2, (x*x)%3 stratum
+         FROM generate_series(1,20) x
+       DISTRIBUTED BY (val1);
+SELECT 20
+
+user=# SELECT * FROM base_table;
+ val1 | val2 | stratum 
+------+------+---------
+    1 |    2 |       1 
+    3 |    6 |       0 
+    5 |   10 |       1 
+    7 |   14 |       1 
+    9 |   18 |       0 
+   11 |   22 |       1 
+   13 |   26 |       1 
+   15 |   30 |       0 
+   17 |   34 |       1 
+   19 |   38 |       1 
+    2 |    4 |       1 
+    4 |    8 |       1 
+    6 |   12 |       0 
+    8 |   16 |       1 
+   10 |   20 |       1 
+   12 |   24 |       0 
+   14 |   28 |       1 
+   16 |   32 |       1 
+   18 |   36 |       0 
+   20 |   40 |       1 
+(20 rows)
+
+user=# SELECT strat_partition(''base_table'',''labeled_table'',
+                ''val1,val2'', ''stratum'',''label'',ARRAY[0.1,0.4,0.01]);
+ strat_partition
+-----------------
+
+(1 row)
+
+user=# SELECT * FROM labeled_table;
+ val1 | val2 | stratum | label
+------+------+---------+-------
+    1 |    2 |       1 |     1
+    3 |    6 |       0 |     1
+    5 |   10 |       1 |     3
+    7 |   14 |       1 |     3
+    9 |   18 |       0 |     2
+   11 |   22 |       1 |     3
+   13 |   26 |       1 |     3
+   15 |   30 |       0 |     0
+   17 |   34 |       1 |     0
+   19 |   38 |       1 |     1
+    2 |    4 |       1 |     3
+    4 |    8 |       1 |     3
+    6 |   12 |       0 |     1
+    8 |   16 |       1 |     0
+   10 |   20 |       1 |     2
+   12 |   24 |       0 |     3
+   14 |   28 |       1 |     1
+   16 |   32 |       1 |     1
+   18 |   36 |       0 |     3
+   20 |   40 |       1 |     1
+(20 rows)
+
+In this example, strat_partition successfully divided group 0 to labels
+of sizes [1,2,1,2] and group 1 to labels of sizes [2,5,1,6], as per the
+desired [10%,40%,1%,49%] cut. The parts of size 10% and 1% were
+rounded up to create a whole-number partition, while the parts of size
+40% and 49% were rounded down.
+
+Prerequisites
+=============
+Requires PL/Perl
+' END;
+$$;
+
+/**
+@addtogroup grp_strat_sampling
+
+@brief A proportional stratified random sampling utility.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#strat_sampling_syntax">Syntax</a>
+<li class="level1"><a href="#strat_sampling_usage">Usage</a>
+<li class="level1"><a href="#strat_sampling_example">Example</a>
+</ul>
+</div>
+
+@about
+A table is given with one or more ID columns and a grouping column.
+Also given is a proportion in the range (0,1).
+The function creates a new table with the ID and grouping columns, selecting
+from the input table only the desired proportion of the original rows
+in each group.
+
+@anchor strat_sampling_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION strat_sampling(in_tab VARCHAR, out_tab VARCHAR, out_cols VARCHAR,
+                        grouping_col VARCHAR, proportion FLOAT8)
+RETURNS VOID;
+</pre>
+
+@param in_tab Name of input table.
+@param out_tab Name of output table.
+@param out_cols Columns to reproduce in the output table. These should be given
+                as a comma-separated string. Should not include
+                the grouping column, \c grouping_col.
+@param grouping_col Column to stratify by. Choose NULL for non-stratified.
+@param proportion The proportion to sample.
+
+@anchor strat_sampling_usage
+@usage
+The function creates a new table, \c out_tab, containing all columns from
+\c out_cols and the column \c grouping_col, both copied from the input table
+\c in_tab, but randomly sampling only \c proportion of the input table rows.
+
+In each group, if the group size in the original table was \a n and the
+proportion is \a p, the number of group representatives remaining in the
+output table will be exactly \f$\lceil pn \rceil \f$. This is
+proportionally-consistent, exact, proportional random sampling, which ensures
+that at least one element is picked in each group.
+
+@anchor strat_sampling_example
+@examp
+@verbatim
+user=# CREATE TABLE base_table AS SELECT x val1, 2*x val2, (x*x)%3 stratum
+         FROM generate_series(1,20) x
+       DISTRIBUTED BY (val1);
+SELECT 20
+
+user=# SELECT * FROM base_table;
+ val1 | val2 | stratum 
+------+------+---------
+    1 |    2 |       1 
+    3 |    6 |       0 
+    5 |   10 |       1 
+    7 |   14 |       1 
+    9 |   18 |       0 
+   11 |   22 |       1 
+   13 |   26 |       1 
+   15 |   30 |       0 
+   17 |   34 |       1 
+   19 |   38 |       1 
+    2 |    4 |       1 
+    4 |    8 |       1 
+    6 |   12 |       0 
+    8 |   16 |       1 
+   10 |   20 |       1 
+   12 |   24 |       0 
+   14 |   28 |       1 
+   16 |   32 |       1 
+   18 |   36 |       0 
+   20 |   40 |       1 
+(20 rows)
+
+user=# SELECT strat_sampling('base_table','sampled_table',
+                'val1,val2', 'stratum',0.5);
+ strat_sampling
+-----------------
+
+(1 row)
+
+user=# SELECT * FROM sampled_table;
+ val1 | val2 | stratum
+------+------+---------
+    1 |    2 |       1 
+    3 |    6 |       0 
+   15 |   30 |       0 
+   17 |   34 |       1 
+   19 |   38 |       1 
+    6 |   12 |       0 
+    8 |   16 |       1 
+   14 |   28 |       1 
+   16 |   32 |       1 
+   20 |   40 |       1 
+(10 rows)
+@endverbatim
+
+In this example, \c strat_sampling successfully selected 3 elements of the
+group of size 6 and 7 elements of the group of size 14, these being exactly
+the desired 50% from each group.
+
+@prereq
+PL/Perl
+
+ */
+
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.strat_sampling(
+                                  in_tab VARCHAR, out_tab VARCHAR,
+                                  out_cols VARCHAR,
+                                  grouping_col VARCHAR,
+                                  proportion FLOAT8)
+RETURNS VOID
+VOLATILE
+LANGUAGE plperl
+AS
+$$
+  my ($in_tab,$out_tab,$out_cols,$grouping_col,$proportion)=@_;
+
+  if (!defined($in_tab)||!defined($out_tab)
+      ||!defined($out_cols)||!defined($proportion)) {
+    return undef;
+  }
+
+  if (defined($grouping_col)) {
+    spi_exec_query(<<"EOT"
+      CREATE TABLE __samp_aux_tab AS (
+        SELECT $out_cols,$grouping_col,random() AS __samp_out_label FROM $in_tab
+      ) DISTRIBUTED BY ($grouping_col);
+EOT
+    );
+    spi_exec_query(<<"EOT"
+      CREATE TABLE __samp_thresh_tab AS (
+        SELECT $grouping_col,
+               percentile_disc($proportion) WITHIN GROUP (ORDER BY
+                 __samp_out_label) AS __samp_out_label
+        FROM __samp_aux_tab GROUP BY $grouping_col
+      ) DISTRIBUTED BY ($grouping_col);
+EOT
+    );
+    spi_exec_query(<<"EOT"
+      CREATE TABLE $out_tab AS (
+        SELECT $out_cols,__samp_thresh_tab.$grouping_col
+          FROM __samp_thresh_tab,__samp_aux_tab
+          WHERE __samp_thresh_tab.$grouping_col = __samp_aux_tab.$grouping_col
+            AND __samp_thresh_tab.__samp_out_label >=
+                __samp_aux_tab.__samp_out_label
+      ) DISTRIBUTED BY ($grouping_col);
+      DROP TABLE __samp_aux_tab;
+      DROP TABLE __samp_thresh_tab;
+EOT
+    );
+  } else {
+    spi_exec_query(<<"EOT"
+      CREATE TABLE __samp_aux_tab AS (
+        SELECT $out_cols,random() AS __samp_out_label FROM $in_tab
+      ) DISTRIBUTED RANDOMLY;
+EOT
+    );
+    spi_exec_query(<<"EOT"
+      CREATE TABLE __samp_thresh_tab AS (
+        SELECT percentile_disc($proportion) WITHIN GROUP (ORDER BY
+                 __samp_out_label) AS __samp_out_label
+        FROM __samp_aux_tab
+      ) DISTRIBUTED RANDOMLY;
+EOT
+    );
+    spi_exec_query(<<"EOT"
+      CREATE TABLE $out_tab AS (
+        SELECT $out_cols
+          FROM __samp_thresh_tab,__samp_aux_tab
+          WHERE __samp_thresh_tab.__samp_out_label >=
+                __samp_aux_tab.__samp_out_label
+      ) DISTRIBUTED RANDOMLY;
+      DROP TABLE __samp_aux_tab;
+      DROP TABLE __samp_thresh_tab;
+EOT
+    );
+  }
+
+  return undef;
+$$;
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.strat_sampling()
+RETURNS VARCHAR
+IMMUTABLE
+LANGUAGE SQL
+AS
+$$
+SELECT '
+strat_sampling: A proportional stratified random sampling utility.
+
+A table is given with one or more ID columns and a grouping column.
+Also given is a proportion in the range (0,1).
+The function creates a new table with the ID and grouping columns, selecting
+from the input table only the desired proportion of the original rows
+in each group.
+
+For full usage instructions, run "PDLTOOLS_SCHEMA.strat_sampling(''usage'')".
+'::VARCHAR;
+$$;
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.strat_sampling(option VARCHAR)
+RETURNS VARCHAR
+IMMUTABLE
+LANGUAGE SQL
+AS
+$$
+SELECT CASE WHEN $1!='usage' THEN PDLTOOLS_SCHEMA.strat_sampling() ELSE '
+strat_sampling: A proportional stratified random sampling utility.
+
+A table is given with one or more ID columns and a grouping column.
+Also given is a proportion in the range (0,1).
+The function creates a new table with the ID and grouping columns, selecting
+from the input table only the desired proportion of the original rows
+in each group.
+
+Synopsis
+========
+PDLTOOLS_SCHEMA.strat_sampling(in_tab VARCHAR, out_tab VARCHAR,
+                        out_cols VARCHAR,
+                        grouping_col VARCHAR, proportion FLOAT8)
+RETURNS VOID
+
+in_tab       - Name of input table.
+out_tab      - Name of output table.
+out_cols     - Columns to reproduce in the output table. These should be given
+                as a comma-separated string. Should not include
+                the grouping column, grouping_col.
+grouping_col - Column to stratify by. Choose NULL for non-stratified.
+proportion   - The proportion to sample.
+
+Usage
+=====
+The function creates a new table, out_tab, containing all columns from
+out_cols and the column grouping_col, both copied from the input table
+in_tab, but randomly sampling only proportion of the input table rows.
+
+In each group, if the group size in the original table was n and the
+proportion is p, the number of group representatives remaining in the
+output table will be exactly ceil(p n). This is
+proportionally-consistent, exact, proportional random sampling, which ensures
+that at least one element is picked in each group.
+
+Example
+=======
+user=# CREATE TABLE base_table AS SELECT x val1, 2*x val2, (x*x)%3 stratum
+         FROM generate_series(1,20) x
+       DISTRIBUTED BY (val1);
+SELECT 20
+
+user=# SELECT * FROM base_table;
+ val1 | val2 | stratum 
+------+------+---------
+    1 |    2 |       1 
+    3 |    6 |       0 
+    5 |   10 |       1 
+    7 |   14 |       1 
+    9 |   18 |       0 
+   11 |   22 |       1 
+   13 |   26 |       1 
+   15 |   30 |       0 
+   17 |   34 |       1 
+   19 |   38 |       1 
+    2 |    4 |       1 
+    4 |    8 |       1 
+    6 |   12 |       0 
+    8 |   16 |       1 
+   10 |   20 |       1 
+   12 |   24 |       0 
+   14 |   28 |       1 
+   16 |   32 |       1 
+   18 |   36 |       0 
+   20 |   40 |       1 
+(20 rows)
+
+user=# SELECT strat_sampling(''base_table'',''sampled_table'',
+                ''val1,val2'', ''stratum'',0.5);
+ strat_sampling
+-----------------
+
+(1 row)
+
+user=# SELECT * FROM sampled_table;
+ val1 | val2 | stratum
+------+------+---------
+    1 |    2 |       1 
+    3 |    6 |       0 
+   15 |   30 |       0 
+   17 |   34 |       1 
+   19 |   38 |       1 
+    6 |   12 |       0 
+    8 |   16 |       1 
+   14 |   28 |       1 
+   16 |   32 |       1 
+   20 |   40 |       1 
+(10 rows)
+
+In this example, strat_sampling successfully selected 3 elements of the
+group of size 6 and 7 elements of the group of size 14, these being exactly
+the desired 50% from each group.
+
+Prerequisites
+=============
+Requires PL/Perl
+' END;
+$$;
+

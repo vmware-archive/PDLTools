@@ -1,0 +1,62 @@
+-- File: test_sampling.sql
+-- Unit test for stratified sampling utility.
+
+CREATE TABLE base_table AS SELECT x val1, 2*x val2, (x*x)%3 stratum
+         FROM generate_series(1,20) x
+       DISTRIBUTED BY (val1);
+
+SELECT strat_partition('base_table','labeled_table',
+                'val1,val2', 'stratum','label',ARRAY[0.1,0.4,0.01]);
+
+SELECT strat_sampling('base_table','sampled_table',
+                'val1,val2', 'stratum',0.5);
+
+SELECT strat_partition('base_table','labeled_nonstrat_table',
+                'val1,val2', NULL,'label',ARRAY[0.1,0.4,0.01]);
+
+SELECT strat_sampling('base_table','sampled_nonstrat_table',
+                'val1,val2', NULL,0.5);
+
+CREATE TABLE labeled_count AS
+  SELECT stratum,label, count(*) cnt FROM labeled_table GROUP BY stratum,label
+DISTRIBUTED RANDOMLY;
+
+CREATE TABLE sampled_count AS
+  SELECT stratum, count(*) cnt FROM sampled_table GROUP BY stratum
+DISTRIBUTED RANDOMLY;
+
+CREATE TABLE labeled_nonstrat_count AS
+  SELECT label, count(*) cnt FROM labeled_nonstrat_table GROUP BY label
+DISTRIBUTED RANDOMLY;
+
+CREATE TABLE sampled_nonstrat_count AS
+  SELECT count(*) cnt FROM sampled_nonstrat_table
+DISTRIBUTED RANDOMLY;
+
+SELECT assert(CASE
+  WHEN (stratum=0 AND label=0) THEN '1'
+  WHEN (stratum=0 AND label=1) THEN '2'
+  WHEN (stratum=0 AND label=2) THEN '1'
+  WHEN (stratum=0 AND label=3) THEN '2'
+  WHEN (stratum=1 AND label=0) THEN '2'
+  WHEN (stratum=1 AND label=1) THEN '5'
+  WHEN (stratum=1 AND label=2) THEN '1'
+  WHEN (stratum=1 AND label=3) THEN '6'
+ELSE '0' END,cnt::TEXT) FROM labeled_count;
+
+SELECT assert(CASE
+  WHEN stratum=0 THEN '3'
+  WHEN stratum=1 THEN '7'
+ELSE '0' END,cnt::TEXT) FROM sampled_count;
+
+SELECT assert(CASE
+  WHEN label=0 THEN '2'
+  WHEN label=1 THEN '8'
+  WHEN label=2 THEN '1'
+  WHEN label=3 THEN '9'
+ELSE '0' END,cnt::TEXT) FROM labeled_nonstrat_count;
+
+SELECT assert('10',cnt::TEXT) FROM sampled_nonstrat_count;
+
+DROP TABLE base_table, labeled_table, sampled_table, labeled_count,
+           sampled_count, labeled_nonstrat_count, sampled_nonstrat_count;
