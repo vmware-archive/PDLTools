@@ -39,4 +39,4 @@ ln -nsf $RPM_INSTALL_PREFIX/pdltools/Current/bin $RPM_INSTALL_PREFIX/pdltools/bi
 ln -nsf $RPM_INSTALL_PREFIX/pdltools/Current/doc $RPM_INSTALL_PREFIX/pdltools/doc
 
 %files
-%((cd "@PDLTOOLS_GPPKG_RPM_SOURCE_DIR@@CPACK_PACKAGING_INSTALL_PREFIX@" && find . \( -type f -or -type l \) | grep -E -v "^\./ports/.*" && find ./ports/greenplum \( -type f -or -type l \) | grep -E -v "^\./ports/greenplum/[[:digit:]]+\.[[:digit:]]+/.*" && find ./ports/greenplum/@GPDB_VERSION@ \( -type f -or -type l \)) | cut -c 2- | awk '{ print "\"@CPACK_PACKAGING_INSTALL_PREFIX@" $0 "\""}')
+%((cd "@PDLTOOLS_GPPKG_RPM_SOURCE_DIR@@CPACK_PACKAGING_INSTALL_PREFIX@" && find . \( -type f -or -type l \) | grep -E -v "^\./ports/.*" && find ./ports/@PORT_NAME@ \( -type f -or -type l \) | grep -E -v "^\./ports/@PORT_NAME@/[[:digit:]]+\.[[:digit:]]+/.*" && find ./ports/@PORT_NAME@/@GPDB_VERSION@ \( -type f -or -type l \)) | cut -c 2- | awk '{ print "\"@CPACK_PACKAGING_INSTALL_PREFIX@" $0 "\""}')

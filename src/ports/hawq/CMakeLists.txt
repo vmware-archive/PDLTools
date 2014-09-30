@@ -148,7 +148,7 @@ function(add_${PORT_LC}_library IN_PORT_VERSION)
   # --------------------------------------------------------------------
 
   if(NOT (${IN_PORT_VERSION} VERSION_LESS "1.2"))
-      add_gppkg(${IN_PORT_VERSION} HAWQ hawq)
+      add_gppkg(${IN_PORT_VERSION} "HAWQ" "hawq")
   endif(NOT (${IN_PORT_VERSION} VERSION_LESS "1.2"))
 endfunction(add_${PORT_LC}_library)
 
