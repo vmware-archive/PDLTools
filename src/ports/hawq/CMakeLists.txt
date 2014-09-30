@@ -148,9 +148,8 @@ function(add_${PORT_LC}_library IN_PORT_VERSION)
   # --------------------------------------------------------------------
 
   if(NOT (${IN_PORT_VERSION} VERSION_LESS "1.2"))
-      add_gppkg(${IN_PORT_VERSION} "HAWQ" "hawq" "1.5")
+      add_gppkg(${IN_PORT_VERSION} HAWQ hawq)
   endif(NOT (${IN_PORT_VERSION} VERSION_LESS "1.2"))
-
 endfunction(add_${PORT_LC}_library)
 
 # Add the current version as a target. This is a macro because it calls

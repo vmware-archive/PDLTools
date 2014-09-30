@@ -1,6 +1,6 @@
 Pkgname: pdltools
 Architecture: @CPACK_RPM_PACKAGE_ARCHITECTURE@
-Version: @PDLTOOLS_GPPKG_VERSION@-gpdb@GPDB_VERSION@
+Version: @PDLTOOLS_GPPKG_VERSION@_@GPDB_VARIANT_SHORT@@GPDB_VERSION@
 OS: rhel5
 GPDBVersion: @GPDB_VERSION@
 Description: PDL Tools is a library of reusable tools used and developed by Pivotal Data Labs.

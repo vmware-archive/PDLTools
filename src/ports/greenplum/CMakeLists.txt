@@ -143,7 +143,7 @@ function(add_${PORT_LC}_library IN_PORT_VERSION)
   #    scripts!
   # --------------------------------------------------------------------
   if(NOT (${IN_PORT_VERSION} VERSION_LESS "4.2"))
-      add_gppkg(${IN_PORT_VERSION} Greenplum gpdb 1.0)
+      add_gppkg(${IN_PORT_VERSION} Greenplum gpdb)
   endif(NOT (${IN_PORT_VERSION} VERSION_LESS "4.2"))
 
 
