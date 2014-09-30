@@ -1,0 +1,24 @@
+###
+# List of methods/modules and their dependencies:
+###
+modules:
+    - name: common
+    - name: uri_utils 
+      depends: ['common']
+    - name: edit_distance 
+      depends: ['common']
+    - name: anonymization 
+      depends: ['common']
+    - name: session
+      depends: ['common']
+#    - name: connected_components
+#      depends: ['common']
+    - name: sugar
+      depends: ['common']
+#    - name: complex
+#      depends: ['common']
+    - name: nlp
+      depends: ['common']
+#    - name: plr_placeholder
+#      depends: ['common'] 
+#  PL/R package disabled until PL/R will be part of Continuous Integration tool.
