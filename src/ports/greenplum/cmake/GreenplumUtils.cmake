@@ -24,6 +24,7 @@ function(add_gppkg GPDB_VERSION GPDB_VARIANT GPDB_VARIANT_SHORT)
     set(GPDB_VERSION \"${GPDB_VERSION}\")
     set(GPDB_VARIANT \"${GPDB_VARIANT}\")
     set(GPDB_VARIANT_SHORT \"${GPDB_VARIANT_SHORT}\")
+    string(TOLOWER \"${GPDB_VARIANT}\" PORT_NAME)
 
     configure_file(
         pdltools.spec.in

@@ -6,4 +6,6 @@
 
 greenplum:
     name:   Greenplum DB
+hawq:
+    name:   HAWQ
 

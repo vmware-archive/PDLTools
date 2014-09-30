@@ -15,9 +15,11 @@ python pdlpack.py [-s schema_name] [-S SUgAR_schema_name] [-M MADlib_schema_name
 import os, sys, datetime, getpass, re, subprocess, tempfile, glob
 import argparse, configyml
 
+platform = 'greenplum'
 pdltoolsdir = None
 pdltoolsdir_conf = None
 rev = None
+portid_list = []
 sugar_rev = None
 this = None
 py_min_ver = None
@@ -47,9 +49,14 @@ def init():
     global this, con_args, py_min_ver
     global perl_min_ver,perl_max_ver
     global plr_min_ver
+    global portid_list
     checkPythonVersion()
     pdltoolsdir = os.path.abspath(os.path.dirname(os.path.realpath(__file__)) + "/..")
     pdltoolsdir_conf = pdltoolsdir+'/config'
+    ports = configyml.get_ports(pdltoolsdir_conf)
+    for p in ports:
+        portid_list.append(p)
+
     rev = configyml.get_version(pdltoolsdir_conf)
     sugar_rev = configyml.get_sugar_version(pdltoolsdir_conf)
     this = os.path.basename(sys.argv[0])    # name of this script
@@ -154,7 +161,7 @@ def ____run_sql_query(sql, show_error):
 
 	return results
 
-def __run_sql_file(schema, sugar_schema, madlib_schema, dsdir_mod_py, module,
+def __run_sql_file(schema, platform, sugar_schema, madlib_schema, dsdir_mod_py, module,
                    sqlfile, tmpfile, logfile, pre_sql):
     """Run SQL file
             @param schema name of the target schema
@@ -182,8 +189,8 @@ def __run_sql_file(schema, sugar_schema, madlib_schema, dsdir_mod_py, module,
             f.writelines([pre_sql, '\n\n'])
             f.flush()
         # Find the pdlpack dir (platform specific or generic)
-        if os.path.isdir(pdltoolsdir + "/ports/greenplum" + "/" + dbver + "/pdlpack"):
-            pdltoolsdir_pdlpack = pdltoolsdir + "/ports/greenplum" + "/" + dbver + "/pdlpack"
+        if os.path.isdir(pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/" + dbver + "/pdlpack"):
+            pdltoolsdir_pdlpack = pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/" + dbver + "/pdlpack"
         else:
             pdltoolsdir_pdlpack = pdltoolsdir + "/pdlpack"
 
@@ -541,7 +548,7 @@ def __db_update_migration_history(schema,backup_schema,curr_rev,
                 % schema.upper(), False)
         raise Exception
 
-def __db_create_objects(schema, sugar_schema, madlib_schema,
+def __db_create_objects(schema, platform, sugar_schema, madlib_schema,
                         backup_schema, backup_sugar_schema,old_sugar):
     """
     Create PDL Tools DB objects in the schema
@@ -556,22 +563,8 @@ def __db_create_objects(schema, sugar_schema, madlib_schema,
     __db_update_migration_history(sugar_schema,backup_sugar_schema,
                                   sugar_rev,old_sugar)
 
-
     __info("> Creating objects for modules:", True)
 
-#     caseset = (set([test.strip() for test in testcase.split(',')])
-#                if testcase != "" else set())
-# 
-#     modset = {}
-#     for case in caseset:
-#         if case.find('/') > -1:
-#             [mod, algo] = case.split('/')
-#             if mod not in modset:
-#                 modset[mod] = []
-#             if algo not in modset[mod]:
-#                 modset[mod].append(algo)
-#         else:
-#             modset[case] = []
 
     # Loop through all modules/modules
     ## portspecs is a global variable
@@ -581,21 +574,17 @@ def __db_create_objects(schema, sugar_schema, madlib_schema,
         # Get the module name
         module = moduleinfo['name']
 
-        # Skip if doesn't meet specified modules
-#         if modset is not None and len(modset) > 0 and module not in modset:
-#             continue
-
         __info("> - %s" % module, True)
  
         # Find the Python module dir (platform specific or generic)
-        if os.path.isdir(pdltoolsdir + "/ports/greenplum" + "/" + dbver + "/modules/" + module):
-            dsdir_mod_py = pdltoolsdir + "/ports/greenplum" + "/" + dbver + "/modules"
+        if os.path.isdir(pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/" + dbver + "/modules/" + module):
+            dsdir_mod_py = pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/" + dbver + "/modules"
         else:
             dsdir_mod_py = pdltoolsdir + "/modules"
 
         # Find the SQL module dir (platform specific or generic)
-        if os.path.isdir(pdltoolsdir + "/ports/greenplum" + "/modules/" + module):
-            dsdir_mod_sql = pdltoolsdir + "/ports/greenplum" + "/modules"
+        if os.path.isdir(pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/modules/" + module):
+            dsdir_mod_sql = pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/modules"
         elif os.path.isdir(pdltoolsdir + "/modules/" + module):
             dsdir_mod_sql = pdltoolsdir + "/modules"
         else:
@@ -625,7 +614,7 @@ def __db_create_objects(schema, sugar_schema, madlib_schema,
             tmpfile = cur_tmpdir + '/' + os.path.basename(sqlfile) + '.tmp'
             logfile = cur_tmpdir + '/' + os.path.basename(sqlfile) + '.log'
 
-            retval = __run_sql_file(schema, sugar_schema, madlib_schema,
+            retval = __run_sql_file(schema, platform, sugar_schema, madlib_schema,
                                     dsdir_mod_py, module,
                                     sqlfile, tmpfile, logfile, None)
             # Check the exit status
@@ -787,7 +776,7 @@ def __db_drop_backup_schema(backup_schema,is_newer):
     except:
       __info("Unable to drop schema %s." % backup_schema.upper(),True)
 
-def __db_install(schema, sugar_schema, madlib_schema):
+def __db_install(schema, platform, sugar_schema, madlib_schema):
     """
     Install PDL Tools
         @param schema pdltools schema name
@@ -857,7 +846,7 @@ def __db_install(schema, sugar_schema, madlib_schema):
 
     # Create pdltools objects
     try:
-        __db_create_objects(schema, sugar_schema, madlib_schema,
+        __db_create_objects(schema, platform, sugar_schema, madlib_schema,
                             backup_schema, backup_sugar_schema,sugar_newer==3)
     except:
         __db_rollback(sugar_schema, backup_sugar_schema)
@@ -937,6 +926,11 @@ def main():
     parser.add_argument('-s', '--schema', nargs=1, dest='schema', metavar='SCHEMA', default='pdltools',
                          help="Target schema for the database objects.")
 
+    parser.add_argument('-p', '--platform', nargs=1, dest='platform',
+                        metavar='PLATFORM', choices=portid_list,
+                        help="Target database platform, current choices: " + str(portid_list))
+
+
     parser.add_argument('-S', '--sugar_schema', nargs=1, dest='sugar_schema', metavar='SUGAR_SCHEMA', default='SUgARlib',
                          help="Target schema for the SUgAR objects.")
 
@@ -953,9 +947,10 @@ def main():
                         help="Temporary directory location for installation log files.")
 
     args = parser.parse_args()
-    global verbose, testcase, tmpdir
+    global platform, verbose, testcase, tmpdir
     verbose = args.verbose
     testcase = args.testcase
+    platform = args.platform[0]
 
     try:
         tmpdir = tempfile.mkdtemp('', 'pdltools.', args.tmpdir)
@@ -1011,38 +1006,38 @@ def main():
     global dbver
     dbver = __get_dbver()
 
-    portdir = os.path.join(pdltoolsdir, "ports", 'greenplum')
+    portdir = os.path.join(pdltoolsdir, "ports", platform)
     supportedVersions = [dirItem for dirItem in os.listdir(portdir) if os.path.isdir(os.path.join(portdir, dirItem))
                              and re.match("^\d+\.\d+", dirItem)]
     if dbver is None:
        dbver = ".".join(map(str, max([map(int, versionStr.split('.')) for versionStr in supportedVersions])))
        __info("Could not parse version string reported by {DBMS}. Will "
               "default to newest supported version of {DBMS} "
-              "({version}).".format(DBMS='greenplum', version=dbver), True)
+              "({version}).".format(DBMS=platform, version=dbver), True)
     else:
-       __info("Detected %s version %s." % ('greenplum', dbver),True)
+       __info("Detected %s version %s." % (platform, dbver),True)
        if not os.path.isdir(os.path.join(portdir, dbver)):
             __error("This version is not among the %s versions for which "
                     "PDL Tools support files have been installed (%s)." %
-                   ('greenplum', ", ".join(supportedVersions)), True)
+                   (platform, ", ".join(supportedVersions)), True)
 
     global pdltoolsdir_lib
     global pdltoolsdir_conf
 
-    if os.path.isfile(pdltoolsdir + "/ports/greenplum" + "/" + dbver + "/lib/libpdltools.so"):
-        pdltoolsdir_lib = pdltoolsdir + "/ports/greenplum" + "/" + dbver + "/lib/libpdltools.so"
+    if os.path.isfile(pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/" + dbver + "/lib/libpdltools.so"):
+        pdltoolsdir_lib = pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/" + dbver + "/lib/libpdltools.so"
 
     # Get the list of modules for this port
     global portspecs
     portspecs = configyml.get_modules(pdltoolsdir_conf)
 
     if(args.command[0]=='install'):
-        install(py_min_ver, perl_min_ver, perl_max_ver, plr_min_ver, schema,
+        install(py_min_ver, perl_min_ver, perl_max_ver, plr_min_ver, schema, platform, 
                 sugar_schema, madlib_schema)
     elif(args.command[0]=='install-check'):
-        install_check(schema, sugar_schema, madlib_schema, args)
+        install_check(schema, platform, sugar_schema, madlib_schema, args)
 
-def install(py_min_ver, perl_min_ver, perl_max_ver, plr_min_ver, schema,
+def install(py_min_ver, perl_min_ver, perl_max_ver, plr_min_ver, schema, platform,
             sugar_schema, madlib_schema):
     '''
         Install pdlpack
@@ -1050,14 +1045,15 @@ def install(py_min_ver, perl_min_ver, perl_max_ver, plr_min_ver, schema,
     # Run installation
     try:
         __plpy_check(py_min_ver)
-        __plperl_check(perl_min_ver,perl_max_ver)
-        #__plr_check(plr_min_ver)
-        __db_install(schema, sugar_schema, madlib_schema)
+        '''PL/Perl installer is currently only available for GPDB, so we won't check this for HAWQ'''
+        if(platform != 'hawq'):
+            __plperl_check(perl_min_ver,perl_max_ver)
+        __db_install(schema, platform, sugar_schema, madlib_schema)
     except:
         __error("PDL Tools installation failed.", True)
 
 
-def install_check(schema, sugar_schema, madlib_schema, args):
+def install_check(schema, platform, sugar_schema, madlib_schema, args):
 	'''
 	Run install checks
 	'''
@@ -1107,14 +1103,14 @@ def install_check(schema, sugar_schema, madlib_schema, args):
 	    __make_dir(cur_tmpdir)
 
 	    # Find the Python module dir (platform specific or generic)
-	    if os.path.isdir(pdltoolsdir + "/ports/greenplum" + "/" + dbver + "/modules/" + module):
-		dsdir_mod_py = pdltoolsdir + "/ports/greenplum" + "/" + dbver + "/modules"
+	    if os.path.isdir(pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/" + dbver + "/modules/" + module):
+		dsdir_mod_py = pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/" + dbver + "/modules"
 	    else:
 		dsdir_mod_py = pdltoolsdir + "/modules"
 
 	    # Find the SQL module dir (platform specific or generic)
-	    if os.path.isdir(pdltoolsdir + "/ports/greenplum" + "/modules/" + module):
-		dsdir_mod_sql = pdltoolsdir + "/ports/greenplum" + "/modules"
+	    if os.path.isdir(pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/modules/" + module):
+		dsdir_mod_sql = pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/modules"
 	    else:
 		dsdir_mod_sql = pdltoolsdir + "/modules"
 
@@ -1144,7 +1140,7 @@ def install_check(schema, sugar_schema, madlib_schema, args):
 
 		# Run the SQL
 		run_start = datetime.datetime.now()
-		retval = __run_sql_file(schema, sugar_schema, madlib_schema,
+		retval = __run_sql_file(schema, platform, sugar_schema, madlib_schema,
                                         dsdir_mod_py, module,
 					sqlfile, tmpfile, logfile, pre_sql)
 		# Runtime evaluation

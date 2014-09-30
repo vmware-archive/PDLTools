@@ -6,11 +6,11 @@ GPDBVersion: @GPDB_VERSION@
 Description: PDL Tools is a library of reusable tools used and developed by Pivotal Data Labs.
 PostInstall:
 - Master: "echo 'Please run the following command to deploy PDL Tools';
-           echo 'usage:  pdlpack install [-s schema_name] [-S sugar_schema_name]';
+           echo 'usage:  pdlpack install [-s schema_name] -p @PORT_NAME@ [-S sugar_schema_name]';
            echo '                       [-M madlib_schema_name] -c user@host:port/database';
            echo 'Example:';
-           echo '   $ $GPHOME/pdltools/bin/pdlpack install -s pdltools -c gpadmin@mdw:5432/testdb';
-           echo '   This will install PDL Tools objects into a Greenplum database named \"testdb\"';
+           echo '   $ $GPHOME/pdltools/bin/pdlpack install -s pdltools -p @PORT_NAME@ -c gpadmin@mdw:5432/testdb';
+           echo '   This will install PDL Tools objects into a @GPDB_VARIANT@ database named \"testdb\"';
            echo '   running on server \"mdw\" on port 5432. Installer will try to login as';
            echo '   \"gpadmin\" and will prompt for password. The target schema for the main';
            echo '   library will be \"pdltools\" (specified here explicitly) and the target';
