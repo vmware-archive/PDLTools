@@ -18,6 +18,7 @@ import argparse, configyml
 platform = 'greenplum'
 pdltoolsdir = None
 pdltoolsdir_conf = None
+pdltoolsdir_lib = None
 rev = None
 portid_list = []
 sugar_rev = None
@@ -174,7 +175,7 @@ def __run_sql_file(schema, platform, sugar_schema, madlib_schema, dsdir_mod_py, 
             @param logfile name of the log file (stdout)
             @param pre_sql optional SQL to run before executing the file
     """
-    global rev
+    global rev, pdltoolsdir_lib
     # Check if the SQL file exists
     if not os.path.isfile(sqlfile):
         __error("Missing module SQL file (%s)" % sqlfile, False)
@@ -447,14 +448,15 @@ def __print_revs(rev, dbrev, sugar_dbrev, con_args, schema, sugar_schema):
     return
 
 
-def __get_dbver():
+def __get_dbver(platform):
     """ Read version number from database (of form X.Y) """
     try:
         versionStr = __run_sql_query("""SELECT pg_catalog.version()""",
                                      True)[0]['version']
- 
-        match = re.search("Greenplum[a-zA-Z\s]*(\d+\.\d+)", versionStr)
-
+        if(platform=='hawq'):
+            match = re.search("HAWQ[a-zA-Z\s]*(\d+\.\d+)", versionStr)
+        else: 
+            match = re.search("Greenplum[a-zA-Z\s]*(\d+\.\d+)", versionStr)
         return None if match is None else match.group(1)
     except:
         __error("Failed reading database version", True)
@@ -1004,7 +1006,7 @@ def main():
     con_args['password'] = c_pass
 
     global dbver
-    dbver = __get_dbver()
+    dbver = __get_dbver(platform)
 
     portdir = os.path.join(pdltoolsdir, "ports", platform)
     supportedVersions = [dirItem for dirItem in os.listdir(portdir) if os.path.isdir(os.path.join(portdir, dirItem))
@@ -1024,8 +1026,12 @@ def main():
     global pdltoolsdir_lib
     global pdltoolsdir_conf
 
+    #Adjust paths to the lib and config directories for this port (if they exist)
     if os.path.isfile(pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/" + dbver + "/lib/libpdltools.so"):
         pdltoolsdir_lib = pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/" + dbver + "/lib/libpdltools.so"
+
+    if os.path.isdir(pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/" + dbver + "/config"):
+        pdltoolsdir_conf = pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/" + dbver + "/config"
 
     # Get the list of modules for this port
     global portspecs
