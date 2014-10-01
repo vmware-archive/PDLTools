@@ -17,7 +17,9 @@ modules:
 #      depends: ['common']
 #    - name: complex
 #      depends: ['common']
-    - name: nlp
+    - name: stemming
+      depends: ['common']
+    - name: sampling
       depends: ['common']
 #    - name: plr_placeholder
 #      depends: ['common'] 
