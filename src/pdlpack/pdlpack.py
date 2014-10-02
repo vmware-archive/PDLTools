@@ -499,7 +499,7 @@ def __db_grant_usage(schema):
         __Error('Cannot grant permissions on schema. Rolling back installation...', False)
         raise Exception
 
-def __db_update_migration_history(schema,backup_schema,curr_rev,
+def __db_update_migration_history(schema, platform, backup_schema, curr_rev,
                                   old_sugar=False):
     """
     Create MigrationTable
@@ -507,28 +507,31 @@ def __db_update_migration_history(schema,backup_schema,curr_rev,
         @param backup_schema Name of backup schema
     """
     # Create MigrationHistory table
-    try:
-        __info("> Creating %s.MigrationHistory table" % schema.upper(), True)
-        sql = """CREATE TABLE %s.migrationhistory
-               (id serial, version varchar(255),
-                applied timestamp default current_timestamp);""" % schema
-        __run_sql_query(sql, True)
-    except:
-        __error("Cannot create MigrationHistory table in schema %s."
-                % schema.upper(), False)
-        raise Exception
+    # For hawq, if there is an existing pdltools schema, we will simply append to existing migration
+    # history table without recreating it.
+    if( not (platform == 'hawq' and backup_schema)):
+        try:
+            __info("> Creating %s.MigrationHistory table" % schema.upper(), True)
+            sql = """CREATE TABLE %s.migrationhistory
+                   (id serial, version varchar(255),
+                   applied timestamp default current_timestamp);""" % schema
+            __run_sql_query(sql, True)
+        except:
+            __error("Cannot create MigrationHistory table in schema %s."
+                    % schema.upper(), False)
+            raise Exception
 
     # Copy MigrationHistory table for record keeping purposes
     if old_sugar:
-      __info("> Old version of SUgAR does not have a MigrationHistory table.",verbose)
-      try:
-        sql = """INSERT INTO %s.migrationhistory (version,applied)
-                 VALUES ('0.4',NULL);""" % schema
-        __run_sql_query(sql,True)
-      except:
-        __error("Cannot insert data into MigrationHistory table.", False)
-        raise Exception
-    elif backup_schema:
+        __info("> Old version of SUgAR does not have a MigrationHistory table.",verbose)
+        try:
+            sql = """INSERT INTO %s.migrationhistory (version,applied)
+                     VALUES ('0.4',NULL);""" % schema
+            __run_sql_query(sql,True)
+        except:
+            __error("Cannot insert data into MigrationHistory table.", False)
+            raise Exception
+    elif backup_schema and platform != 'hawq':
         try:
             __info("> Saving data from %s.MigrationHistory table" % backup_schema.upper(), True)
             sql = """INSERT INTO %s.migrationhistory (version, applied)
@@ -536,8 +539,8 @@ def __db_update_migration_history(schema,backup_schema,curr_rev,
                    ORDER BY id;""" % (schema, backup_schema)
             __run_sql_query(sql, True)
         except:
-              __error("Cannot copy MigrationHistory table", False)
-              raise Exception
+            __error("Cannot copy MigrationHistory table", False)
+            raise Exception
 
     # Stamp the DB installation
     try:
@@ -560,9 +563,9 @@ def __db_create_objects(schema, platform, sugar_schema, madlib_schema,
         @param backup_sugar_schema Name of backup schema of latest SUgAR
     """
     __info("> Updating PDL Tools migration history.", True)
-    __db_update_migration_history(schema,backup_schema, rev)
+    __db_update_migration_history(schema, platform, backup_schema, rev)
     __info("> Updating SUgAR migration history.", True)
-    __db_update_migration_history(sugar_schema, backup_sugar_schema, sugar_rev, old_sugar)
+    __db_update_migration_history(sugar_schema, platform, backup_sugar_schema, sugar_rev, old_sugar)
 
     __info("> Creating objects for modules:", True)
 
@@ -703,7 +706,7 @@ def __check_prev_install(schema, platform, current_rev, is_sugar=False):
         schema_writable = False
 
     
-    """CASE #1: Target schema exists with library objects:"""
+    #CASE #1: Target schema exists with library objects:
     rc=0
     if schema_writable:
       dbrev = __get_installed_ver(schema)
@@ -747,20 +750,16 @@ def __check_prev_install(schema, platform, current_rev, is_sugar=False):
               __info("> Halting installation.",True)
               __info("Before retrying: drop %s schema OR install into a different schema." % schema.upper(), True)
           return (backup_schema, is_newer)
-
-      """CASE #2: Target schema exists w/o library objects:"""
+      #CASE #2: Target schema exists w/o library objects:
       else:
           __info("> Schema %s already exists but does not include library objects." % schema.upper(), True)
           __info("> Installation stopped.", True)
           __info("> Before retrying: drop %s schema OR install into a different schema." % schema.upper(), True)
           is_newer = 2
           return (backup_schema, is_newer)
-
-    
-    """CASE #3: Target schema does not exist:"""
+    #CASE #3: Target schema does not exist
     else:
         __info("> Schema %s does not exist." % schema.upper(), verbose)
-
     return (backup_schema, is_newer)
 
 
@@ -806,7 +805,7 @@ def __db_install(schema, platform, sugar_schema, madlib_schema):
         __info("* Both PDL Tools and SUgAR installations are already at latest version.", True)
         __info("**********************************************************************", True)
 
-    if backup_schema or backup_sugar_schema and platform = 'hawq':
+    if backup_schema or backup_sugar_schema and platform == 'hawq':
         __info("* Schema PDLTools and/or SUgAR already exists", True)
         __info("* For HAWQ, these schemas will be overwritten by the objects in this installer", True)
         __info("* It may drop any database objects (tables, views, etc.) that depend on 'pdltools or SUgAR' SCHEMA!!!!!!!!!!!!!", True)
@@ -877,10 +876,12 @@ def __db_install(schema, platform, sugar_schema, madlib_schema):
         raise Exception
 
     __info("PDL Tools %s installed successfully in %s schema." % (rev, schema.upper()), True)
-    __db_drop_backup_schema(backup_schema,pdltools_newer)
+    if(platform != 'hawq'):
+        __db_drop_backup_schema(backup_schema,pdltools_newer)
 
-    __info("SUgAR %s installed successfully in %s schema." % (sugar_rev, sugar_schema.upper()), True)
-    __db_drop_backup_schema(backup_sugar_schema,sugar_newer)
+    if(platform != 'hawq'):
+        __info("SUgAR %s installed successfully in %s schema." % (sugar_rev, sugar_schema.upper()), True)
+        __db_drop_backup_schema(backup_sugar_schema,sugar_newer)
 
     __info("Installation completed successfully.",True)
 
