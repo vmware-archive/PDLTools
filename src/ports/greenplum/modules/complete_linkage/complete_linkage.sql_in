@@ -1,0 +1,841 @@
+
+/* ----------------------------------------------------------------------- *//**
+
+@file complete_linkage.sql
+
+@brief Implementation of complete-linkage agglomerative hierarchical clustering.
+
+@author Written by Jin Yu
+@date 22 September 2014
+
+ *//* ----------------------------------------------------------------------- */
+
+
+/**
+@addtogroup complete_linkage
+
+@brief Complete-linkage agglomerative hierarchical clustering.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#complete_linkage_syntax">Syntax</a>
+<li class="level1"><a href="#complete_linkage_usage">Usage</a>
+<li class="level1"><a href="#complete_linkage_example">Example</a>
+</ul>
+</div>
+
+@about
+This function implements the commonly used complete-linkage hierarchical clustering algorithm. It constructs a hierarchical clustering tree from bottom up by merging closest clusters. Complete-linkage clustering defines the distance between two clusters as the distance between the farthest pair of data points in the two clusters (http://en.wikipedia.org/wiki/Complete-linkage_clustering). Given a hierarchical clustering tree, one can cut the tree at a certain height to obtain flat clusters of data points (cf. \ref cut_hclust_tree).
+
+@anchor complete_linkage_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION complete_linkage(dist_tab TEXT, id1 TEXT, id2 TEXT, dist TEXT, output TEXT, iter INT) 
+RETURNS VOID;
+</pre>
+
+@param dist_tab Table that contains pairwise distances of data. It is sufficient to provide only the lower or upper triangular part of the distance matrix.
+@param id1 ID column of data point 1 in \a dist_tab.
+@param id2 ID column of data point 2 in \a dist_tab.
+@param dist Column of pairwise distances.
+@param output Name of the result table, containing the constructed hierarchical clustering tree.
+@param iter Number of maximum iterations. Set to NULL to build the entire clustering tree.
+
+@sa See also \ref cut_hclust_tree for cutting the clustering tree to form flat clusters.
+
+
+@anchor complete_linkage_usage
+@usage
+@par Usage
+
+This function operates on pairwise distances between data points. They are expected to be provided in a table of the following structure:
+\n
+\code
+TABLE/VIEW input_table
+(
+    ...
+    id1 INT, -- ID of point 1
+    id2 INT, -- ID of point 2
+    dist FLOAT8, -- distance between points 1 and 2
+    ...
+);
+\endcode
+
+The distance measure is assumed to be non-negative and symmetric (but not necessarily a proper distance metric). Let \f$A\f$ denote the distance matrix with \f$A_{ij}\f$ being the distance between data points \f$i\f$ and \f$j\f$. It is sufficient to only provide non-zero entries in the lower or upper triangular part of \f$A\f$. The obtained hierarchical clustering tree is saved in a user-specified output table. The output table is to be used as input to the cut_hclust_tree_complete() function to produce flat clusters.
+
+
+@anchor complete_linkage_example
+@examp
+@par Example
+
+-# Create a test pairwise distance matrix
+\code
+DROP TABLE IF EXISTS complete_linkage_test_dist;
+CREATE TEMP TABLE complete_linkage_test_dist (id1 INT, id2 INT, dist FLOAT) DISTRIBUTED RANDOMLY;
+
+INSERT INTO complete_linkage_test_dist VALUES(1,2,0); 
+INSERT INTO complete_linkage_test_dist VALUES(1,3,1);
+INSERT INTO complete_linkage_test_dist VALUES(1,4,5);
+INSERT INTO complete_linkage_test_dist VALUES(2,3,2);
+INSERT INTO complete_linkage_test_dist VALUES(2,4,4);
+INSERT INTO complete_linkage_test_dist VALUES(3,4,3);
+\endcode
+\n
+-# Build a hierarchical clustering tree
+\code
+SELECT complete_linkage('complete_linkage_test_dist','id1','id2','dist','complete_linkage_test_output',NULL);
+\endcode
+\n
+-# Cut the clustering tree at a certain height  (2 in the example) to obtain flat clusters (see \ref cut_hclust_tree for the usage of the cut_hclust_tree() function)
+\code
+SELECT cut_hclust_tree('complete_linkage_test_dist','id1','id2','dist','complete_linkage_test_output',2,'complete_linkage_test_cluster');
+\endcode
+The \a cluster_id column in the output table \a complete_linkage_test_cluster indicates data assignment.
+\code
+SELECT * FROM complete_linkage_test_cluster ORDER BY cluster_id, member;
+
+ cluster_id | member | height | exemplar 
+------------+--------+--------+----------
+          1 |      4 |      0 |        4
+          2 |      1 |      2 |        1
+          2 |      2 |      2 |        1
+          2 |      3 |      2 |        1
+
+\endcode
+ */
+
+ 
+/**
+@addtogroup cut_hclust_tree
+
+@brief Cutting a hierarchical clustering tree at a certain height to obtain flat clusters.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#cut_hclust_tree_syntax">Syntax</a>
+<li class="level1"><a href="#cut_hclust_tree_usage">Usage</a>
+<li class="level1"><a href="#cut_hclust_tree_usage">Example</a>
+</ul>
+</div>
+
+@about
+This function cuts a hierarchical clustering tree (e.g. produced by \ref complete_linkage) at a given height to obtain flat clustering of data points. In a hierarchical clustering tree, two lower level clusters are merged to form a new cluster in the next level. The new cluster is placed at a height that equals to the distance between the merged clusters. The interpretation of the height value depends on the specific choice of clustering method. For example, cutting a complete-linkage (cf \ref complete_linkage) tree at height \f$h\f$ means that all data points in a cluster are less than \f$h\f$ apart from each other.
+
+@anchor cut_hclust_tree_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION cut_hclust_tree(dist_tab TEXT, id1 TEXT, id2 TEXT, dist TEXT, hclust_tree_tab TEXT, height FLOAT, output TEXT)
+RETURNS VOID;
+</pre>
+
+@param dist_tab Table that contains pairwise distances of data. It is sufficient to provide only the lower or upper triangular part of the distance matrix.
+@param id1 ID column of data point 1 in \a dist_tab.
+@param id2 ID column of data point 2 in \a dist_tab.
+@param dist Column of pairwise distance.
+@param hclust_tree_tab Table that contains the clustering tree e.g. produced by \ref complete_linkage.
+@param height Height to cut the tree.
+@param output Output table containing for each cluster the cluster ID, list of members (unnested), height and exemplar. An exemplar is the
+data point which has the shortest average distance to its peers in the cluster.
+
+@sa See also \ref complete_linkage for building a hierarchical clustering tree.
+
+@anchor cut_hclust_tree_usage
+@usage
+@par Usage/Example
+
+See \ref complete_linkage for a usage example.
+
+*/
+
+
+
+
+/**
+ * @brief Build a complete-linkage hierarchical clustering tree.
+ *
+ * @param dist_tab Table that contains pairwise distances of data. It suffices to 
+ * provide only the lower or upper triangular part of the distance matrix.
+ * @param id1 ID column of data point 1 in dist_tab.
+ * @param id2 ID column of data point 2 in dist_tab.
+ * @param dist Column of pairwise distances.
+ * @param output Name of the result table, containing the constructed hierarchical clustering tree.
+ * @param iter Number of maximum iterations. Set to NULL to build the entire clustering tree.
+ *
+ * Sample usage: SELECT complete_linkage('test_dist','id1','id2','dist','test_output',NULL);
+ *
+ * See also the cut_hclust_tree_complete() function for cutting the clustering tree to form flat clusters.
+ *
+ */ 
+
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.complete_linkage(dist_tab TEXT, id1 TEXT, id2 TEXT, dist TEXT, output TEXT, iter INT) 
+RETURNS VOID AS $$
+    DECLARE
+        sql TEXT; 
+        dist_mat TEXT;
+        nn_tab TEXT;
+        n INT;
+        clust_id_end INT;
+        nn RECORD;
+        max_iter INT;
+    BEGIN
+
+        -- Create a symmetric distance matrix from dist_tab to facilitate 
+        -- the process of finding the nearest neighbor.
+        EXECUTE('SELECT ''__complete_linkage_'' || PDLTOOLS_SCHEMA.random_str(10)') INTO dist_mat;
+        -- EXECUTE('DROP TABLE IF EXISTS ' || dist_mat);
+
+        sql = 'CREATE TABLE '|| dist_mat ||' AS (
+            SELECT '|| id1 ||' i,'|| id2 ||' j,'|| dist ||' dist FROM '|| dist_tab || ' 
+            UNION 
+            SELECT '|| id2 ||' i,'|| id1 ||' j,'|| dist ||' dist FROM '|| dist_tab || '
+            ) DISTRIBUTED BY (i)';
+        EXECUTE sql;
+
+        -- Analyze the distance table so that the database
+        -- can collect some statistics for query optimization.
+        EXECUTE('ANALYZE ' || dist_mat);
+        
+        -- Prepare the output table. It will be expanded as
+        -- clusters are merged.
+        -- EXECUTE('DROP TABLE IF EXISTS ' || output);
+        sql = 'CREATE TABLE '|| output ||' AS (
+            SELECT (row_number() OVER(ORDER BY id))::INT cluster_id, 
+            array[id] member, NULL::INT[] children, 0.0::FLOAT8 height, 1 active
+            FROM (
+            (SELECT DISTINCT '|| id1 ||' id FROM '|| dist_tab ||') 
+            UNION 
+            (SELECT DISTINCT '|| id2 || ' id FROM '|| dist_tab ||')
+            ) foo 
+            ) DISTRIBUTED BY (cluster_id)';
+        EXECUTE sql;
+
+        -- It's essential to analyze the output table so that the database
+        -- can collect some statistics for query optimization.
+        EXECUTE('ANALYZE ' || output);
+
+        -- Number of data to cluster.
+        EXECUTE('SELECT count(distinct i)::INT FROM ' || dist_mat) INTO n;
+
+        -- Largest cluster id so far. It will be incremented by 1 
+        -- each time when two clusters are merged.
+        clust_id_end = n;
+
+        -- Table to save nearest neighbors.
+        EXECUTE('SELECT ''__complete_linkage_'' || PDLTOOLS_SCHEMA.random_str(10)') INTO nn_tab;
+    
+        -- EXECUTE('DROP TABLE IF EXISTS ' || nn_tab);
+
+        PERFORM PDLTOOLS_SCHEMA.init_nn_table_complete(dist_mat, output, nn_tab);
+        
+        -- It's essential to analyze the nearest neighbor table so that 
+        -- the database can collect some statistics for query optimization.
+        EXECUTE('ANALYZE ' || nn_tab);
+
+        IF iter IS NULL THEN
+            max_iter = n-1;
+        ELSE
+            max_iter = iter;
+        END IF;
+
+        -- Start the main loop. 
+        FOR i IN 1..least(max_iter, (n-1)) LOOP
+            LOOP 
+                -- Find the pair of clusters with the shortest distance between them.
+                sql = 'SELECT a.*, b.active nn_active
+                    FROM ' || nn_tab || ' a JOIN '|| output ||' b
+                    ON (nn = b.cluster_id)
+                    WHERE a.height < 1e16
+                    ORDER BY a.height, b.active DESC, a.cluster_id 
+                    LIMIT 1';
+                EXECUTE sql INTO nn;
+
+                EXIT WHEN nn IS NULL; 
+                
+                EXIT WHEN nn.nn_active = 1;
+
+                -- When the found nearest neighbor (NN) is not "active" 
+                -- (i.e., already been merged to another cluster), update the 
+                -- nearest neighbor table. 
+                PERFORM PDLTOOLS_SCHEMA.update_nn_table_complete(dist_mat, output, nn_tab, nn.cluster_id);
+                
+            END LOOP;
+
+            -- Exit the main loop when all pairs of clusters with finite 
+            -- inter-cluster distances have been merged.
+            EXIT WHEN nn IS NULL;
+
+            -- "De-activate" the found NNs in the output table.
+            sql = 'UPDATE ' || output || ' 
+                SET active = 0
+                WHERE cluster_id IN (' || 
+                CAST(nn.cluster_id AS TEXT) || ',' || 
+                CAST(nn.nn AS TEXT) || ')';
+            EXECUTE sql;
+
+
+            -- Delete the found NNs from the nearest neighbor table.
+            sql = 'DELETE FROM ' || nn_tab || ' 
+                WHERE cluster_id IN (' || 
+                CAST(nn.cluster_id AS TEXT) || ',' || 
+                CAST(nn.nn AS TEXT) || ')';
+            EXECUTE sql;
+
+
+            -- Add the newly merged cluster to the output table.
+            clust_id_end = clust_id_end + 1;
+            sql = 'INSERT INTO ' || output || ' 
+                VALUES (' || CAST(clust_id_end AS TEXT) || ',
+                array[' || array_to_string(nn.member,',') || '],
+                array[' || CAST(nn.cluster_id AS TEXT) || ',' || CAST(nn.nn AS TEXT) || '],' ||
+                CAST(nn.height AS TEXT) || ',
+                1)';
+            EXECUTE sql;
+
+            -- Expand the nearest neighbor table to include the newly formed cluster.
+            IF i < (n-1) THEN
+                PERFORM PDLTOOLS_SCHEMA.expand_nn_table_complete(dist_mat, output, nn_tab, clust_id_end);
+
+            END IF;
+
+        END LOOP;
+
+        -- Clean up temporary tables.
+        EXECUTE('DROP TABLE '|| dist_mat);
+        EXECUTE('DROP TABLE '|| nn_tab);
+
+    END
+$$ LANGUAGE PLPGSQL; 
+
+/**
+ * @brief Cut the clustering tree produced by the complete_linkage() function
+ * at a certain height, and find the exemplar of each cluster. An exemplar is the
+ * data point which has the shortest average distance to its peers in the cluster.
+ *
+ * @param dist_tab Table that contains pairwise distances of data. It suffices to 
+ * provide only the lower or upper triangular part of the distance matrix.
+ * @param id1 ID column of data point 1 in dist_tab.
+ * @param id2 ID column of data point 2 in dist_tab.
+ * @param dist Column of pairwise distance.
+ * @param hclust_tree_tab Table that contains the clustering tree produced by complete_linkage().
+ * @param height Height to cut the tree.
+ * @param output Output table containing cluster IDs, members of clusters, 
+ * heights (complete-linkage distances) of clusters, and exemplars.
+ *
+ * Sample usage: SELECT PDLTOOLS_SCHEMA.cut_hclust_tree('test_dist','id1','id2','dist','test_output',0.5,'test_cluster');
+ * SELECT * FROM test_cluster ORDER BY cluster_id, member;
+ *
+ */ 
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.cut_hclust_tree(dist_tab TEXT, id1 TEXT, id2 TEXT, dist TEXT, 
+    hclust_tree_tab TEXT, height FLOAT, output TEXT)
+RETURNS VOID AS $$
+    DECLARE
+        sql TEXT;
+        temp_tab TEXT;
+    BEGIN
+        EXECUTE('SELECT ''__complete_linkage_'' || PDLTOOLS_SCHEMA.random_str(10)') INTO temp_tab;
+        -- EXECUTE('DROP TABLE IF EXISTS ' || temp_tab);
+
+        -- Cut the clustering tree at the given height.
+        sql = 'CREATE TABLE '|| temp_tab || ' AS (
+            SELECT cluster_id, unnest(member) member, height
+            FROM (
+            SELECT (row_number() OVER(ORDER BY height))::INT cluster_id, member, height 
+            FROM '|| hclust_tree_tab ||' 
+            WHERE cluster_id IN (
+            SELECT cluster_id FROM '|| hclust_tree_tab ||' WHERE height <= '|| CAST(height AS TEXT) ||'
+            EXCEPT
+            SELECT unnest(children) FROM '|| hclust_tree_tab ||' WHERE height <= '|| CAST(height AS TEXT) ||
+            ')
+            ) foo
+            ) DISTRIBUTED RANDOMLY';
+        EXECUTE sql;
+
+        -- Find the exemplar of each cluster.
+        -- EXECUTE('DROP TABLE IF EXISTS ' || output);
+        sql = 'CREATE TABLE '|| output ||' AS (
+            SELECT a.*, b.i exemplar
+            FROM '
+            || temp_tab || ' a
+            JOIN
+            (
+            SELECT cluster_id, member i
+            FROM (
+                SELECT *, row_number() OVER(PARTITION BY cluster_id ORDER BY avg_dist) rn
+                FROM (
+                    SELECT cluster_id, member, avg(coalesce(dist,0)) avg_dist
+                    FROM '
+                    || temp_tab || '
+                    LEFT JOIN
+                    (
+                    (SELECT '|| id1 || ' i, ' || id2 || ' j, ' || dist || ' dist FROM '|| dist_tab ||
+                    ' JOIN ' || temp_tab || ' a ON ('|| id1 || '= a.member) JOIN ' || temp_tab || ' b ON ('|| id2 || '= b.member)
+                    WHERE a.cluster_id = b.cluster_id)
+                    UNION
+                    (SELECT '|| id2 || ' i, ' || id1 || ' j, ' || dist || ' dist FROM '|| dist_tab ||
+                    ' JOIN ' || temp_tab || ' a ON ('|| id1 || '= a.member) JOIN ' || temp_tab || ' b ON ('|| id2 || '= b.member)
+                    WHERE a.cluster_id = b.cluster_id)
+                    ) b ON (member = i)
+                    GROUP BY cluster_id, member
+                ) foo
+            ) foo 
+            WHERE rn = 1
+            ) b USING(cluster_id)
+            ) DISTRIBUTED BY (cluster_id)';
+        EXECUTE sql;
+
+        -- Clean up the temporary table.
+        EXECUTE('DROP TABLE ' || temp_tab);
+
+    END;
+$$ LANGUAGE PLPGSQL;
+
+
+/**
+ * @brief Data type to represent the nearest neighbor of a cluster.
+*/
+DROP TYPE IF EXISTS PDLTOOLS_SCHEMA.nearest_clust_complete CASCADE; 
+CREATE TYPE PDLTOOLS_SCHEMA.nearest_clust_complete AS (
+    cluster_id INT,
+    nn INT,
+    member INT[],
+    height FLOAT8
+);
+
+
+
+/**
+ * @brief Find the nearest neighbor of a cluster based on complete-linkage distances.
+ * 
+ * @param dist_tab Table that contains pairwise distances of data. It suffices to 
+ * provide only the lower or upper triangular part of the distance matrix. 
+ * @param clust_tab Table that contains the clustering tree.
+ * @param clusta_id Array of clusters to find nearest neighbors for.
+ * @return Returns the nearest neighbors of the given set of clusters.
+ *
+ * This function is called by functions within complete_linkage().
+ *
+ */
+  
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.find_nn_complete(dist_tab TEXT, clust_tab TEXT, clusta_id INT[])
+RETURNS SETOF PDLTOOLS_SCHEMA.nearest_clust_complete AS $$
+    DECLARE 
+        sql TEXT; 
+        nn PDLTOOLS_SCHEMA.nearest_clust_complete;   
+    BEGIN      
+        sql = 'SELECT q.cluster_id, p.nn, (a.member || b.member) member, coalesce(p.height, 1e16) height
+            FROM
+            (SELECT *
+            FROM (
+            SELECT clusta cluster_id, clustb nn, height,
+            row_number() OVER(PARTITION BY clusta ORDER BY height, clustb) rn
+            FROM
+            (SELECT clusta, clustb, 
+            CASE WHEN count(j) = max(clusta_size)*max(clustb_size)
+            THEN greatest(max(dist), greatest(max(clusta_height), max(clustb_height)))
+            ELSE 1e16 END height
+            FROM ' ||
+            dist_tab || ' dist_tab JOIN 
+            (SELECT cluster_id clusta, unnest(member) clusta_member_i, member clusta_member, height clusta_height, array_upper(member,1) clusta_size
+            FROM '|| clust_tab ||' 
+            WHERE active = 1 
+            AND cluster_id IN (' || array_to_string(clusta_id, ',') || ')
+            ) a ON (i = clusta_member_i)
+            JOIN 
+            (SELECT cluster_id clustb, unnest(member) clustb_member_i, member clustb_member, height clustb_height, array_upper(member,1) clustb_size
+            FROM '|| clust_tab ||'  
+            WHERE active = 1) b
+            ON (j = clustb_member_i AND clusta <> clustb)
+            GROUP BY clusta, clustb
+            ) foo
+            ) foo
+            WHERE rn = 1
+            ) p
+            RIGHT JOIN
+            (SELECT unnest(array[' || array_to_string(clusta_id, ',') || ']) cluster_id 
+            ) q ON(p.cluster_id = q.cluster_id) 
+            LEFT JOIN '|| clust_tab ||' a ON (q.cluster_id = a.cluster_id)
+            LEFT JOIN '|| clust_tab ||' b ON (p.nn = b.cluster_id)';
+
+        FOR nn IN EXECUTE sql LOOP
+            RETURN NEXT nn;
+        END LOOP;
+
+        RETURN;
+        
+    END;   
+$$ LANGUAGE PLPGSQL;
+
+
+
+
+/**
+ * @brief Initialize the nearest neighbor table.
+ * 
+ * @param dist_tab Table that contains pairwise distances of data. It suffices to 
+ * provide only the triangular part of the distance matrix. 
+ * @param clust_tab Table that contains the clustering tree.
+ * @param nn_tab Table to save nearest neighbors.
+ *
+ * This function is called by complete_linkage().
+ *
+ */
+ 
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.init_nn_table_complete(dist_tab TEXT, clust_tab TEXT, nn_tab TEXT)
+RETURNS VOID AS $$
+
+    DECLARE 
+        sql TEXT;
+        all_clust INT[];
+        nn RECORD; 
+    BEGIN
+        sql = 'SELECT array_agg(cluster_id) FROM '|| clust_tab;
+        EXECUTE sql INTO all_clust;
+
+        -- EXECUTE('DROP TABLE IF EXISTS ' || nn_tab);
+        sql = 'CREATE TABLE ' || nn_tab || ' (
+            cluster_id INT, 
+            nn INT, 
+            member INT[], 
+            height FLOAT8
+            ) DISTRIBUTED BY (cluster_id)';
+         EXECUTE sql;
+        
+        FOR nn IN SELECT * FROM PDLTOOLS_SCHEMA.find_nn_complete(dist_tab, clust_tab, all_clust) LOOP 
+            sql = 'INSERT INTO ' || nn_tab || ' 
+                VALUES (' || 
+                CAST(nn.cluster_id AS TEXT) || ',' || 
+                CAST(nn.nn AS TEXT) || ',
+                array[' || array_to_string(nn.member,',') || '],' ||
+                CAST(nn.height AS TEXT) || ')';
+            EXECUTE sql;  
+        END LOOP; 
+    END;
+$$ LANGUAGE PLPGSQL;
+
+
+
+/**
+ * @brief Update the nearest neighbor table.
+ * 
+ * @param dist_tab Table that contains pairwise distances of data. It suffices to 
+ * provide only the lower or upper triangular part of the distance matrix. 
+ * @param clust_tab Table that contains the clustering tree.
+ * @param nn_tab Table to save nearest neighbors.
+ * @param clust_id ID of the cluster that requires an updated nearest neighbor.
+ *
+ * This function is called by complete_linkage().
+ *
+ */
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.update_nn_table_complete(dist_tab TEXT, clust_tab TEXT, nn_tab TEXT, clust_id INT)
+RETURNS VOID AS $$
+
+    DECLARE 
+        sql TEXT;
+        nn RECORD;     
+    BEGIN       
+                
+        SELECT * FROM PDLTOOLS_SCHEMA.find_nn_complete(dist_tab, clust_tab, array[clust_id]) INTO nn;     
+          
+        sql = 'UPDATE ' || nn_tab || '
+            SET nn = '|| CAST(nn.nn AS TEXT) ||',
+            member = array[' || array_to_string(nn.member,',') || '],
+            height = ' || CAST(nn.height AS TEXT) || '
+            WHERE cluster_id = ' || CAST(nn.cluster_id AS TEXT);
+        EXECUTE sql;  
+ 
+    END;
+$$ LANGUAGE PLPGSQL;
+
+
+
+/**
+ * @brief Expand the nearest neighbor table to include the newly formed cluster.
+ * 
+ * @param dist_tab Table that contains pairwise distances of data. It suffices to 
+ * provide only the lower or upper triangular part of the distance matrix. 
+ * @param clust_tab Table that contains the clustering tree.
+ * @param nn_tab Table to save nearest neighbors.
+ * @param new_clust_id ID of the new cluster.
+ *
+ * This function is called by complete_linkage().
+ *
+ */
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.expand_nn_table_complete(dist_tab TEXT, clust_tab TEXT, nn_tab TEXT, new_clust_id INT)
+RETURNS VOID AS $$
+
+    DECLARE 
+        sql TEXT;
+        nn RECORD;     
+    BEGIN       
+
+        SELECT * FROM PDLTOOLS_SCHEMA.find_nn_complete(dist_tab, clust_tab, array[new_clust_id]) INTO nn;     
+
+        IF nn.nn IS NOT NULL THEN  
+            sql = 'INSERT INTO ' || nn_tab || ' 
+                VALUES (' || 
+                CAST(nn.cluster_id AS TEXT) || ',' || 
+                CAST(nn.nn AS TEXT) || ',
+                array[' || array_to_string(nn.member,',') || '],' ||
+                CAST(nn.height AS TEXT) || ')';
+            EXECUTE sql;  
+        END IF;
+ 
+    END;
+$$ LANGUAGE PLPGSQL;
+
+
+
+
+/**
+ * @brief Create a random string (e.g. used as temporary table names).
+ *
+ * @param len Length of the random string.
+ * @return Returns a random string of the given length.
+ *
+ * Sample usage: SELECT random_str(6);
+ *
+ */ 
+ 
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.random_str(len INT)
+RETURNS TEXT AS
+$$
+    SELECT string_agg(a)
+    FROM (
+        SELECT chr(ascii('a') + (random() * 25)::integer) a
+        FROM generate_series(1,$1)
+    ) foo
+$$ LANGUAGE SQL;
+
+
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.complete_linkage() 
+RETURNS TEXT AS $$
+SELECT '
+complete_linkage: Complete-linkage agglomerative hierarchical clustering.
+
+This function implements the commonly used complete-linkage hierarchical
+clustering algorithm.  It constructs a hierarchical clustering tree from
+bottom up by merging closest clusters. Complete-linkage clustering defines the
+distance between two clusters as the distance between the farthest pair of
+data points in the two clusters. Given a hierarchical clustering tree, one can
+cut the tree at a certain height to obtain flat clusters of data points
+(cf. cut_hclust_tree).
+
+For full usage instructions, run "PDLTOOLS_SCHEMA.complete_linkage(''usage'')".
+'::TEXT;
+$$ LANGUAGE SQL;
+
+
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.complete_linkage(TEXT) 
+RETURNS TEXT AS $$
+
+SELECT CASE WHEN $1!='usage' THEN PDLTOOLS_SCHEMA.complete_linkage() ELSE 
+'complete_linkage: Complete-linkage agglomerative hierarchical clustering.
+
+This function implements the commonly used complete-linkage hierarchical
+clustering algorithm. It constructs a hierarchical clustering tree from bottom
+up by merging closest clusters. Complete-linkage clustering defines the
+distance between two clusters as the distance between the farthest pair of
+data points in the two clusters. Given a hierarchical clustering tree, one can
+cut the tree at a certain height to obtain flat clusters (cf. cut_hclust_tree)
+
+Syntax
+======
+
+FUNCTION PDLTOOLS_SCHEMA.complete_linkage(dist_tab TEXT, id1 TEXT, id2 TEXT,
+                                          dist TEXT, output TEXT, iter INT) 
+RETURNS VOID;
+
+dist_tab - Table that contains pairwise distances of data. It suffices to
+           provide only non-zero elements in the lower or upper triangular
+           part of the distance matrix.
+id1      - ID column of data point 1 in dist_tab.
+id2      - ID column of data point 2 in dist_tab.
+dist     - Column of pairwise distances.
+output   - Name of the result table, containing the constructed hierarchical
+           clustering tree.
+iter     - Number of maximum iterations. Set to NULL to build the entire
+           clustering tree.
+
+See also cut_hclust_tree for cutting the clustering tree to form flat
+clusters.
+
+Usage
+=====
+
+This function operates on pairwise distances between data points. They are
+expected to be provided in a table of the following structure:
+
+TABLE/VIEW input_table
+(
+    ...
+    id1 INT, -- ID of point 1
+    id2 INT, -- ID of point 2
+    dist FLOAT8, -- distance between points 1 and 2
+    ...
+);
+
+The distance measure is assumed to be non-negative and symmetric (but not
+necessarily a proper distance metric). Let A denote the distance matrix with
+A_ij being the distance between data points i and j. It is sufficient to only
+provide non-zero entries in the lower or upper triangular part of A. The
+obtained hierarchical clustering tree is saved in a user-specified output
+table. The output table is to be used as input to the cut_hclust_tree()
+function to produce flat clusters.
+
+
+Example
+=======
+
+1. Create a test pairwise distance matrix
+
+CREATE TEMP TABLE complete_linkage_test_dist (id1 INT, id2 INT, dist FLOAT)
+DISTRIBUTED RANDOMLY;
+
+INSERT INTO complete_linkage_test_dist VALUES(1,2,0); 
+INSERT INTO complete_linkage_test_dist VALUES(1,3,1);
+INSERT INTO complete_linkage_test_dist VALUES(1,4,5);
+INSERT INTO complete_linkage_test_dist VALUES(2,3,2);
+INSERT INTO complete_linkage_test_dist VALUES(2,4,4);
+INSERT INTO complete_linkage_test_dist VALUES(3,4,3);
+
+
+2. Build a hierarchical clustering tree
+SELECT PDLTOOLS_SCHEMA.complete_linkage(''complete_linkage_test_dist'',
+             ''id1'',''id2'',''dist'',''complete_linkage_test_output'',NULL);
+
+3. Cut the clustering tree at a certain height  (2 in the example) to obtain
+flat clusters.
+SELECT PDLTOOLS_SCHEMA.cut_hclust_tree(''complete_linkage_test_dist'',''id1'',
+             ''id2'',''dist'',''complete_linkage_test_output'',2,
+             ''complete_linkage_test_cluster'');
+
+The cluster_id column in the output table complete_linkage_test_cluster
+indicates data assignment.
+
+SELECT * from test_cluster ORDER BY cluster_id, member;
+
+ cluster_id | member | height | exemplar 
+------------+--------+--------+----------
+          1 |      4 |      0 |        4
+          2 |      1 |      2 |        1
+          2 |      2 |      2 |        1
+          2 |      3 |      2 |        1
+
+
+
+' END;
+    
+$$ LANGUAGE SQL;
+
+
+
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.cut_hclust_tree() 
+RETURNS TEXT AS $$
+SELECT '
+cut_hclust_tree: Cut a hierarchical clustering tree at a certain height to
+obtain flat clusters.
+
+This function cuts a hierarchical clustering tree (e.g. produced by
+complete_linkage) at a given height to obtain flat clustering of data points.
+In a hierarchical clustering tree, two lower level clusters are merged to form
+a new cluster in the next level. The new cluster is placed at a height that
+equals to the distance between the merged clusters. The interpretation of the
+height value depends on the specific choice of clustering method. For example,
+cutting a complete-linkage tree at height h means that all data points in a
+cluster are less than h apart from each other. See also complete_linkage for
+building a complete-linkage hierarchical clustering tree.
+
+For full usage instructions, run "PDLTOOLS_SCHEMA.cut_hclust_tree(''usage'')".
+'::TEXT;
+$$ LANGUAGE SQL;
+
+
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.cut_hclust_tree(TEXT) 
+RETURNS TEXT AS $$
+SELECT CASE WHEN $1!='usage' THEN PDLTOOLS_SCHEMA.cut_hclust_tree() ELSE '
+cut_hclust_tree: Cut a hierarchical clustering tree at a certain height to
+obtain flat clusters.
+
+This function cuts a hierarchical clustering tree (e.g. produced by
+complete_linkage) at a given height to obtain flat clustering of data points.
+In a hierarchical clustering tree, two lower level clusters are merged to form
+a new cluster in the next level. The new cluster is placed at a height that
+equals to the distance between the merged clusters. The interpretation of the
+height value depends on the specific choice of clustering method. For example,
+cutting a complete-linkage tree at height h means that all data points in a
+cluster are less than h apart from each other. See also complete_linkage for
+building a hierarchical clustering tree.
+
+Syntax
+======
+FUNCTION PDLTOOLS_SCHEMA.cut_hclust_tree(dist_tab TEXT, id1 TEXT, id2 TEXT,
+    dist TEXT, hclust_tree_tab TEXT, height FLOAT, output TEXT)
+RETURNS VOID;
+
+
+dist_tab        - Table that contains pairwise distances of data. It suffices
+                  to provide only the lower or upper triangular part of the
+                  distance matrix.
+id1             - ID column of data point 1 in dist_tab.
+id2             - ID column of data point 2 in dist_tab.
+dist            - Column of pairwise distance.
+hclust_tree_tab - Table that contains the clustering tree e.g. produced by
+                  complete_linkage.
+height          - Height to cut the tree.
+output          - Output table containing for each cluster the cluster ID,
+                  list of members (unnested), height and exemplar. An exemplar
+                  is the data point which has the shortest average distance to
+                  its peers in the cluster.
+
+Usage
+=====
+
+The following usage example shows how to build and cut a complete-linkage
+clustering tree to obtain flat clustering of data points.
+
+1. Create a test pairwise distance matrix
+
+CREATE TEMP TABLE complete_linkage_test_dist (id1 INT, id2 INT, dist FLOAT)
+DISTRIBUTED RANDOMLY;
+
+INSERT INTO complete_linkage_test_dist VALUES(1,2,0); 
+INSERT INTO complete_linkage_test_dist VALUES(1,3,1);
+INSERT INTO complete_linkage_test_dist VALUES(1,4,5);
+INSERT INTO complete_linkage_test_dist VALUES(2,3,2);
+INSERT INTO complete_linkage_test_dist VALUES(2,4,4);
+INSERT INTO complete_linkage_test_dist VALUES(3,4,3);
+
+
+
+2. Build a hierarchical clustering tree
+SELECT PDLTOOLS_SCHEMA.complete_linkage(''complete_linkage_test_dist'',
+              ''id1'',''id2'',''dist'',''complete_linkage_test_output'',NULL);
+
+3. Cut the clustering tree at a certain height  (2 in the example) to obtain
+flat clusters.
+SELECT PDLTOOLS_SCHEMA.cut_hclust_tree(''complete_linkage_test_dist'',''id1'',
+              ''id2'',''dist'',''complete_linkage_test_output'',2,
+              ''complete_linkage_test_cluster'');
+
+The cluster_id column in the output table complete_linkage_test_cluster
+indicates data assignment.
+
+SELECT * from test_cluster ORDER BY cluster_id, member;
+
+ cluster_id | member | height | exemplar 
+------------+--------+--------+----------
+          1 |      4 |      0 |        4
+          2 |      1 |      2 |        1
+          2 |      2 |      2 |        1
+          2 |      3 |      2 |        1
+
+'END;
+$$ LANGUAGE SQL;
+
