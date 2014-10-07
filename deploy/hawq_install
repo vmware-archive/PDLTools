@@ -22,7 +22,7 @@ def install_pdltools(pdltools_rpm, hostfile):
 
     hosts = [h for h in open(hostfile).read().split('\n') if h]
     ssh_rpmq = """ssh {host} rpm -q {rpm_pkg_name} --dbpath {rpm_db}"""
-    ssh_uninstall = """ssh {host} rpm -ev --allmatches --dbpath {rpm_db}"""
+    ssh_uninstall = """ssh {host} rpm -ev --allmatches {rpm_pkg_name} --dbpath {rpm_db}"""
 
     #1) Check and remove any existing installations of the same version of the package
     for host in hosts:
@@ -30,7 +30,7 @@ def install_pdltools(pdltools_rpm, hostfile):
         rc = os.system(ssh_rpmq.format(host=host, rpm_pkg_name=rpm_pkg_name, rpm_db=rpm_db))
         if(not rc):
             print 'Removing existing installation of {package_name} on {host}'.format(host=host, package_name=package_name)
-            rc = os.system(ssh_uninstall.format(host=host, rpm_db=rpm_db))
+            rc = os.system(ssh_uninstall.format(host=host, rpm_db=rpm_db, rpm_pkg_name=rpm_pkg_name))
             if(rc !=0):
                 print 'Error uninstalling the rpm on {host}'.format(host=host)
                 return
