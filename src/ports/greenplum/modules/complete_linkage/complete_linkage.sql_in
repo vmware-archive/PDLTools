@@ -12,7 +12,7 @@
 
 
 /**
-@addtogroup complete_linkage
+@addtogroup grp_complete_linkage
 
 @brief Complete-linkage agglomerative hierarchical clustering.
 
@@ -25,7 +25,7 @@
 </div>
 
 @about
-This function implements the commonly used complete-linkage hierarchical clustering algorithm. It constructs a hierarchical clustering tree from bottom up by merging closest clusters. Complete-linkage clustering defines the distance between two clusters as the distance between the farthest pair of data points in the two clusters (http://en.wikipedia.org/wiki/Complete-linkage_clustering). Given a hierarchical clustering tree, one can cut the tree at a certain height to obtain flat clusters of data points (cf. \ref cut_hclust_tree).
+This function implements the commonly used complete-linkage hierarchical clustering algorithm. It constructs a hierarchical clustering tree from bottom up by merging closest clusters. Complete-linkage clustering defines the distance between two clusters as the distance between the farthest pair of data points in the two clusters (http://en.wikipedia.org/wiki/Complete-linkage_clustering). Given a hierarchical clustering tree, one can cut the tree at a certain height to obtain flat clusters of data points (cf. \ref grp_cut_hclust_tree).
 
 @anchor complete_linkage_syntax
 @par Syntax
@@ -41,12 +41,11 @@ RETURNS VOID;
 @param output Name of the result table, containing the constructed hierarchical clustering tree.
 @param iter Number of maximum iterations. Set to NULL to build the entire clustering tree.
 
-@sa See also \ref cut_hclust_tree for cutting the clustering tree to form flat clusters.
+@sa grp_cut_hclust_tree (for cutting the clustering tree to form flat clusters).
 
 
 @anchor complete_linkage_usage
 @usage
-@par Usage
 
 This function operates on pairwise distances between data points. They are expected to be provided in a table of the following structure:
 \n
@@ -66,11 +65,9 @@ The distance measure is assumed to be non-negative and symmetric (but not necess
 
 @anchor complete_linkage_example
 @examp
-@par Example
 
 -# Create a test pairwise distance matrix
 \code
-DROP TABLE IF EXISTS complete_linkage_test_dist;
 CREATE TEMP TABLE complete_linkage_test_dist (id1 INT, id2 INT, dist FLOAT) DISTRIBUTED RANDOMLY;
 
 INSERT INTO complete_linkage_test_dist VALUES(1,2,0); 
@@ -86,7 +83,7 @@ INSERT INTO complete_linkage_test_dist VALUES(3,4,3);
 SELECT complete_linkage('complete_linkage_test_dist','id1','id2','dist','complete_linkage_test_output',NULL);
 \endcode
 \n
--# Cut the clustering tree at a certain height  (2 in the example) to obtain flat clusters (see \ref cut_hclust_tree for the usage of the cut_hclust_tree() function)
+-# Cut the clustering tree at a certain height  (2 in the example) to obtain flat clusters (see \ref grp_cut_hclust_tree for the usage of the cut_hclust_tree() function)
 \code
 SELECT cut_hclust_tree('complete_linkage_test_dist','id1','id2','dist','complete_linkage_test_output',2,'complete_linkage_test_cluster');
 \endcode
@@ -106,20 +103,19 @@ SELECT * FROM complete_linkage_test_cluster ORDER BY cluster_id, member;
 
  
 /**
-@addtogroup cut_hclust_tree
+@addtogroup grp_cut_hclust_tree
 
 @brief Cutting a hierarchical clustering tree at a certain height to obtain flat clusters.
 
 <div class="toc"><b>Contents</b>
 <ul>
 <li class="level1"><a href="#cut_hclust_tree_syntax">Syntax</a>
-<li class="level1"><a href="#cut_hclust_tree_usage">Usage</a>
-<li class="level1"><a href="#cut_hclust_tree_usage">Example</a>
+<li class="level1"><a href="#cut_hclust_tree_example">Example</a>
 </ul>
 </div>
 
 @about
-This function cuts a hierarchical clustering tree (e.g. produced by \ref complete_linkage) at a given height to obtain flat clustering of data points. In a hierarchical clustering tree, two lower level clusters are merged to form a new cluster in the next level. The new cluster is placed at a height that equals to the distance between the merged clusters. The interpretation of the height value depends on the specific choice of clustering method. For example, cutting a complete-linkage (cf \ref complete_linkage) tree at height \f$h\f$ means that all data points in a cluster are less than \f$h\f$ apart from each other.
+This function cuts a hierarchical clustering tree (e.g. produced by \ref grp_complete_linkage) at a given height to obtain flat clustering of data points. In a hierarchical clustering tree, two lower level clusters are merged to form a new cluster in the next level. The new cluster is placed at a height that equals to the distance between the merged clusters. The interpretation of the height value depends on the specific choice of clustering method. For example, cutting a complete-linkage (cf \ref grp_complete_linkage) tree at height \f$h\f$ means that all data points in a cluster are less than \f$h\f$ apart from each other.
 
 @anchor cut_hclust_tree_syntax
 @par Syntax
@@ -132,18 +128,17 @@ RETURNS VOID;
 @param id1 ID column of data point 1 in \a dist_tab.
 @param id2 ID column of data point 2 in \a dist_tab.
 @param dist Column of pairwise distance.
-@param hclust_tree_tab Table that contains the clustering tree e.g. produced by \ref complete_linkage.
+@param hclust_tree_tab Table that contains the clustering tree e.g. produced by \ref grp_complete_linkage.
 @param height Height to cut the tree.
 @param output Output table containing for each cluster the cluster ID, list of members (unnested), height and exemplar. An exemplar is the
 data point which has the shortest average distance to its peers in the cluster.
 
-@sa See also \ref complete_linkage for building a hierarchical clustering tree.
+@sa \ref grp_complete_linkage (for building a hierarchical clustering tree).
 
-@anchor cut_hclust_tree_usage
-@usage
-@par Usage/Example
+@anchor cut_hclust_tree_example
+@examp
 
-See \ref complete_linkage for a usage example.
+See \ref grp_complete_linkage for a usage example.
 
 */
 
@@ -182,7 +177,7 @@ RETURNS VOID AS $$
 
         -- Create a symmetric distance matrix from dist_tab to facilitate 
         -- the process of finding the nearest neighbor.
-        EXECUTE('SELECT ''__complete_linkage_'' || PDLTOOLS_SCHEMA.random_str(10)') INTO dist_mat;
+        EXECUTE('SELECT ''__complete_linkage_'' || PDLTOOLS_SCHEMA.__clink_random_str(10)') INTO dist_mat;
         -- EXECUTE('DROP TABLE IF EXISTS ' || dist_mat);
 
         sql = 'CREATE TABLE '|| dist_mat ||' AS (
@@ -222,11 +217,11 @@ RETURNS VOID AS $$
         clust_id_end = n;
 
         -- Table to save nearest neighbors.
-        EXECUTE('SELECT ''__complete_linkage_'' || PDLTOOLS_SCHEMA.random_str(10)') INTO nn_tab;
+        EXECUTE('SELECT ''__complete_linkage_'' || PDLTOOLS_SCHEMA.__clink_random_str(10)') INTO nn_tab;
     
         -- EXECUTE('DROP TABLE IF EXISTS ' || nn_tab);
 
-        PERFORM PDLTOOLS_SCHEMA.init_nn_table_complete(dist_mat, output, nn_tab);
+        PERFORM PDLTOOLS_SCHEMA.__clink_init_nn_table_complete(dist_mat, output, nn_tab);
         
         -- It's essential to analyze the nearest neighbor table so that 
         -- the database can collect some statistics for query optimization.
@@ -257,7 +252,7 @@ RETURNS VOID AS $$
                 -- When the found nearest neighbor (NN) is not "active" 
                 -- (i.e., already been merged to another cluster), update the 
                 -- nearest neighbor table. 
-                PERFORM PDLTOOLS_SCHEMA.update_nn_table_complete(dist_mat, output, nn_tab, nn.cluster_id);
+                PERFORM PDLTOOLS_SCHEMA.__clink_update_nn_table_complete(dist_mat, output, nn_tab, nn.cluster_id);
                 
             END LOOP;
 
@@ -294,7 +289,7 @@ RETURNS VOID AS $$
 
             -- Expand the nearest neighbor table to include the newly formed cluster.
             IF i < (n-1) THEN
-                PERFORM PDLTOOLS_SCHEMA.expand_nn_table_complete(dist_mat, output, nn_tab, clust_id_end);
+                PERFORM PDLTOOLS_SCHEMA.__clink_expand_nn_table_complete(dist_mat, output, nn_tab, clust_id_end);
 
             END IF;
 
@@ -334,7 +329,7 @@ RETURNS VOID AS $$
         sql TEXT;
         temp_tab TEXT;
     BEGIN
-        EXECUTE('SELECT ''__complete_linkage_'' || PDLTOOLS_SCHEMA.random_str(10)') INTO temp_tab;
+        EXECUTE('SELECT ''__complete_linkage_'' || PDLTOOLS_SCHEMA.__clink_random_str(10)') INTO temp_tab;
         -- EXECUTE('DROP TABLE IF EXISTS ' || temp_tab);
 
         -- Cut the clustering tree at the given height.
@@ -393,10 +388,11 @@ $$ LANGUAGE PLPGSQL;
 
 
 /**
+ * @internal
  * @brief Data type to represent the nearest neighbor of a cluster.
 */
-DROP TYPE IF EXISTS PDLTOOLS_SCHEMA.nearest_clust_complete CASCADE; 
-CREATE TYPE PDLTOOLS_SCHEMA.nearest_clust_complete AS (
+DROP TYPE IF EXISTS PDLTOOLS_SCHEMA.__clink_nearest_clust_complete CASCADE; 
+CREATE TYPE PDLTOOLS_SCHEMA.__clink_nearest_clust_complete AS (
     cluster_id INT,
     nn INT,
     member INT[],
@@ -406,6 +402,7 @@ CREATE TYPE PDLTOOLS_SCHEMA.nearest_clust_complete AS (
 
 
 /**
+ * @internal
  * @brief Find the nearest neighbor of a cluster based on complete-linkage distances.
  * 
  * @param dist_tab Table that contains pairwise distances of data. It suffices to 
@@ -418,11 +415,11 @@ CREATE TYPE PDLTOOLS_SCHEMA.nearest_clust_complete AS (
  *
  */
   
-CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.find_nn_complete(dist_tab TEXT, clust_tab TEXT, clusta_id INT[])
-RETURNS SETOF PDLTOOLS_SCHEMA.nearest_clust_complete AS $$
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__clink_find_nn_complete(dist_tab TEXT, clust_tab TEXT, clusta_id INT[])
+RETURNS SETOF PDLTOOLS_SCHEMA.__clink_nearest_clust_complete AS $$
     DECLARE 
         sql TEXT; 
-        nn PDLTOOLS_SCHEMA.nearest_clust_complete;   
+        nn PDLTOOLS_SCHEMA.__clink_nearest_clust_complete;   
     BEGIN      
         sql = 'SELECT q.cluster_id, p.nn, (a.member || b.member) member, coalesce(p.height, 1e16) height
             FROM
@@ -471,6 +468,7 @@ $$ LANGUAGE PLPGSQL;
 
 
 /**
+ * @internal
  * @brief Initialize the nearest neighbor table.
  * 
  * @param dist_tab Table that contains pairwise distances of data. It suffices to 
@@ -482,7 +480,7 @@ $$ LANGUAGE PLPGSQL;
  *
  */
  
-CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.init_nn_table_complete(dist_tab TEXT, clust_tab TEXT, nn_tab TEXT)
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__clink_init_nn_table_complete(dist_tab TEXT, clust_tab TEXT, nn_tab TEXT)
 RETURNS VOID AS $$
 
     DECLARE 
@@ -502,7 +500,7 @@ RETURNS VOID AS $$
             ) DISTRIBUTED BY (cluster_id)';
          EXECUTE sql;
         
-        FOR nn IN SELECT * FROM PDLTOOLS_SCHEMA.find_nn_complete(dist_tab, clust_tab, all_clust) LOOP 
+        FOR nn IN SELECT * FROM PDLTOOLS_SCHEMA.__clink_find_nn_complete(dist_tab, clust_tab, all_clust) LOOP 
             sql = 'INSERT INTO ' || nn_tab || ' 
                 VALUES (' || 
                 CAST(nn.cluster_id AS TEXT) || ',' || 
@@ -517,6 +515,7 @@ $$ LANGUAGE PLPGSQL;
 
 
 /**
+ * @internal
  * @brief Update the nearest neighbor table.
  * 
  * @param dist_tab Table that contains pairwise distances of data. It suffices to 
@@ -529,7 +528,7 @@ $$ LANGUAGE PLPGSQL;
  *
  */
 
-CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.update_nn_table_complete(dist_tab TEXT, clust_tab TEXT, nn_tab TEXT, clust_id INT)
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__clink_update_nn_table_complete(dist_tab TEXT, clust_tab TEXT, nn_tab TEXT, clust_id INT)
 RETURNS VOID AS $$
 
     DECLARE 
@@ -537,7 +536,7 @@ RETURNS VOID AS $$
         nn RECORD;     
     BEGIN       
                 
-        SELECT * FROM PDLTOOLS_SCHEMA.find_nn_complete(dist_tab, clust_tab, array[clust_id]) INTO nn;     
+        SELECT * FROM PDLTOOLS_SCHEMA.__clink_find_nn_complete(dist_tab, clust_tab, array[clust_id]) INTO nn;     
           
         sql = 'UPDATE ' || nn_tab || '
             SET nn = '|| CAST(nn.nn AS TEXT) ||',
@@ -552,6 +551,7 @@ $$ LANGUAGE PLPGSQL;
 
 
 /**
+ * @internal
  * @brief Expand the nearest neighbor table to include the newly formed cluster.
  * 
  * @param dist_tab Table that contains pairwise distances of data. It suffices to 
@@ -563,7 +563,7 @@ $$ LANGUAGE PLPGSQL;
  * This function is called by complete_linkage().
  *
  */
-CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.expand_nn_table_complete(dist_tab TEXT, clust_tab TEXT, nn_tab TEXT, new_clust_id INT)
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__clink_expand_nn_table_complete(dist_tab TEXT, clust_tab TEXT, nn_tab TEXT, new_clust_id INT)
 RETURNS VOID AS $$
 
     DECLARE 
@@ -571,7 +571,7 @@ RETURNS VOID AS $$
         nn RECORD;     
     BEGIN       
 
-        SELECT * FROM PDLTOOLS_SCHEMA.find_nn_complete(dist_tab, clust_tab, array[new_clust_id]) INTO nn;     
+        SELECT * FROM PDLTOOLS_SCHEMA.__clink_find_nn_complete(dist_tab, clust_tab, array[new_clust_id]) INTO nn;     
 
         IF nn.nn IS NOT NULL THEN  
             sql = 'INSERT INTO ' || nn_tab || ' 
@@ -590,16 +590,17 @@ $$ LANGUAGE PLPGSQL;
 
 
 /**
+ * @internal
  * @brief Create a random string (e.g. used as temporary table names).
  *
  * @param len Length of the random string.
  * @return Returns a random string of the given length.
  *
- * Sample usage: SELECT random_str(6);
+ * Sample usage: SELECT __clink_random_str(6);
  *
  */ 
  
-CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.random_str(len INT)
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__clink_random_str(len INT)
 RETURNS TEXT AS
 $$
     SELECT string_agg(a)
