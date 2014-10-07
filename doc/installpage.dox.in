@@ -226,6 +226,7 @@ DROP SCHEMA IF EXISTS pdltools CASCADE;
 DROP SCHEMA IF EXISTS sugarlib CASCADE;
 </pre>
 
+____
 
 ## Installing PDLTools on HAWQ
 
@@ -269,7 +270,9 @@ Successfully installed PDLTools on all nodes under /usr/local/hawq/./pdltools
 
 Once the rpm has been installed, you can then install the PDLTools schema in your target database as listed in the sections above. Here is a sample installation log and install-check log
 
-### Installing PDLTools for HAWQ in a target database.
+### Installing PDLTools for HAWQ in a target database
+
+
 @verbatim
 [gpadmin@mdw]$ /usr/local/hawq/pdltools/bin/pdlpack install -s pdltools -p hawq -c gpadmin@mdw:5432/testdb
 Password for user gpadmin: 
@@ -306,6 +309,8 @@ pdlpack.py : INFO : Installation completed successfully.
 @endverbatim	 
 
 ### Install-check PDLTools for HAWQ 
+
+
 @verbatim
 [gpadmin@mdw]$ /usr/local/hawq/pdltools/bin/pdlpack install-check -s pdltools -p hawq -c gpadmin@mdw:5432/testdb
 Password for user gpadmin: 
