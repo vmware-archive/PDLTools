@@ -11,7 +11,7 @@ def install_pdltools(pdltools_rpm, hostfile):
     """
        Simple python wrapper that installs the RPM 
     """
-    gphome = os.environ['GPHOME']
+    gphome = os.environ['GPHOME'] if os.environ.has_key('GPHOME') else None
     if(not gphome):
         print '$GPHOME not found. Please source $GPHOME/greenplum_path.sh and retry'
         return
