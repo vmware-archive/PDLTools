@@ -226,6 +226,101 @@ DROP SCHEMA IF EXISTS pdltools CASCADE;
 DROP SCHEMA IF EXISTS sugarlib CASCADE;
 </pre>
 
+____
+
+## Installing PDLTools on HAWQ
+
+PDLTools is available as a gppkg for HAWQ 1.3 and as an rpm for HAWQ 1.2 (HAWQ 1.2 doesn't support gppkgs). Currently only a subset of the modules supported on GPDB are available for PDLTools on HAWQ.
+These modules are stemming, uri_utils, anonymization and edit_distance. The complex numbers modules is unavailable due to lack of support for  User Defined Types (UDTs) yet on HAWQ. The SUgAR, sampling and connected components modules are also unsupported because of the unavailability of a PL/Perl gppkg for HAWQ. We expect these to be supported as soon as PL/Perl is made available.
+
+The installation instructions for HAWQ 1.3 are similar to those for GPDB.
+We've provided a simple Python based installer for PDLTools for HAWQ 1.2. You can download the install here: <A HREF="scripts/hawq_install">PDLTools HAWQ Install Script</A>.
+
+You can install PDLTools on HAWQ 1.2 then like so:
+<pre class="example">
+./hawq_install pdltools-1.3-Linux.rpm $HOME/hostfile
+</pre>
+
+Here's a sample installation log on a 4 node cluster, with the `hostfile` containing the entries `mdw`, `sdw1-3`
+
+@verbatim
+[gpadmin@mdw]$ ./hawq_install pdltools-1.3-Linux.rpm ../hostfile
+Querying mdw for any existing installation of pdltools-1.3-Linux.rpm
+package pdltools-1.3 is not installed
+Querying sdw-1  for any existing installation of pdltools-1.3-Linux.rpm
+package pdltools-1.3 is not installed
+Querying sdw-2  for any existing installation of pdltools-1.3-Linux.rpm
+package pdltools-1.3 is not installed
+Querying sdw-3 for any existing installation of pdltools-1.3-Linux.rpm
+package pdltools-1.3 is not installed
+Copying pdltools-1.3-Linux.rpm to all hosts
+gpscp -f ../hostfile pdltools-1.3-Linux.rpm =:/usr/local/hawq/.
+Installing pdltools-1.3-Linux.rpm on all hosts
+gpssh -f ../hostfile rpm -v -i /usr/local/hawq/./pdltools-1.3-Linux.rpm --nodeps --dbpath /usr/local/hawq/./share/packages/database --prefix /usr/local/hawq/.
+                    
+[sdw-3]
+[sdw-2] Preparing packages for installation...
+[sdw-2] pdltools-1.3-1
+[sdw-1] Preparing packages for installation...
+[sdw-1] pdltools-1.3-1
+[mdw] Preparing packages for installation...
+[mdw] pdltools-1.3-1
+Successfully installed PDLTools on all nodes under /usr/local/hawq/./pdltools
+@endverbatim
+
+Once the rpm has been installed, you can then install the PDLTools schema in your target database as listed in the sections above. Here is a sample installation log and install-check log
+
+### Installing PDLTools for HAWQ in a target database
+
+
+@verbatim
+[gpadmin@mdw]$ /usr/local/hawq/pdltools/bin/pdlpack install -s pdltools -p hawq -c gpadmin@mdw:5432/testdb
+Password for user gpadmin: 
+pdlpack.py : INFO : Detected hawq version 1.2.
+pdlpack.py : INFO : Testing PL/Python environment...
+pdlpack.py : INFO : > PL/Python environment OK (version: 2.6.2)
+pdlpack.py : INFO : Installing pdltools into PDLTOOLS schema and SUgAR into SUGARLIB schema...
+pdlpack.py : INFO : Looking for MADlib installation in MADLIB schema...
+pdlpack.py : INFO : **********************************************************************
+pdlpack.py : INFO : * NOTE:
+pdlpack.py : INFO : * Both PDL Tools and SUgAR installations are already at latest version.
+pdlpack.py : INFO : **********************************************************************
+pdlpack.py : INFO : * Schema PDLTools and/or SUgAR already exists
+pdlpack.py : INFO : * For HAWQ, these schemas will be overwritten by the objects in this installer
+pdlpack.py : INFO : * It may drop any database objects (tables, views, etc.) that depend on 'pdltools or SUgAR' SCHEMA!!!!!!!!!!!!!
+pdlpack.py : INFO : ***************************************************************************
+pdlpack.py : INFO : Would you like to continue?
+>>> y
+pdlpack.py : INFO : > Granting usage on PDLTOOLS schema
+pdlpack.py : INFO : > Granting usage on SUGARLIB schema
+pdlpack.py : INFO : > Updating PDL Tools migration history.
+pdlpack.py : INFO : > Writing version info in PDLTOOLS.MigrationHistory table
+pdlpack.py : INFO : > Updating SUgAR migration history.
+pdlpack.py : INFO : > Writing version info in SUGARLIB.MigrationHistory table
+pdlpack.py : INFO : > Creating objects for modules:
+pdlpack.py : INFO : > - common
+pdlpack.py : INFO : > - uri_utils
+pdlpack.py : INFO : > - edit_distance
+pdlpack.py : INFO : > - anonymization
+pdlpack.py : INFO : > - stemming
+pdlpack.py : INFO : PDL Tools 1.3 installed successfully in PDLTOOLS schema.
+pdlpack.py : INFO : Installation completed successfully.
+[gpadmin@mdw]$ 
+@endverbatim	 
+
+### Install-check PDLTools for HAWQ 
+
+
+@verbatim
+[gpadmin@mdw]$ /usr/local/hawq/pdltools/bin/pdlpack install-check -s pdltools -p hawq -c gpadmin@mdw:5432/testdb
+Password for user gpadmin: 
+pdlpack.py : INFO : Detected hawq version 1.2.
+TEST CASE RESULT|Module: uri_utils|test_uri_utils.sql_in|PASS|Time: 132 milliseconds
+TEST CASE RESULT|Module: edit_distance|test_edit_distance.sql_in|PASS|Time: 389 milliseconds
+TEST CASE RESULT|Module: anonymization|test_anonymization.sql_in|PASS|Time: 2547 milliseconds
+TEST CASE RESULT|Module: stemming|test_porter_stemmer.sql_in|PASS|Time: 201 milliseconds
+[gpadmin@mdw]$
+@endverbatim
 
 ____
 

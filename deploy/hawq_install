@@ -1,0 +1,66 @@
+#!/usr/bin/env python
+"""
+Python wrapper for installing the PDLTools rpm file for HAWQ 1.2.
+Since gppkgs are supported in HAWQ only from version 1.3 and above, we use this work-around.
+This script has been adapted from the bash version used by MADlib Eng team
+Srivatsan Ramanujam <sramanujam@pivotal.io>, 2 Oct 2014
+"""
+import os
+
+def install_pdltools(pdltools_rpm, hostfile):
+    """
+       Simple python wrapper that installs the RPM 
+    """
+    gphome = os.environ['GPHOME'] if os.environ.has_key('GPHOME') else None
+    if(not gphome):
+        print '$GPHOME not found. Please source $GPHOME/greenplum_path.sh and retry'
+        return
+
+    rpm_db = """{gphome}/share/packages/database""".format(gphome=gphome)
+    rpm_pkg_name = os.path.basename(pdltools_rpm).replace('-Linux.rpm','')
+    package_name = os.path.basename(pdltools_rpm)
+
+    hosts = [h for h in open(hostfile).read().split('\n') if h]
+    ssh_rpmq = """ssh {host} rpm -q {rpm_pkg_name} --dbpath {rpm_db}"""
+    ssh_uninstall = """ssh {host} rpm -ev --allmatches {rpm_pkg_name} --dbpath {rpm_db}"""
+
+    #1) Check and remove any existing installations of the same version of the package
+    for host in hosts:
+        print 'Querying {host} for any existing installation of {package_name}'.format(host=host, package_name=package_name)
+        rc = os.system(ssh_rpmq.format(host=host, rpm_pkg_name=rpm_pkg_name, rpm_db=rpm_db))
+        if(not rc):
+            print 'Removing existing installation of {package_name} on {host}'.format(host=host, package_name=package_name)
+            rc = os.system(ssh_uninstall.format(host=host, rpm_db=rpm_db, rpm_pkg_name=rpm_pkg_name))
+            if(rc !=0):
+                print 'Error uninstalling the rpm on {host}'.format(host=host)
+                return
+    
+    #2) Copy the new rpm to all nodes
+    gpscp = """gpscp -f {hostfile} {pdltools_rpm} =:{gphome}""".format(hostfile=hostfile, pdltools_rpm=pdltools_rpm, gphome=gphome)
+    print 'Copying {package_name} to all hosts'.format(package_name=package_name)
+    print gpscp
+    rc = os.system(gpscp)
+    if(rc!=0):
+        print 'Error copying {package_name} to one or more hosts'.format(package_name=package_name)
+        return
+
+    #3) Install the rpm on all nodes
+    gpssh_install = """gpssh -f {hostfile} rpm -v -i {rpmfile} --nodeps --dbpath {rpm_db} --prefix {gphome}
+                    """.format(hostfile=hostfile, rpmfile=os.path.join(gphome,package_name), rpm_db=rpm_db, gphome=gphome)
+    print 'Installing {package_name} on all hosts'.format(package_name=package_name)
+    print gpssh_install
+    rc = os.system(gpssh_install)
+    if(rc != 0):
+        print 'Error installing {package_name} on one or more hosts'.format(package_name=package_name)
+        return
+    print 'Successfully installed PDLTools on all nodes under {gphome}/pdltools'.format(gphome=gphome)
+
+if(__name__ == '__main__'):
+    from sys import argv
+    if(len(argv) !=3):
+        print 'Usage: ./hawq_install <pdltools_rpm_file> <hostfile>'
+    else:
+        if(not argv[1].strip().endswith('.rpm')):
+            print "Error: {rpm_file} doesn't appear to be an rpm file. Please try again".format(rpm_file=argv[1])
+        else:
+            install_pdltools(argv[1],argv[2])

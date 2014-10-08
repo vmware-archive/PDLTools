@@ -1,8 +1,8 @@
 # ======================================================================
-# -- Greenplum Port
+# -- HAWQ Port
 # ======================================================================
 
-set(PORT "Greenplum")
+set(PORT "HAWQ")
 string(TOUPPER ${PORT} PORT_UC)
 string(TOLOWER ${PORT} PORT_LC)
 set(PORT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -18,21 +18,23 @@ else(APPLE)
 endif(APPLE)
 
 list(APPEND CMAKE_MODULE_PATH
-  ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+  ${CMAKE_CURRENT_SOURCE_DIR}/cmake
+    ${CMAKE_CURRENT_SOURCE_DIR}/../greenplum/cmake)
 include(PostgreSQLUtils)
 include(GreenplumUtils)
+include(HAWQUtils)
 
 # ======================================================================
 # 1. Specify files that will be compiled into the shared library, for
 #    *all* versions of this port
 # ======================================================================
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}../greenplum")
 set(PDLTOOLS_DBAL_SOURCES  ${PDLTOOLS_SOURCES})
 
 add_sql_files(
     SQL_TARGET_FILES
-    "./modules"
+    "../greenplum/modules"
     "${CMAKE_CURRENT_BINARY_DIR}/modules"
 )
 
@@ -42,6 +44,7 @@ add_custom_target(sqlFiles_${PORT_LC} ALL DEPENDS ${SQL_TARGET_FILES})
 # ======================================================================
 # 2. Install all SQL files
 # ======================================================================
+
 
 cpack_add_port_group_and_component_for_all_versions()
 
@@ -70,10 +73,11 @@ function(add_${PORT_LC}_library IN_PORT_VERSION)
   message ("     ${DBMS_UC}_VERSION_MINOR .. : ${${DBMS_UC}_VERSION_MINOR}")
   message ("     ${DBMS_UC}_ARCHITECTURE ... : ${${DBMS_UC}_ARCHITECTURE}")
   message ("   ------------------------------------------------------------")
-  
+ 
   add_executable(${DBMS} IMPORTED)
   set_target_properties(${DBMS} PROPERTIES IMPORTED_LOCATION "${${DBMS_UC}_EXECUTABLE}")
   
+
   include_directories(SYSTEM
     ${${DBMS_UC}_SERVER_INCLUDE_DIR}
     ${${DBMS_UC}_ADDITIONAL_INCLUDE_DIRS})
@@ -142,11 +146,10 @@ function(add_${PORT_LC}_library IN_PORT_VERSION)
   # 4. Generate gppkg deployment scripts. Note: These are generated CMake
   #    scripts!
   # --------------------------------------------------------------------
-  if(NOT (${IN_PORT_VERSION} VERSION_LESS "4.2"))
-      add_gppkg(${IN_PORT_VERSION} Greenplum gpdb)
-  endif(NOT (${IN_PORT_VERSION} VERSION_LESS "4.2"))
 
-
+  if(NOT (${IN_PORT_VERSION} VERSION_LESS "1.2"))
+      add_gppkg(${IN_PORT_VERSION} "HAWQ" "hawq")
+  endif(NOT (${IN_PORT_VERSION} VERSION_LESS "1.2"))
 endfunction(add_${PORT_LC}_library)
 
 # Add the current version as a target. This is a macro because it calls
@@ -159,7 +162,7 @@ macro(add_current_${PORT_LC}_version)
   
   find_package(${PORT}_${_VERSION_UNDERSCORES})
   if(${PORT_UC}_${_VERSION_UNDERSCORES}_FOUND)
-    add_greenplum_library(${_VERSION})
+    add_hawq_library(${_VERSION})
   endif(${PORT_UC}_${_VERSION_UNDERSCORES}_FOUND)
 endmacro(add_current_${PORT_LC}_version)
 

@@ -1,4 +1,3 @@
-#
 # Define Greenplum feature macros
 #
 function(define_greenplum_features IN_VERSION OUT_FEATURES)
@@ -6,15 +5,15 @@ function(define_greenplum_features IN_VERSION OUT_FEATURES)
         list(APPEND ${OUT_FEATURES} __HAS_ORDERED_AGGREGATES__)
     endif()
 
+    if(NOT ${IN_VERSION} VERSION_LESS "4.3")
+        list(APPEND ${OUT_FEATURES} __HAS_FUNCTION_PROPERTIES__)
+    endif()
+
     # Pass values to caller
     set(${OUT_FEATURES} "${${OUT_FEATURES}}" PARENT_SCOPE)
 endfunction(define_greenplum_features)
 
-function(add_gppkg)
-    if(${IN_PORT_VERSION} VERSION_LESS "4.2")
-        return()
-    endif(${IN_PORT_VERSION} VERSION_LESS "4.2")
-
+function(add_gppkg GPDB_VERSION GPDB_VARIANT GPDB_VARIANT_SHORT)
     file(WRITE "${CMAKE_BINARY_DIR}/deploy/gppkg/Version_${IN_PORT_VERSION}.cmake" "
     file(MAKE_DIRECTORY
         \"\${CMAKE_CURRENT_BINARY_DIR}/${IN_PORT_VERSION}/BUILD\"
@@ -22,7 +21,11 @@ function(add_gppkg)
         \"\${CMAKE_CURRENT_BINARY_DIR}/${IN_PORT_VERSION}/RPMS\"
         \"\${CMAKE_CURRENT_BINARY_DIR}/${IN_PORT_VERSION}/gppkg\"
     )
-    set(GPDB_VERSION ${IN_PORT_VERSION})
+    set(GPDB_VERSION \"${GPDB_VERSION}\")
+    set(GPDB_VARIANT \"${GPDB_VARIANT}\")
+    set(GPDB_VARIANT_SHORT \"${GPDB_VARIANT_SHORT}\")
+    string(TOLOWER \"${GPDB_VARIANT}\" PORT_NAME)
+
     configure_file(
         pdltools.spec.in
         \"\${CMAKE_CURRENT_BINARY_DIR}/${IN_PORT_VERSION}/SPECS/pdltools.spec\"
@@ -58,3 +61,4 @@ function(add_gppkg)
     add_dependencies(gppkg gppkg_${PORT_VERSION_UNDERSCORE})
     ")
 endfunction(add_gppkg)
+
