@@ -182,6 +182,28 @@ PL/pgSQL (function \ref grp_connected_components_no_udfs only)
         @defgroup grp_connected_components connected_components
         @defgroup grp_connected_components_no_udfs connected_components_no_udfs
     @}
+
+    @defgroup grp_clink Complete Linkage
+    @{
+        @brief Implementation of complete-linkage agglomerative hierarchical clustering.
+
+Implementation of the commonly used complete-linkage hierarchical clustering
+algorithm. It constructs a hierarchical clustering tree from bottom up by
+merging closest clusters. Complete-linkage clustering defines the distance
+between two clusters as the distance between the farthest pair of data points
+in the two clusters
+(See http://en.wikipedia.org/wiki/Complete-linkage_clustering).
+
+(Written by [Jin Yu](mailto:jyu@pivotal.io), 22 Sep 2014.)
+
+@sa Module source file: complete_linkage.sql_in.
+
+@prereq
+PL/pgSQL
+
+        @defgroup grp_complete_linkage complete_linkage
+        @defgroup grp_cut_hclust_tree cut_hclust_tree
+    @}
 @}
 
 @defgroup grp_sugar_module SUgAR - Syntactic Upgrades for Analytics Routines

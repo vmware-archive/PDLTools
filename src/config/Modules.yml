@@ -13,6 +13,8 @@ modules:
       depends: ['common']
     - name: connected_components
       depends: ['common']
+    - name: connected_components_hawq
+      depends: ['common']
     - name: sugar
       depends: ['common']
     - name: complex
@@ -20,6 +22,8 @@ modules:
     - name: stemming
       depends: ['common']
     - name: sampling
+      depends: ['common']
+    - name: complete_linkage
       depends: ['common']
 #    - name: plr_placeholder
 #      depends: ['common'] 
