@@ -11,8 +11,8 @@ modules:
       depends: ['common']
 #    - name: session
 #      depends: ['common']
-#    - name: connected_components
-#      depends: ['common']
+    - name: connected_components_hawq
+      depends: ['common']
 #    - name: sugar
 #      depends: ['common']
 #    - name: complex
