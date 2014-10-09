@@ -26,6 +26,8 @@ export DBNAME=dstoolsdbtest
 export PDLTOOLSUSER=dstoolsuser
 export PDLTOOLSUSERPWD=123
 PDLTOOLS_VERSION=$( awk '{print $2}' ${BASEDIR}/src/config/Version.yml )
+#Platform : should be either "greenplum" or "hawq"
+export PLATFORM_CMD="--platform greenplum"
 
 if [ -n "${SCHEMA}" ]; then
     export SCHEMA_CMD="--schema ${SCHEMA}"
@@ -300,12 +302,12 @@ for envfile in ${ENVIRONMENT_FILES}; do
 	cat <<-EOF
 		
 		======================================================================
-		Executing: ${PDLPACK} --verbose --conn ${PDLTOOLSUSER}/${PDLTOOLSUSERPWD}@localhost:${PGPORT}/${DBNAME} ${SCHEMA_CMD} install
+		Executing: ${PDLPACK} --verbose --conn ${PDLTOOLSUSER}/${PDLTOOLSUSERPWD}@localhost:${PGPORT}/${DBNAME} ${SCHEMA_CMD} ${PLATFORM_CMD} install
 		----------------------------------------------------------------------
 		
 	EOF
 		
-    ${PDLPACK} --verbose --conn ${PDLTOOLSUSER}/${PDLTOOLSUSERPWD}@localhost:${PGPORT}/${DBNAME} ${SCHEMA_CMD} install 2>&1 | tee pdltools_install.out
+    ${PDLPACK} --verbose --conn ${PDLTOOLSUSER}/${PDLTOOLSUSERPWD}@localhost:${PGPORT}/${DBNAME} ${SCHEMA_CMD} ${PLATFORM_CMD} install 2>&1 | tee pdltools_install.out
     RETURN=${PIPESTATUS[0]}
 	if [ "$RETURN" != 0 ]; then
 		cat <<-EOF
@@ -319,12 +321,12 @@ for envfile in ${ENVIRONMENT_FILES}; do
 	cat <<-EOF
 		
 		======================================================================
-		Executing: ${PDLPACK} --verbose --conn ${PDLTOOLSUSER}/${PDLTOOLSUSERPWD}@localhost:${PGPORT}/${DBNAME} ${SCHEMA_CMD} --tmpdir ${BASEDIR} install-check
+		Executing: ${PDLPACK} --verbose --conn ${PDLTOOLSUSER}/${PDLTOOLSUSERPWD}@localhost:${PGPORT}/${DBNAME} ${SCHEMA_CMD} ${PLATFORM_CMD} --tmpdir ${BASEDIR} install-check
 		----------------------------------------------------------------------
 		
 	EOF
 		
-    ${PDLPACK} --verbose --conn ${PDLTOOLSUSER}/${PDLTOOLSUSERPWD}@localhost:${PGPORT}/${DBNAME} ${SCHEMA_CMD} --tmpdir ${BASEDIR} install-check 2>&1 | tee pdltools_install-check.out
+    ${PDLPACK} --verbose --conn ${PDLTOOLSUSER}/${PDLTOOLSUSERPWD}@localhost:${PGPORT}/${DBNAME} ${SCHEMA_CMD} ${PLATFORM_CMD} --tmpdir ${BASEDIR} install-check 2>&1 | tee pdltools_install-check.out
     RETURN=${PIPESTATUS[0]}
 	if [ "$RETURN" != 0 ]; then
 		cat <<-EOF
