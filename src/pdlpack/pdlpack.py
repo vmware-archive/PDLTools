@@ -950,7 +950,7 @@ def main():
     parser.add_argument('-s', '--schema', nargs=1, dest='schema', metavar='SCHEMA', default='pdltools',
                          help="Target schema for the database objects.")
 
-    parser.add_argument('-p', '--platform', nargs=1, dest='platform',
+    parser.add_argument('-p', '--platform', nargs=1, dest='platform', required=True,
                         metavar='PLATFORM', choices=portid_list,
                         help="Target database platform, current choices: " + str(portid_list))
 
