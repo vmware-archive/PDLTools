@@ -9,7 +9,9 @@ Srivatsan Ramanujam
 
 Usage:
 ======
-python pdlpack.py [-s schema_name] [-S SUgAR_schema_name] [-M MADlib_schema_name] -c <username>@<hostname>:<port>/<databasename>
+python pdlpack.py [-s schema_name] -p platform [-S SUgAR_schema_name] [-M MADlib_schema_name] -c <username>@<hostname>:<port>/<databasename>
+
+'platform' should be either 'greenplum' or 'hawq'.
 '''
 
 import os, sys, datetime, getpass, re, subprocess, tempfile, glob
@@ -805,7 +807,7 @@ def __db_install(schema, platform, sugar_schema, madlib_schema):
         __info("* Both PDL Tools and SUgAR installations are already at latest version.", True)
         __info("**********************************************************************", True)
 
-    if backup_schema or backup_sugar_schema and platform == 'hawq':
+    if (backup_schema or backup_sugar_schema) and platform == 'hawq':
         __info("* Schema PDLTools and/or SUgAR already exists", True)
         __info("* For HAWQ, these schemas will be overwritten by the objects in this installer", True)
         __info("* It may drop any database objects (tables, views, etc.) that depend on 'pdltools or SUgAR' SCHEMA!!!!!!!!!!!!!", True)

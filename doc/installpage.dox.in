@@ -7,10 +7,21 @@
 The latest GPPKG version of the PDL Tools library can be found here: 
  - <A HREF="gppkg/pdltools-@PDLTOOLS_VERSION_STRING@-gpdb4.2-rhel5-x86_64.gppkg">PDL Tools @PDLTOOLS_VERSION_STRING@ GPPKG for GPDB 4.2</A HREF>
  - <A HREF="gppkg/pdltools-@PDLTOOLS_VERSION_STRING@-gpdb4.3-rhel5-x86_64.gppkg">PDL Tools @PDLTOOLS_VERSION_STRING@ GPPKG for GPDB 4.3</A HREF>
+ - <A HREF="gppkg/pdltools-@PDLTOOLS_VERSION_STRING@-hawq1.3-rhel5-x86_64.gppkg">PDL Tools @PDLTOOLS_VERSION_STRING@ GPPKG for HAWQ 1.3</A HREF>
 
 Alternatively, PDL Tools can be installed from its RPM:
  - <A HREF="rpm/pdltools-@PDLTOOLS_VERSION_STRING@-gpdb4.2-Linux.rpm">PDL Tools @PDLTOOLS_VERSION_STRING@ RPM for GPDB 4.2</A HREF>
  - <A HREF="rpm/pdltools-@PDLTOOLS_VERSION_STRING@-gpdb4.3-Linux.rpm">PDL Tools @PDLTOOLS_VERSION_STRING@ RPM for GPDB 4.3</A HREF>
+ - <A HREF="rpm/pdltools-@PDLTOOLS_VERSION_STRING@-hawq1.2-Linux.rpm">PDL Tools @PDLTOOLS_VERSION_STRING@ RPM for HAWQ 1.2</A HREF>
+ - <A HREF="rpm/pdltools-@PDLTOOLS_VERSION_STRING@-hawq1.3-Linux.rpm">PDL Tools @PDLTOOLS_VERSION_STRING@ RPM for HAWQ 1.3</A HREF>
+
+Note that HAWQ 1.2 does not support GPPKG installation, for which reason only
+RPMs are available for it. Because of features not supported in HAWQ
+(both 1.2 and 1.3), some parts of PDL Tools available in GPDB are not
+available in HAWQ.
+
+An installation script for PDL Tools on HAWQ 1.2 is available here:
+ - <A HREF="scripts/hawq_install">PDL Tools HAWQ Install Script</A>.
 
 This documentation is also available as an
 <A HREF="manual/pdltools-@PDLTOOLS_VERSION_STRING@-manual.tgz">HTML tar ball</A>
@@ -19,7 +30,7 @@ and as a
 for it to be installed together with the library and available when using it.
 ____
 
-## Installation of PDL Tools
+## Installing PDL Tools on GPDB
 
 ### Prerequisites
 
@@ -56,7 +67,7 @@ eenplum-db-4.3.0.0'
 ation of pdltools-@PDLTOOLS_VERSION_STRING@-gpdb4.3-rhel5-x86_64.gppkg.
 20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-Please run the followin
 g command to deploy PDL Tools
-usage:  pdlpack install [-s schema_name] [-S sugar_schema_name]
+usage:  pdlpack install [-s schema_name] -p greenplum [-S sugar_schema_name]
                        [-M madlib_schema_name] -c user@host:port/database
 Example:
    $ $GPHOME/pdltools/bin/pdlpack install -s pdltools -c gpadmin@mdw:5432/testdb
@@ -88,13 +99,16 @@ able to log in as 'gpadmin'. If not, refer to the next section.
 Run the following command as 'gpadmin'.
 
 <pre class="example">
-/usr/local/greenplum-db/pdltools/bin/pdlpack install [-s <em>schema name</em>] [-S <em>SUgAR schema name</em>] [-M <em>MADlib schema name</em>] -c <em>user\@host:port/database name</em>
+/usr/local/greenplum-db/pdltools/bin/pdlpack install [-s <em>schema name</em>] -p greenplum [-S <em>SUgAR schema name</em>] [-M <em>MADlib schema name</em>] -c <em>user\@host:port/database name</em>
 </pre>
 
 where <em>database name</em> should be replaced by the name of the database you wish to install to, <em>schema name</em> is the schema to install to, <em>SUgAR schema name</em> is the schema in which to install the SUgAR library, and <em>MADlib schema name</em> is the schema to search for MADlib objects in. By default, <em>schema name</em> would be "pdltools", <em>SUgAR schema name</em> would be "sugarlib" and <em>MADlib schema name</em> would be "madlib". Typically, <em>user\@host:port</em> is chosen to be "gpadmin@localhost:5433", as in the example below. MADlib objects do not need to be present during PDL Tools installation for it to succeed, though some of the run-time functionality of PDL Tools relies on calling MADlib routines.
 
+Note that starting with PDL Tools 1.3, specifying '-p greenplum' to set the
+platform is mandatory.
+
 @verbatim
-$ /usr/local/greenplum-db/pdltools/bin/pdlpack install -s pdltools -c gpadmin@localhost:5433/exampledb
+$ /usr/local/greenplum-db/pdltools/bin/pdlpack install -s pdltools -p greenplum -c gpadmin@localhost:5433/exampledb
 pdlpack.py : INFO : Detected greenplum version 4.3.
 pdlpack.py : INFO : Testing PL/Python environment...
 pdlpack.py : INFO : > PL/Python environment OK (version: 2.6.2)
@@ -128,6 +142,7 @@ pdlpack.py : INFO : > - sugar
 pdlpack.py : INFO : > - complex
 pdlpack.py : INFO : > - stemming
 pdlpack.py : INFO : > - sampling
+pdlpack.py : INFO : > - complete_linkage
 pdlpack.py : INFO : PDL Tools @PDLTOOLS_VERSION_STRING@ installed successfully in PDLTOOLS schema.
 pdlpack.py : INFO : SUgAR 0.4.4 installed successfully in SUGARLIB schema.
 pdlpack.py : INFO : Installation completed successfully.
@@ -161,7 +176,7 @@ computer and use your own user name. Here is an example for a typical
 installation on a DCA environment.
 
 @verbatim
-$ /usr/local/greenplum-db/pdltools/bin/pdlpack install -s pdltools -c user@localhost:5432/exampledb
+$ /usr/local/greenplum-db/pdltools/bin/pdlpack install -s pdltools -p greenplum -c user@localhost:5432/exampledb
 @endverbatim
 
 ### Checking that the installation was successful (optional)
@@ -169,7 +184,7 @@ $ /usr/local/greenplum-db/pdltools/bin/pdlpack install -s pdltools -c user@local
 Once you've installed the package onto your database, you may want to check that the installation was successful. The `install-check` option give you a method to do so.
 
 <pre class="example">
-/usr/local/greenplum-db/pdltools/bin/pdlpack install-check [-s <em>schema name</em>] [-S <em>SUgAR schema name</em>] [-M <em>MADlib schema name</em>] -c <em>user\@host:port/database name</em>
+/usr/local/greenplum-db/pdltools/bin/pdlpack install-check [-s <em>schema name</em>] -p greenplum [-S <em>SUgAR schema name</em>] [-M <em>MADlib schema name</em>] -c <em>user\@host:port/database name</em>
 </pre>
 
 where <em>database name</em> should be replaced by the name of the database you installed to, and <em>schema name</em>, <em>SUgAR schema name</em> and <em>MADlib schema name</em> are the schemas (with the same defaults as in the installation command).
@@ -178,7 +193,7 @@ Run this command as gpadmin, or follow the instructions in the previous section
 in order to run the command as another user.
 
 @verbatim
-$ /usr/local/greenplum-db/pdltools/bin/pdlpack install-check -s pdltools -c gpadmin@localhost:5433/exampledb
+$ /usr/local/greenplum-db/pdltools/bin/pdlpack install-check -s pdltools -p greenplum -c gpadmin@localhost:5433/exampledb
 pdlpack.py : INFO : Detected greenplum version 4.3.
 TEST CASE RESULT|Module: uri_utils|test_uri_utils.sql_in|PASS|Time: 58 milliseco
 nds
@@ -195,6 +210,7 @@ conds
 TEST CASE RESULT|Module: stemming|test_porter_stemmer.sql_in|PASS|Time: 39 milli
 seconds
 TEST CASE RESULT|Module: sampling|test_sampling.sql_in|PASS|Time: 1186 milliseco
+TEST CASE RESULT|Module: complete_linkage|test_complete_linkage.sql_in|PASS|Time: 2313 milliseco
 nds
 @endverbatim
 
@@ -228,15 +244,17 @@ DROP SCHEMA IF EXISTS sugarlib CASCADE;
 
 ____
 
-## Installing PDLTools on HAWQ
+## Installing PDL Tools on HAWQ
 
-PDLTools is available as a gppkg for HAWQ 1.3 and as an rpm for HAWQ 1.2 (HAWQ 1.2 doesn't support gppkgs). Currently only a subset of the modules supported on GPDB are available for PDLTools on HAWQ.
-These modules are stemming, uri_utils, anonymization and edit_distance. The complex numbers modules is unavailable due to lack of support for  User Defined Types (UDTs) yet on HAWQ. The SUgAR, sampling and connected components modules are also unsupported because of the unavailability of a PL/Perl gppkg for HAWQ. We expect these to be supported as soon as PL/Perl is made available.
+PDL Tools is available as a gppkg for HAWQ 1.3 and as an rpm for HAWQ 1.2 (HAWQ 1.2 doesn't support gppkgs). Currently only a subset of the modules supported on GPDB are available for PDL Tools on HAWQ.
+The complex numbers modules is unavailable due to lack of support for User Defined Types (UDTs) yet on HAWQ. The sessionization and sampling modules are unsupported because of the unavailability of a PL/Perl gppkg for HAWQ. We expect these to be supported as soon as PL/Perl is made available.
 
 The installation instructions for HAWQ 1.3 are similar to those for GPDB.
-We've provided a simple Python based installer for PDLTools for HAWQ 1.2. You can download the install here: <A HREF="scripts/hawq_install">PDLTools HAWQ Install Script</A>.
+Change the '-p greenplum' directive to '-p hawq' to set the platform
+properly.
+We've provided a simple Python based installer for PDL Tools for HAWQ 1.2. You can download the install here: <A HREF="scripts/hawq_install">PDL Tools HAWQ Install Script</A>.
 
-You can install PDLTools on HAWQ 1.2 then like so:
+You can install PDL Tools on HAWQ 1.2 then like so:
 <pre class="example">
 ./hawq_install pdltools-1.3-Linux.rpm $HOME/hostfile
 </pre>
@@ -265,12 +283,12 @@ gpssh -f ../hostfile rpm -v -i /usr/local/hawq/./pdltools-1.3-Linux.rpm --nodeps
 [sdw-1] pdltools-1.3-1
 [mdw] Preparing packages for installation...
 [mdw] pdltools-1.3-1
-Successfully installed PDLTools on all nodes under /usr/local/hawq/./pdltools
+Successfully installed PDL Tools on all nodes under /usr/local/hawq/./pdltools
 @endverbatim
 
-Once the rpm has been installed, you can then install the PDLTools schema in your target database as listed in the sections above. Here is a sample installation log and install-check log
+Once the rpm has been installed, you can then install the PDL Tools schema in your target database as listed in the sections above. Here is a sample installation log and install-check log
 
-### Installing PDLTools for HAWQ in a target database
+### Installing PDL Tools for HAWQ in a target database
 
 
 @verbatim
@@ -308,7 +326,7 @@ pdlpack.py : INFO : Installation completed successfully.
 [gpadmin@mdw]$ 
 @endverbatim	 
 
-### Install-check PDLTools for HAWQ 
+### Install-check PDL Tools for HAWQ 
 
 
 @verbatim

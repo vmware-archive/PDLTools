@@ -37,7 +37,7 @@ RETURNS VOID;
 @param dist_tab Table that contains pairwise distances of data. It is sufficient to provide only the lower or upper triangular part of the distance matrix.
 @param id1 ID column of data point 1 in \a dist_tab.
 @param id2 ID column of data point 2 in \a dist_tab.
-@param dist Column of pairwise distances.
+@param dist Column of pairwise distances. (Missing rows are taken to have 0 distance.)
 @param output Name of the result table, containing the constructed hierarchical clustering tree.
 @param iter Number of maximum iterations. Set to NULL to build the entire clustering tree.
 
@@ -62,6 +62,13 @@ TABLE/VIEW input_table
 
 The distance measure is assumed to be non-negative and symmetric (but not necessarily a proper distance metric). Let \f$A\f$ denote the distance matrix with \f$A_{ij}\f$ being the distance between data points \f$i\f$ and \f$j\f$. It is sufficient to only provide non-zero entries in the lower or upper triangular part of \f$A\f$. The obtained hierarchical clustering tree is saved in a user-specified output table. The output table is to be used as input to the cut_hclust_tree_complete() function to produce flat clusters.
 
+The output is a table that specifies the constructed hierarchical clustering
+tree. It contains cluster IDs, members of clusters, IDs of immediate children
+clusters, and heights of clusters. This table is expected to be used as input
+to \ref grp_cut_hclust_tree to form flat clusters.
+
+The output currently includes also a column called "active". This is only
+for internal use inside the \a complete_linkage function.
 
 @anchor complete_linkage_example
 @examp
@@ -89,14 +96,13 @@ SELECT cut_hclust_tree('complete_linkage_test_dist','id1','id2','dist','complete
 \endcode
 The \a cluster_id column in the output table \a complete_linkage_test_cluster indicates data assignment.
 \code
-SELECT * FROM complete_linkage_test_cluster ORDER BY cluster_id, member;
+SELECT * FROM complete_linkage_test_cluster;
 
- cluster_id | member | height | exemplar 
-------------+--------+--------+----------
-          1 |      4 |      0 |        4
-          2 |      1 |      2 |        1
-          2 |      2 |      2 |        1
-          2 |      3 |      2 |        1
+ cluster_id | member  | height | exemplar 
+------------+---------+--------+----------
+          2 | {3,1,2} |      2 |        1
+          1 | {4}     |      0 |        4
+(2 rows)
 
 \endcode
  */
@@ -127,10 +133,10 @@ RETURNS VOID;
 @param dist_tab Table that contains pairwise distances of data. It is sufficient to provide only the lower or upper triangular part of the distance matrix.
 @param id1 ID column of data point 1 in \a dist_tab.
 @param id2 ID column of data point 2 in \a dist_tab.
-@param dist Column of pairwise distance.
+@param dist Column of pairwise distance. (Missing rows are taken to be 0 distance.)
 @param hclust_tree_tab Table that contains the clustering tree e.g. produced by \ref grp_complete_linkage.
 @param height Height to cut the tree.
-@param output Output table containing for each cluster the cluster ID, list of members (unnested), height and exemplar. An exemplar is the
+@param output Output table containing for each cluster the cluster ID, list of members, height and exemplar. An exemplar is the
 data point which has the shortest average distance to its peers in the cluster.
 
 @sa \ref grp_complete_linkage (for building a hierarchical clustering tree).
@@ -152,7 +158,7 @@ See \ref grp_complete_linkage for a usage example.
  * provide only the lower or upper triangular part of the distance matrix.
  * @param id1 ID column of data point 1 in dist_tab.
  * @param id2 ID column of data point 2 in dist_tab.
- * @param dist Column of pairwise distances.
+ * @param dist Column of pairwise distances. (Missing rows are taken to be 0 distance.)
  * @param output Name of the result table, containing the constructed hierarchical clustering tree.
  * @param iter Number of maximum iterations. Set to NULL to build the entire clustering tree.
  *
@@ -198,9 +204,9 @@ RETURNS VOID AS $$
             SELECT (row_number() OVER(ORDER BY id))::INT cluster_id, 
             array[id] member, NULL::INT[] children, 0.0::FLOAT8 height, 1 active
             FROM (
-            (SELECT DISTINCT '|| id1 ||' id FROM '|| dist_tab ||') 
+            (SELECT '|| id1 ||' id FROM '|| dist_tab ||') 
             UNION 
-            (SELECT DISTINCT '|| id2 || ' id FROM '|| dist_tab ||')
+            (SELECT '|| id2 || ' id FROM '|| dist_tab ||')
             ) foo 
             ) DISTRIBUTED BY (cluster_id)';
         EXECUTE sql;
@@ -311,14 +317,14 @@ $$ LANGUAGE PLPGSQL;
  * provide only the lower or upper triangular part of the distance matrix.
  * @param id1 ID column of data point 1 in dist_tab.
  * @param id2 ID column of data point 2 in dist_tab.
- * @param dist Column of pairwise distance.
+ * @param dist Column of pairwise distance. (Missing rows are taken to be 0 distance.)
  * @param hclust_tree_tab Table that contains the clustering tree produced by complete_linkage().
  * @param height Height to cut the tree.
  * @param output Output table containing cluster IDs, members of clusters, 
  * heights (complete-linkage distances) of clusters, and exemplars.
  *
  * Sample usage: SELECT PDLTOOLS_SCHEMA.cut_hclust_tree('test_dist','id1','id2','dist','test_output',0.5,'test_cluster');
- * SELECT * FROM test_cluster ORDER BY cluster_id, member;
+ * SELECT * FROM test_cluster;
  *
  */ 
 
@@ -328,13 +334,15 @@ RETURNS VOID AS $$
     DECLARE
         sql TEXT;
         temp_tab TEXT;
+        temp_unnest_tab TEXT;
     BEGIN
         EXECUTE('SELECT ''__complete_linkage_'' || PDLTOOLS_SCHEMA.__clink_random_str(10)') INTO temp_tab;
         -- EXECUTE('DROP TABLE IF EXISTS ' || temp_tab);
+        EXECUTE('SELECT ''__complete_linkage_'' || PDLTOOLS_SCHEMA.__clink_random_str(10)') INTO temp_unnest_tab;
 
         -- Cut the clustering tree at the given height.
         sql = 'CREATE TABLE '|| temp_tab || ' AS (
-            SELECT cluster_id, unnest(member) member, height
+            SELECT cluster_id, member, height
             FROM (
             SELECT (row_number() OVER(ORDER BY height))::INT cluster_id, member, height 
             FROM '|| hclust_tree_tab ||' 
@@ -345,6 +353,11 @@ RETURNS VOID AS $$
             ')
             ) foo
             ) DISTRIBUTED RANDOMLY';
+        EXECUTE sql;
+
+        sql = 'CREATE TABLE ' || temp_unnest_tab || ' AS (
+                 SELECT cluster_id, unnest(member) AS member
+                 FROM ' || temp_tab || ') DISTRIBUTED RANDOMLY';
         EXECUTE sql;
 
         -- Find the exemplar of each cluster.
@@ -361,15 +374,15 @@ RETURNS VOID AS $$
                 FROM (
                     SELECT cluster_id, member, avg(coalesce(dist,0)) avg_dist
                     FROM '
-                    || temp_tab || '
+                    || temp_unnest_tab || '
                     LEFT JOIN
                     (
                     (SELECT '|| id1 || ' i, ' || id2 || ' j, ' || dist || ' dist FROM '|| dist_tab ||
-                    ' JOIN ' || temp_tab || ' a ON ('|| id1 || '= a.member) JOIN ' || temp_tab || ' b ON ('|| id2 || '= b.member)
+                    ' JOIN ' || temp_unnest_tab || ' a ON ('|| id1 || '= a.member) JOIN ' || temp_unnest_tab || ' b ON ('|| id2 || '= b.member)
                     WHERE a.cluster_id = b.cluster_id)
                     UNION
                     (SELECT '|| id2 || ' i, ' || id1 || ' j, ' || dist || ' dist FROM '|| dist_tab ||
-                    ' JOIN ' || temp_tab || ' a ON ('|| id1 || '= a.member) JOIN ' || temp_tab || ' b ON ('|| id2 || '= b.member)
+                    ' JOIN ' || temp_unnest_tab || ' a ON ('|| id1 || '= a.member) JOIN ' || temp_unnest_tab || ' b ON ('|| id2 || '= b.member)
                     WHERE a.cluster_id = b.cluster_id)
                     ) b ON (member = i)
                     GROUP BY cluster_id, member
@@ -382,6 +395,7 @@ RETURNS VOID AS $$
 
         -- Clean up the temporary table.
         EXECUTE('DROP TABLE ' || temp_tab);
+        EXECUTE('DROP TABLE ' || temp_unnest_tab);
 
     END;
 $$ LANGUAGE PLPGSQL;
@@ -656,7 +670,7 @@ dist_tab - Table that contains pairwise distances of data. It suffices to
            part of the distance matrix.
 id1      - ID column of data point 1 in dist_tab.
 id2      - ID column of data point 2 in dist_tab.
-dist     - Column of pairwise distances.
+dist     - Column of pairwise distances. (Missing rows are taken to be 0 distance.)
 output   - Name of the result table, containing the constructed hierarchical
            clustering tree.
 iter     - Number of maximum iterations. Set to NULL to build the entire
@@ -688,6 +702,13 @@ obtained hierarchical clustering tree is saved in a user-specified output
 table. The output table is to be used as input to the cut_hclust_tree()
 function to produce flat clusters.
 
+The output is a table that specifies the constructed hierarchical clustering
+tree. It contains cluster IDs, members of clusters, IDs of immediate children
+clusters, and heights of clusters. This table is expected to be used as input
+to cut_hclust_tree to form flat clusters.
+
+The output currently includes also a column called "active". This is only
+for internal use inside the complete_linkage function.
 
 Example
 =======
@@ -718,15 +739,13 @@ SELECT PDLTOOLS_SCHEMA.cut_hclust_tree(''complete_linkage_test_dist'',''id1'',
 The cluster_id column in the output table complete_linkage_test_cluster
 indicates data assignment.
 
-SELECT * from test_cluster ORDER BY cluster_id, member;
+SELECT * from test_cluster;
 
- cluster_id | member | height | exemplar 
-------------+--------+--------+----------
-          1 |      4 |      0 |        4
-          2 |      1 |      2 |        1
-          2 |      2 |      2 |        1
-          2 |      3 |      2 |        1
-
+ cluster_id | member  | height | exemplar 
+------------+---------+--------+----------
+          2 | {3,1,2} |      2 |        1
+          1 | {4}     |      0 |        4
+(2 rows)
 
 
 ' END;
@@ -786,12 +805,12 @@ dist_tab        - Table that contains pairwise distances of data. It suffices
                   distance matrix.
 id1             - ID column of data point 1 in dist_tab.
 id2             - ID column of data point 2 in dist_tab.
-dist            - Column of pairwise distance.
+dist            - Column of pairwise distance. (Missing rows are taken to be 0 distance.)
 hclust_tree_tab - Table that contains the clustering tree e.g. produced by
                   complete_linkage.
 height          - Height to cut the tree.
 output          - Output table containing for each cluster the cluster ID,
-                  list of members (unnested), height and exemplar. An exemplar
+                  list of members, height and exemplar. An exemplar
                   is the data point which has the shortest average distance to
                   its peers in the cluster.
 
@@ -828,14 +847,14 @@ SELECT PDLTOOLS_SCHEMA.cut_hclust_tree(''complete_linkage_test_dist'',''id1'',
 The cluster_id column in the output table complete_linkage_test_cluster
 indicates data assignment.
 
-SELECT * from test_cluster ORDER BY cluster_id, member;
+SELECT * from test_cluster;
 
- cluster_id | member | height | exemplar 
-------------+--------+--------+----------
-          1 |      4 |      0 |        4
-          2 |      1 |      2 |        1
-          2 |      2 |      2 |        1
-          2 |      3 |      2 |        1
+ cluster_id | member  | height | exemplar 
+------------+---------+--------+----------
+          2 | {3,1,2} |      2 |        1
+          1 | {4}     |      0 |        4
+(2 rows)
+
 
 'END;
 $$ LANGUAGE SQL;

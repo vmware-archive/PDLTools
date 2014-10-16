@@ -22,7 +22,10 @@ SELECT complete_linkage('complete_linkage_test_dist','id1','id2','dist','complet
 SELECT cut_hclust_tree('complete_linkage_test_dist','id1','id2','dist','complete_linkage_test_output',2,'complete_linkage_test_cluster');
 
 -- Check if the number of clusters is as expected.
-SELECT assert((SELECT count(distinct cluster_id) FROM complete_linkage_test_cluster)::TEXT, '2'::TEXT);
+SELECT assert((SELECT count(*) FROM complete_linkage_test_cluster)::TEXT, '2'::TEXT);
+
+-- Check if the clustering result is as expected.
+SELECT assert(string_agg(cluster_id::TEXT || ' ' || array_to_string(array(SELECT * FROM unnest(member) ORDER BY 1),';') || ' ' || height::TEXT || ' ' || exemplar::TEXT || ',' ORDER BY cluster_id),'1 4 0 4,2 1;2;3 2 1,'::TEXT) FROM complete_linkage_test_cluster;
 
 -- Clean up temp tables.
 DROP TABLE complete_linkage_test_dist;

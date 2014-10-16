@@ -5,11 +5,13 @@
 ## PDL Tools Revision History
 
 ### PDL Tools 1.3 (packaged with SUgAR 0.4.4) -- Current version
-- Ported PDL Tools to work on HAWQ
+- Ported PDL Tools to work on HAWQ (1.2 and 1.3)
 - Modified pdlpack to accommodate installation on HAWQ
+- Added Complete Linkage algorithm.
+- Added multi-graph support for Connected Components algorithm.
 
 ### PDL Tools 1.2.2 (packaged with SUgAR 0.4.4) -- Current version
-- Added Stratified sampling.
+- Added Stratified Sampling.
 - Added installation instructions for non-gpadmin install.
 
 ### PDL Tools 1.2.1 (packaged with SUgAR 0.4.4)
