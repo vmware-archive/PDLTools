@@ -26,8 +26,6 @@ export DBNAME=dstoolsdbtest
 export PDLTOOLSUSER=dstoolsuser
 export PDLTOOLSUSERPWD=123
 PDLTOOLS_VERSION=$( awk '{print $2}' ${BASEDIR}/src/config/Version.yml )
-#Platform : should be either "greenplum" or "hawq"
-export PLATFORM_CMD="--platform greenplum"
 
 if [ -n "${SCHEMA}" ]; then
     export SCHEMA_CMD="--schema ${SCHEMA}"
@@ -58,7 +56,6 @@ func_dbstop () {
 
 function set_environment () {
 
-    export PLATFORM="greenplum"
     export PGPORT=60000
 
     export PLATFORM_CONFIG=$( basename ${envfile} .sh )
@@ -68,8 +65,11 @@ function set_environment () {
 ## Main script
 ## ======================================================================
 
+export PLATFORM="${PLATFORM:=greenplum}"
+
 echo "${ENVIRONMENT_FILES}" | grep GREENPLUM_4_2_X > /dev/null
 if [ $? = 0 ]; then
+    export PLATFORM_CMD="--platform ${PLATFORM}"
 
     pushd ${BASEDIR}/releng
     
@@ -84,6 +84,39 @@ if [ $? = 0 ]; then
     ./test_gpdb.sh 4.2.X dev RHEL5-x86_64;
 
     cat >> /data/gpdbchina/4.2.X-build-dev/gpdb-data/master/gpdbqa-1/pg_hba.conf <<-EOF
+		
+		local    all         madlibuser      ident
+		host     all         madlibuser      127.0.0.1/28    trust
+		local    all         dstoolsuser     ident
+		host     all         dstoolsuser     127.0.0.1/28    trust
+		
+	EOF
+
+    (source ${BASEDIR}/releng/${ENVIRONMENT_FILE}; \
+        gpstop -a; \
+        generate_snapshot 1; \
+    )
+
+    popd
+fi
+
+echo "${ENVIRONMENT_FILES}" | grep hawq-build-1.2 > /dev/null
+if [ $? = 0 ]; then
+    export PLATFORM_CMD="--platform ${PLATFORM}"
+
+    pushd ${BASEDIR}/releng
+    
+    export ENVIRONMENT_FILE=env-hawq-build-1.2.sh
+
+    GPDB_INSTALLER_URL=${HAWQ_INSTALLER_URL:=http://pulse-eng.greenplum.com/browse/projects/HAWQ-madlib/builds/8410/downloads/rhel5_x86_64/Build%20HAWQ/GPSQL%20Installer/greenplum-db-1.2.0.1-build-8410-RHEL5-x86_64.zip} \
+    RETRIEVE_INSTALLERS=true \
+    SKIP_INSTALL=false \
+    ENABLE_MIRRORS=false \
+    BASE_PORT=16000 \
+    NUMBER_OF_SEGS_PER_NODE=6 \
+    ./gpdb.sh hawq 1.2 RHEL5-x86_64
+
+    cat >> /data/gpdbchina/hawq-build-1.2/gpdb-data/master/gpdbqa-1/pg_hba.conf <<-EOF
 		
 		local    all         madlibuser      ident
 		host     all         madlibuser      127.0.0.1/28    trust
@@ -199,9 +232,16 @@ for envfile in ${ENVIRONMENT_FILES}; do
     # fi
     # popd
 
-    GPDB_VERSION=`basename $(ls -d deploy/gppkg/4*)`
     RPM=$(ls pdltools-*.rpm)
-    RPM_NEW_NAME=`echo ${RPM} | sed -e "s|pdltools-\(.*\)-Linux.rpm|pdltools-\1-gpdb${GPDB_VERSION}-Linux.rpm|g"`
+
+    if [ "${PLATFORM}" = "hawq" ]; then
+        HAWQ_VERSION=`basename $(ls -d deploy/gppkg/1*)`
+        RPM_NEW_NAME=`echo ${RPM} | sed -e "s|pdltools-\(.*\)-Linux.rpm|pdltools-\1-hawq${HAWQ_VERSION}-Linux.rpm|g"`
+    else
+        GPDB_VERSION=`basename $(ls -d deploy/gppkg/4*)`
+        RPM_NEW_NAME=`echo ${RPM} | sed -e "s|pdltools-\(.*\)-Linux.rpm|pdltools-\1-gpdb${GPDB_VERSION}-Linux.rpm|g"`
+    fi
+
     mv -v ${RPM} ${RPM_NEW_NAME}
 
 	cat <<-EOF
