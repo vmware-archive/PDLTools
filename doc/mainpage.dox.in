@@ -146,6 +146,25 @@ PL/C
         @defgroup grp_stem_token stem_token
         @defgroup grp_stem_token_arr stem_token_arr
     @}
+
+    @defgroup grp_prediction_metrics Prediction Metrics
+    @{
+        @brief A collection of metrics to gauge model accuracy.
+
+A collection of summary statistics to gauge model accuracy based on predicted
+values vs. ground-truth values.
+
+(Written by [Michael Brand](mailto:mbrand@pivotal.io), 21 Oct 2014.)
+
+@sa Module source file: prediction_metrics.sql_in
+        @defgroup grp_mf_mae mf_mae
+        @defgroup grp_mf_mape mf_mape
+        @defgroup grp_mf_mpe mf_mpe
+        @defgroup grp_mf_rmse mf_rmse
+        @defgroup grp_mf_r2 mf_r2
+        @defgroup grp_mf_adjusted_r2 mf_adjusted_r2
+        @defgroup grp_mf_binary_classifier mf_binary_classifier
+    @}
 @}
 
 @defgroup grp_algorithms_module Algorithms
