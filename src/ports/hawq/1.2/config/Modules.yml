@@ -11,16 +11,20 @@ modules:
       depends: ['common']
 #    - name: session
 #      depends: ['common']
+#    - name: connected_components
+#      depends: ['common']
     - name: connected_components_hawq
       depends: ['common']
-#    - name: sugar
-#      depends: ['common']
+    - name: sugar
+      depends: ['common']
 #    - name: complex
 #      depends: ['common']
     - name: stemming
       depends: ['common']
 #    - name: sampling
 #      depends: ['common']
+    - name: comlplete_linkage
+      depends: ['common']
 #    - name: plr_placeholder
 #      depends: ['common'] 
 #  PL/R package disabled until PL/R will be part of Continuous Integration tool.

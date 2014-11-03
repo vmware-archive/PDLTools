@@ -1,7 +1,15 @@
 -- File: test_sugar.sql
 -- Unit test for the SUgAR library.
 
+/*
+
+
+
 -- Testing the '@' operator.
+
+
+-- Test disabled because there is no trusted language to create the 'slope'
+-- function in, in HAWQ (barring, perhaps, Java).
 
 CREATE TABLE test_data
 (fyear integer,firm integer, eps float8) DISTRIBUTED BY (firm);
@@ -92,6 +100,10 @@ DROP TABLE test_data;
 DROP TABLE outtable;
 DROP TABLE correct_result;
 DROP TABLE result_comp;
+
+
+
+*/
 
 -- Testing pivot01
 
