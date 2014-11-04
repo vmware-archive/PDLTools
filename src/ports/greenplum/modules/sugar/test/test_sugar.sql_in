@@ -79,14 +79,14 @@ INSERT INTO correct_result VALUES
 
 CREATE TABLE result_comp AS
 SELECT c.firm, c.fyear,
-  assert(CASE WHEN (abs(o.eps-c.eps)<1e-10) THEN 't' ELSE 'f' END,'t')
+  assert(CASE WHEN (abs(o.eps-c.eps)<1e-10) THEN 't' ELSE 'f' END,'t','assertion test')
     aa,
-  assert(CASE WHEN (abs(o.lag_eps-c.lag_eps)<1e-10) THEN 't' ELSE 'f' END,'t')
+  assert(CASE WHEN (abs(o.lag_eps-c.lag_eps)<1e-10) THEN 't' ELSE 'f' END,'t','assertion test')
     ab,
-  assert(CASE WHEN (abs(o.slope_r-c.slope_r)<1e-10) THEN 't' ELSE 'f' END,'t')
+  assert(CASE WHEN (abs(o.slope_r-c.slope_r)<1e-10) THEN 't' ELSE 'f' END,'t','assertion test')
     ac,
-  assert(CASE WHEN NOT (c.firm IS NULL) THEN 't' ELSE 'f' END,'t') ad,
-  assert(CASE WHEN NOT (c.fyear IS NULL) THEN 't' ELSE 'f' END,'t') ae
+  assert(CASE WHEN NOT (c.firm IS NULL) THEN 't' ELSE 'f' END,'t','assertion test') ad,
+  assert(CASE WHEN NOT (c.fyear IS NULL) THEN 't' ELSE 'f' END,'t','assertion test') ae
 FROM (SELECT * FROM outtable
       WHERE slope_r IS NOT NULL AND firm=50) o
      LEFT OUTER JOIN correct_result c
@@ -144,19 +144,19 @@ INSERT INTO correct_result VALUES
 
 CREATE TABLE result_comp AS
 SELECT c.row_num,
-  assert(CASE WHEN (abs(o.price-c.price)<1e-10) THEN 't' ELSE 'f' END,'t')
+  assert(CASE WHEN (abs(o.price-c.price)<1e-10) THEN 't' ELSE 'f' END,'t','assertion test')
     aa,
-  assert(CASE WHEN (o.units=c.units) THEN 't' ELSE 'f' END,'t')
+  assert(CASE WHEN (o.units=c.units) THEN 't' ELSE 'f' END,'t','assertion test')
     ab,
-  assert(CASE WHEN (abs(o.cost-c.cost)<1e-10) THEN 't' ELSE 'f' END,'t')
+  assert(CASE WHEN (abs(o.cost-c.cost)<1e-10) THEN 't' ELSE 'f' END,'t','assertion test')
     ac,
-  assert(CASE WHEN (o.region_east=c.region_east) THEN 't' ELSE 'f' END,'t')
+  assert(CASE WHEN (o.region_east=c.region_east) THEN 't' ELSE 'f' END,'t','assertion test')
     ad,
-  assert(CASE WHEN (o.region_west=c.region_west) THEN 't' ELSE 'f' END,'t')
+  assert(CASE WHEN (o.region_west=c.region_west) THEN 't' ELSE 'f' END,'t','assertion test')
     ae,
-  assert(CASE WHEN (o.region_none=c.region_none) THEN 't' ELSE 'f' END,'t')
+  assert(CASE WHEN (o.region_none=c.region_none) THEN 't' ELSE 'f' END,'t','assertion test')
     af,
-  assert(CASE WHEN NOT (c.row_num IS NULL) THEN 't' ELSE 'f' END,'t') ag
+  assert(CASE WHEN NOT (c.row_num IS NULL) THEN 't' ELSE 'f' END,'t','assertion test') ag
 FROM outtable o
      LEFT OUTER JOIN correct_result c
      ON (o.row_num=c.row_num)
@@ -209,19 +209,19 @@ SELECT c.patient_id,
   assert(CASE WHEN (((o."diagnosis_code_icd9-cm-274.9" IS NULL) AND
                      (c."diagnosis_code_icd9-cm-274.9" IS NULL)) OR
            (o."diagnosis_code_icd9-cm-274.9"=c."diagnosis_code_icd9-cm-274.9"))
-         THEN 't' ELSE 'f' END,'t') ab,
+         THEN 't' ELSE 'f' END,'t','assertion test') ab,
   assert(CASE WHEN (((o."diagnosis_code_icd9-cm-434.0" IS NULL) AND
                      (c."diagnosis_code_icd9-cm-434.0" IS NULL)) OR
            (o."diagnosis_code_icd9-cm-434.0"=c."diagnosis_code_icd9-cm-434.0"))
-         THEN 't' ELSE 'f' END,'t') ac,
+         THEN 't' ELSE 'f' END,'t','assertion test') ac,
   assert(CASE WHEN (((o."diagnosis_code_icd9-cm-785.2" IS NULL) AND
                      (c."diagnosis_code_icd9-cm-785.2" IS NULL)) OR
            (o."diagnosis_code_icd9-cm-785.2"=c."diagnosis_code_icd9-cm-785.2"))
-         THEN 't' ELSE 'f' END,'t') ad,
+         THEN 't' ELSE 'f' END,'t','assertion test') ad,
   assert(CASE WHEN (((o."diagnosis_code_icd9-cm-845.0" IS NULL) AND
                      (c."diagnosis_code_icd9-cm-845.0" IS NULL)) OR
            (o."diagnosis_code_icd9-cm-845.0"=c."diagnosis_code_icd9-cm-845.0"))
-         THEN 't' ELSE 'f' END,'t') ae
+         THEN 't' ELSE 'f' END,'t','assertion test') ae
 FROM outtable o
      LEFT OUTER JOIN correct_result c
      ON (o.patient_id=c.patient_id)
@@ -260,7 +260,7 @@ SELECT c.patient_id,
   assert(CASE WHEN (((o."ICD9-CM-785.2" IS NULL) AND
                      (c."ICD9-CM-785.2" IS NULL)) OR
            (o."ICD9-CM-785.2"=c."ICD9-CM-785.2"))
-         THEN 't' ELSE 'f' END,'t') ab
+         THEN 't' ELSE 'f' END,'t','assertion test') ab
 FROM outtable o
      LEFT OUTER JOIN correct_result c
      ON (o.patient_id=c.patient_id)
@@ -306,9 +306,9 @@ INSERT INTO correct_result VALUES
 CREATE TABLE result_comp AS
 SELECT c.region,
   assert(CASE WHEN (o."BOY g"=c."BOY g")
-         THEN 't' ELSE 'f' END,'t') aa,
+         THEN 't' ELSE 'f' END,'t','assertion test') aa,
   assert(CASE WHEN (o."GIRL g"=c."GIRL g")
-         THEN 't' ELSE 'f' END,'t') ab
+         THEN 't' ELSE 'f' END,'t','assertion test') ab
 FROM outtable o
      LEFT OUTER JOIN correct_result c
      ON (o.region=c.region OR ((o.region IS NULL) AND (c.region IS NULL)))
