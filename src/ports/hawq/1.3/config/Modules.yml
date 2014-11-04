@@ -23,7 +23,7 @@ modules:
       depends: ['common']
 #    - name: sampling
 #      depends: ['common']
-    - name: comlplete_linkage
+    - name: complete_linkage
       depends: ['common']
 #    - name: plr_placeholder
 #      depends: ['common'] 
