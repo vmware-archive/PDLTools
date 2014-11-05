@@ -120,6 +120,8 @@ SELECT COMPLEX '5+3i' ^ '4'::int2;
 SELECT dotproduct(ARRAY[COMPLEX(1,3),COMPLEX(5,7)], ARRAY[COMPLEX(2,4),COMPLEX(6,8)]);
 @endverbatim
 
+@warning Though the complex type is useful for calculations, when storing values in a table for long-term storage it is preferable to convert the values back to native database types. The reason for this is that when the library is upgraded, columns of user-defined types such as "complex" are not upgraded with it.
+
 @note Like all other PDL Tools utilities, the complex data type is defined
 within the PDL Tools schema.
 

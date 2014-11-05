@@ -767,6 +767,40 @@ def __check_prev_install(schema, platform, current_rev, is_sugar=False):
 
 def __db_drop_backup_schema(backup_schema, is_newer):
   if (is_newer==1 or is_newer==3) and backup_schema != None:
+    affected_objects = __run_sql_query("""
+                            SELECT
+                              n1.nspname AS schema,
+                              relname AS relation,
+                              attname AS column,
+                              typname AS type
+                            FROM
+                              pg_attribute a,
+                              pg_class c,
+                              pg_type t,
+                              pg_namespace n,
+                              pg_namespace n1
+                            WHERE
+                              n.nspname = '%s'
+                              AND t.typnamespace = n.oid
+                              AND a.atttypid = t.oid
+                              AND c.oid = a.attrelid
+                              AND c.relnamespace = n1.oid
+                            ORDER BY
+                              n1.nspname, relname, attname, typname;
+""" % backup_schema.lower(), True)
+    if len(affected_objects)!=0:
+      __info("********************************************************", True)
+      __info("> The following database objects depend on old schema %s." % backup_schema.upper(), True)
+      __info("> (schema : table.column : type):", True)
+      for ao in affected_objects:
+        __info ( '> - ' + ao['schema'] + ' : ' + ao['relation'] + '.' + ao['column'] + ' : ' + ao['type'], True);
+      __info("> Old schema will not be dropped.", True)
+      __info("********************************************************", True)
+      return
+    __info("********************************************************", True)
+    __info("WARNING:", True)
+    __info("No database objects were found that depend on the old schema %s. However, we cannot guarantee that this check is complete. If the schema is dropped, any database objects that still depend on it will be removed." % backup_schema.upper(), True)
+    __info("********************************************************", True)
     __info("Keep old schema %s? [Y/N]" % backup_schema.upper(), True)
     go = raw_input('>>> ').upper()
     while go =='' or go[0] not in 'YN':
