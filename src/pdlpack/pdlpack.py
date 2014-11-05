@@ -766,7 +766,8 @@ def __check_prev_install(schema, platform, current_rev, is_sugar=False):
 
 
 def __db_drop_backup_schema(backup_schema, is_newer):
-  if (is_newer==1 or is_newer==3) and backup_schema != None:
+  # if (is_newer==1 or is_newer==3) and backup_schema != None:
+  if backup_schema != None:
     affected_objects = __run_sql_query("""
                             SELECT
                               n1.nspname AS schema,
