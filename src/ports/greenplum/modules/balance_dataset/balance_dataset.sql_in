@@ -1,0 +1,164 @@
+/* ----------------------------------------------------------------------- *//**
+
+@file balance_dataset.sql_in
+
+@brief A set of utilities for balancing a dataset for classification problems
+
+@author Written by Srivatsan Ramanujam
+@date 14 Nov 2014
+
+ *//* ----------------------------------------------------------------------- */
+
+/**
+@addtogroup grp_balancing
+
+@brief Balance dataset to ensure all class labels have equal records
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#balance_dataset_syntax">Syntax</a>
+<li class="level1"><a href="#balance_dataset_usage">Usage</a>
+<li class="level1"><a href="#balance_dataset_example">Example</a>
+</ul>
+</div>
+
+@about
+Balance a dataset for classification models.
+
+@anchor balance_dataset_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION balance_dataset(
+          imbalanced_table_name text, 
+          id_column_name text,
+          label_column_name text,
+          balanced_output_table_name text
+       );
+RETURNS TEXT;
+</pre>
+
+@param input_table A text field representing the name of the input table
+@param id_col A text field representing the name of the ID column
+@param label_col A text field representing name of the class label
+@param output_table A text field representing the name of the output table
+@returns A status message indicating success/failure.
+
+@anchor balance_dataset_example
+@examp
+@verbatim
+user=# drop table if exists unbalanced cascade;
+DROP TABLE
+user=# create table unbalanced
+user-# ( 
+user(#     id int, 
+user(#     f1 float, 
+user(#     f2 float, 
+user(#     f3 float, 
+user(#     label text
+user(# ) distributed by (id);
+CREATE TABLE
+user=# 
+user=# insert into unbalanced
+user-# values
+user-# (1, 0.35, 0.52, 0.61, 'a'),
+user-# (2, 0.24, 0.51, 0.63, 'a'),
+user-# (3, 0.31, 0.49, 0.67, 'a'),
+user-# (5, 0.20, 0.35, 0.26, 'b'),
+user-# (6, 0.21, 0.36, 0.28, 'b'),
+user-# (7, 0.49, 0.70, 0.90, 'c');
+INSERT 0 6
+user=# select * from unbalanced;
+ id |  f1  |  f2  |  f3  | label 
+----+------+------+------+-------
+  2 | 0.24 | 0.51 | 0.63 | a
+  6 | 0.21 | 0.36 | 0.28 | b
+  1 | 0.35 | 0.52 | 0.61 | a
+  3 | 0.31 | 0.49 | 0.67 | a
+  5 |  0.2 | 0.35 | 0.26 | b
+  7 | 0.49 |  0.7 |  0.9 | c
+(6 rows)
+
+user=# drop table if exists balanced_dataset cascade;
+DROP TABLE
+user=# select balance_dataset('unbalanced', 'id','label','balanced_dataset');
+              balance_dataset               
+--------------------------------------------
+ Balanced dataset created: balanced_dataset
+(1 row)
+
+user=# 
+user=# select label, 
+user-#        count(distinct id_balanced) 
+user-# from balanced_dataset 
+user-# group by 1 order by 2;
+ label | count 
+-------+-------
+ b     |     2
+ c     |     3
+ a     |     3
+(3 rows)
+@endverbatim
+
+drop function if exists PDLTOOLS_SCHEMA.balance_dataset(text, text, text, text) cascade;
+create or replace function PDLTOOLS_SCHEMA.balance_dataset(
+         input_table text,
+         id_col text,
+         label_col text,
+         output_table text
+      )
+returns text
+as
+$$
+   import plpy
+   names = input_table.split('.')
+   input_schema = names[0] if len(names) > 1 else 'public'
+   input_table_name = names[1] if len(names) > 1 else input_table
+   balanced_dataset_query = '''
+              create table {output_table}
+              as
+              (
+                  select row_number() over ( order by random()) as {id_col_balanced},
+                         {input_schema}.{input_table_name}.*
+                  from
+                  (
+                      select {label_col},
+                             case when seed < (ceil(num_repeats) - num_repeats) then generate_series(1, ceil(num_repeats)::int)
+                                  else generate_series(1, floor(num_repeats)::int) 
+                             end as repeat_val
+                      from
+                      (
+                          select {label_col},
+                                 random() as seed,
+                                 max_num_repeats*1.0/num_repeats as num_repeats
+                          from
+                          (
+                              select {label_col},
+                                     count(distinct {id_col}) as num_repeats
+                              from {input_schema}.{input_table_name}
+                              group by {label_col}
+                          ) tbl1,
+                          (
+                              select max(num_repeats) as max_num_repeats
+                              from
+                              (
+                                  select {label_col},
+                                         count(distinct {id_col}) as num_repeats
+                                  from {input_schema}.{input_table_name}
+                                  group by {label_col}
+                              )tbl
+                          ) tbl2
+                      ) tbl3
+                  ) rpt, {input_schema}.{input_table_name}
+                  where rpt.{label_col} = {input_schema}.{input_table_name}.{label_col}
+              ) distributed by ({id_col});
+   '''.format(
+           input_schema = input_schema,
+           input_table_name = input_table_name,
+           id_col = id_col,
+           id_col_balanced = id_col+'_balanced',
+           label_col = label_col,
+           output_table = output_table
+   )
+   plpy.execute(balanced_dataset_query)
+   return 'Balanced dataset created: {output_table}'.format(output_table=output_table)
+$$ language plpythonu;

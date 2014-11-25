@@ -146,6 +146,20 @@ PL/C
         @defgroup grp_stem_token stem_token
         @defgroup grp_stem_token_arr stem_token_arr
     @}
+    @defgroup grp_balancing Balancing datasets
+    @{
+        @brief Balance a dataset for classification by re-sampling
+
+Balancing datasets for classification models.
+
+(Written by [Srivatsan Ramanujam](mailto:sramanujam@pivotal.io), 14 Nov 2014.)
+
+@sa Module source file: balance_dataset.sql_in
+@prereq
+PL/Python
+        @defgroup grp_balance_dataset balance_dataset
+    @}
+
 @}
 
 @defgroup grp_algorithms_module Algorithms
