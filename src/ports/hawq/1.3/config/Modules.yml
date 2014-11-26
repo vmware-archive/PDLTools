@@ -21,6 +21,8 @@ modules:
 #      depends: ['common']
     - name: stemming
       depends: ['common']
+    - name: balance_dataset
+      depends: ['common']
 #    - name: sampling
 #      depends: ['common']
 #    - name: complete_linkage
