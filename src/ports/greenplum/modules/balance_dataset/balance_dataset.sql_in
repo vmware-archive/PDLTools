@@ -98,27 +98,24 @@ user-# group by 1 order by 2;
  a     |     3
 (3 rows)
 @endverbatim
+*/
 
-drop function if exists PDLTOOLS_SCHEMA.balance_dataset(text, text, text, text) cascade;
-create or replace function PDLTOOLS_SCHEMA.balance_dataset(
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.balance_dataset(
          input_table text,
          id_col text,
          label_col text,
          output_table text
       )
-returns text
-as
+RETURNS text
+AS
 $$
    import plpy
-   names = input_table.split('.')
-   input_schema = names[0] if len(names) > 1 else 'public'
-   input_table_name = names[1] if len(names) > 1 else input_table
    balanced_dataset_query = '''
               create table {output_table}
               as
               (
                   select row_number() over ( order by random()) as {id_col_balanced},
-                         {input_schema}.{input_table_name}.*
+                         {input_table}.*
                   from
                   (
                       select {label_col},
@@ -134,7 +131,7 @@ $$
                           (
                               select {label_col},
                                      count(distinct {id_col}) as num_repeats
-                              from {input_schema}.{input_table_name}
+                              from {input_table}
                               group by {label_col}
                           ) tbl1,
                           (
@@ -143,17 +140,16 @@ $$
                               (
                                   select {label_col},
                                          count(distinct {id_col}) as num_repeats
-                                  from {input_schema}.{input_table_name}
+                                  from {input_table}
                                   group by {label_col}
                               )tbl
                           ) tbl2
                       ) tbl3
-                  ) rpt, {input_schema}.{input_table_name}
-                  where rpt.{label_col} = {input_schema}.{input_table_name}.{label_col}
+                  ) rpt, {input_table}
+                  where rpt.{label_col} = {input_table}.{label_col}
               ) distributed by ({id_col});
    '''.format(
-           input_schema = input_schema,
-           input_table_name = input_table_name,
+           input_table = input_table,
            id_col = id_col,
            id_col_balanced = id_col+'_balanced',
            label_col = label_col,
@@ -161,4 +157,4 @@ $$
    )
    plpy.execute(balanced_dataset_query)
    return 'Balanced dataset created: {output_table}'.format(output_table=output_table)
-$$ language plpythonu;
+$$ LANGUAGE PLPYTHONU;
