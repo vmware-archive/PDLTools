@@ -150,7 +150,12 @@ PL/C
     @{
         @brief Balance a dataset for classification by re-sampling
 
-Balancing datasets for classification models.
+Given a table with varying number of records for each class
+label, this function will create an output table with each class label
+having approximately the same number of records. This is achieved by
+repeating each row of every under-represented class by a certain amount
+so that the expected number of rows from the underrepresented classes equals
+the total number of rows in the majority class.
 
 (Written by [Srivatsan Ramanujam](mailto:sramanujam@pivotal.io), 14 Nov 2014.)
 
