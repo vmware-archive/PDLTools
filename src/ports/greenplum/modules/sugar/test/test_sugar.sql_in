@@ -1,97 +1,99 @@
 -- File: test_sugar.sql
 -- Unit test for the SUgAR library.
 
--- Testing the '@' operator.
-
-CREATE TABLE test_data
-(fyear integer,firm integer, eps float8) DISTRIBUTED BY (firm);
-
-INSERT INTO test_data
-SELECT (b.f + 1) % 10 + 2000 AS fyear,
-floor((b.f+1)/10) + 50 AS firm,
-f::float8/100 + (f::float8/500)*(f::float8/50) AS eps
-FROM generate_series(-500,499,1) b(f);
-
--- find slope of the linear model regression line
-CREATE OR REPLACE FUNCTION perl_regr_slope(x float8[], y float8[])
-RETURNS float8 AS $BODY$
-my @x = split /,/,substr $_[0],1,length($_[0])-2;
-my @y = split /,/,substr $_[1],1,length($_[1])-2;
-my $nx = @x;
-my $ny = @y;
-
-return undef if (($nx!=$ny)||($nx!=9));
-my ($sx, $sy, $sxx, $sxy);
-
-$sx += $_ for @x;
-$sy += $_ for @y;
-$sxx += $_ * $_ for @x;
-$sxy += $_ for map {$x[$_] * $y[$_]} (0..$#x);
-
-my $num = $sxy*$nx-$sx*$sy;
-my $denom = $sxx*$nx-$sx*$sx;
-
-return undef if ($denom==0);
-
-return $num/$denom;
-
-$BODY$ LANGUAGE plperl;
-
--- Use the function as follows
-SELECT sugar($SUGAR$
-  CREATE TABLE outtable AS
-    SELECT *, perl_regr_slope(@eps, @lag_eps) AS slope_R FROM (
-      SELECT firm, fyear, eps,
-             lag(eps) OVER (PARTITION BY firm ORDER BY firm, fyear) AS lag_eps
-      FROM test_data
-    ) AS a
-    WHERE eps IS NOT NULL AND lag_eps IS NOT NULL
-    WINDOW default_window AS (
-      PARTITION BY firm ORDER BY firm, fyear ROWS 8 PRECEDING
-    )
-    DISTRIBUTED BY (fyear);
-$SUGAR$);
-
-CREATE TABLE correct_result
-(firm integer, fyear integer, eps float8, lag_eps float8, slope_R float8)
-DISTRIBUTED BY (firm);
-
-INSERT INTO correct_result VALUES
-(50,  2000, -0.00996, -0.01984, 0.991667409270239),
-(50,  2001,        0, -0.00996, 0.991736261534802),
-(50,  2002,  0.01004,        0, 0.991803985368099),
-(50,  2003,  0.02016,  0.01004, 0.991870608283387),
-(50,  2004,  0.03036,  0.02016, 0.991936156906779),
-(50,  2005,  0.04064,  0.03036, 0.992000657012704),
-(50,  2006,    0.051,  0.04064, 0.992064133557693),
-(50,  2007,  0.06144,    0.051, 0.992126610712562),
-(50,  2008,  0.07196,  0.06144, 0.992188111893091),
-(50,  2009,  0.08256,  0.07196, 0.992248659789272);
-
-
-CREATE TABLE result_comp AS
-SELECT c.firm, c.fyear,
-  assert(CASE WHEN (abs(o.eps-c.eps)<1e-10) THEN 't' ELSE 'f' END,'t')
-    aa,
-  assert(CASE WHEN (abs(o.lag_eps-c.lag_eps)<1e-10) THEN 't' ELSE 'f' END,'t')
-    ab,
-  assert(CASE WHEN (abs(o.slope_r-c.slope_r)<1e-10) THEN 't' ELSE 'f' END,'t')
-    ac,
-  assert(CASE WHEN NOT (c.firm IS NULL) THEN 't' ELSE 'f' END,'t') ad,
-  assert(CASE WHEN NOT (c.fyear IS NULL) THEN 't' ELSE 'f' END,'t') ae
-FROM (SELECT * FROM outtable
-      WHERE slope_r IS NOT NULL AND firm=50) o
-     LEFT OUTER JOIN correct_result c
-     ON (o.firm=c.firm AND o.fyear=c.fyear)
-DISTRIBUTED BY (firm,fyear);
-
-SELECT assert(count(*),10) FROM result_comp;
-SELECT DISTINCT assert(count(*),10) FROM result_comp;
-
-DROP TABLE test_data;
-DROP TABLE outtable;
-DROP TABLE correct_result;
-DROP TABLE result_comp;
+/*
+ * -- Testing the '@' operator.
+ * 
+ * CREATE TABLE test_data
+ * (fyear integer,firm integer, eps float8) DISTRIBUTED BY (firm);
+ * 
+ * INSERT INTO test_data
+ * SELECT (b.f + 1) % 10 + 2000 AS fyear,
+ * floor((b.f+1)/10) + 50 AS firm,
+ * f::float8/100 + (f::float8/500)*(f::float8/50) AS eps
+ * FROM generate_series(-500,499,1) b(f);
+ * 
+ * -- find slope of the linear model regression line
+ * CREATE OR REPLACE FUNCTION perl_regr_slope(x float8[], y float8[])
+ * RETURNS float8 AS $BODY$
+ * my @x = split /,/,substr $_[0],1,length($_[0])-2;
+ * my @y = split /,/,substr $_[1],1,length($_[1])-2;
+ * my $nx = @x;
+ * my $ny = @y;
+ * 
+ * return undef if (($nx!=$ny)||($nx!=9));
+ * my ($sx, $sy, $sxx, $sxy);
+ * 
+ * $sx += $_ for @x;
+ * $sy += $_ for @y;
+ * $sxx += $_ * $_ for @x;
+ * $sxy += $_ for map {$x[$_] * $y[$_]} (0..$#x);
+ * 
+ * my $num = $sxy*$nx-$sx*$sy;
+ * my $denom = $sxx*$nx-$sx*$sx;
+ * 
+ * return undef if ($denom==0);
+ * 
+ * return $num/$denom;
+ * 
+ * $BODY$ LANGUAGE plperl;
+ * 
+ * -- Use the function as follows
+ * SELECT sugar($SUGAR$
+ *   CREATE TABLE outtable AS
+ *     SELECT *, perl_regr_slope(@eps, @lag_eps) AS slope_R FROM (
+ *       SELECT firm, fyear, eps,
+ *              lag(eps) OVER (PARTITION BY firm ORDER BY firm, fyear) AS lag_eps
+ *       FROM test_data
+ *     ) AS a
+ *     WHERE eps IS NOT NULL AND lag_eps IS NOT NULL
+ *     WINDOW default_window AS (
+ *       PARTITION BY firm ORDER BY firm, fyear ROWS 8 PRECEDING
+ *     )
+ *     DISTRIBUTED BY (fyear);
+ * $SUGAR$);
+ * 
+ * CREATE TABLE correct_result
+ * (firm integer, fyear integer, eps float8, lag_eps float8, slope_R float8)
+ * DISTRIBUTED BY (firm);
+ * 
+ * INSERT INTO correct_result VALUES
+ * (50,  2000, -0.00996, -0.01984, 0.991667409270239),
+ * (50,  2001,        0, -0.00996, 0.991736261534802),
+ * (50,  2002,  0.01004,        0, 0.991803985368099),
+ * (50,  2003,  0.02016,  0.01004, 0.991870608283387),
+ * (50,  2004,  0.03036,  0.02016, 0.991936156906779),
+ * (50,  2005,  0.04064,  0.03036, 0.992000657012704),
+ * (50,  2006,    0.051,  0.04064, 0.992064133557693),
+ * (50,  2007,  0.06144,    0.051, 0.992126610712562),
+ * (50,  2008,  0.07196,  0.06144, 0.992188111893091),
+ * (50,  2009,  0.08256,  0.07196, 0.992248659789272);
+ * 
+ * 
+ * CREATE TABLE result_comp AS
+ * SELECT c.firm, c.fyear,
+ *   assert(CASE WHEN (abs(o.eps-c.eps)<1e-10) THEN 't' ELSE 'f' END,'t')
+ *     aa,
+ *   assert(CASE WHEN (abs(o.lag_eps-c.lag_eps)<1e-10) THEN 't' ELSE 'f' END,'t')
+ *     ab,
+ *   assert(CASE WHEN (abs(o.slope_r-c.slope_r)<1e-10) THEN 't' ELSE 'f' END,'t')
+ *     ac,
+ *   assert(CASE WHEN NOT (c.firm IS NULL) THEN 't' ELSE 'f' END,'t') ad,
+ *   assert(CASE WHEN NOT (c.fyear IS NULL) THEN 't' ELSE 'f' END,'t') ae
+ * FROM (SELECT * FROM outtable
+ *       WHERE slope_r IS NOT NULL AND firm=50) o
+ *      LEFT OUTER JOIN correct_result c
+ *      ON (o.firm=c.firm AND o.fyear=c.fyear)
+ * DISTRIBUTED BY (firm,fyear);
+ * 
+ * SELECT assert(count(*),10) FROM result_comp;
+ * SELECT DISTINCT assert(count(*),10) FROM result_comp;
+ * 
+ * DROP TABLE test_data;
+ * DROP TABLE outtable;
+ * DROP TABLE correct_result;
+ * DROP TABLE result_comp;
+ */
 
 -- Testing pivot01
 

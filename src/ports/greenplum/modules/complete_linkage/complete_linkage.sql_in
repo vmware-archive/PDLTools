@@ -405,7 +405,7 @@ $$ LANGUAGE PLPGSQL;
  * @internal
  * @brief Data type to represent the nearest neighbor of a cluster.
 */
-DROP TYPE IF EXISTS PDLTOOLS_SCHEMA.__clink_nearest_clust_complete CASCADE; 
+-- DROP TYPE IF EXISTS PDLTOOLS_SCHEMA.__clink_nearest_clust_complete CASCADE; 
 CREATE TYPE PDLTOOLS_SCHEMA.__clink_nearest_clust_complete AS (
     cluster_id INT,
     nn INT,

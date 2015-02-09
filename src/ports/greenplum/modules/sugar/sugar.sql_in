@@ -2206,7 +2206,7 @@ $$;
  * This aggregate function should never be used on NULL inputs.
  */
  
-DROP AGGREGATE IF EXISTS SUGAR_SCHEMA.__sugar_fast_agg(ANYELEMENT) CASCADE;
+-- DROP AGGREGATE IF EXISTS SUGAR_SCHEMA.__sugar_fast_agg(ANYELEMENT) CASCADE;
 CREATE AGGREGATE SUGAR_SCHEMA.__sugar_fast_agg(ANYELEMENT) (
   sfunc = SUGAR_SCHEMA.__sugar_agg_add,
   prefunc = SUGAR_SCHEMA.__sugar_agg_merge,
@@ -2272,7 +2272,7 @@ user=# SELECT choose_any(x) FROM generate_series(1,20) x;
 
  */
  
-DROP AGGREGATE IF EXISTS SUGAR_SCHEMA.choose_any(ANYELEMENT) CASCADE;
+-- DROP AGGREGATE IF EXISTS SUGAR_SCHEMA.choose_any(ANYELEMENT) CASCADE;
 CREATE AGGREGATE SUGAR_SCHEMA.choose_any(ANYELEMENT) (
   sfunc = SUGAR_SCHEMA.__sugar_any_add,
   prefunc = SUGAR_SCHEMA.__sugar_any_add,
@@ -2347,7 +2347,7 @@ user=# SELECT unique_element(x) FROM (
 
  */
 
-DROP AGGREGATE IF EXISTS SUGAR_SCHEMA.unique_element(ANYELEMENT) CASCADE;
+-- DROP AGGREGATE IF EXISTS SUGAR_SCHEMA.unique_element(ANYELEMENT) CASCADE;
 CREATE AGGREGATE SUGAR_SCHEMA.unique_element(ANYELEMENT) (
   sfunc = SUGAR_SCHEMA.__sugar_unique_add,
   prefunc = SUGAR_SCHEMA.__sugar_unique_add,
@@ -3316,7 +3316,7 @@ Run <code>"SELECT sugar('usage');"</code> for more on SUgAR documentation.
 @sa grp_sugar, grp_sugar_help_db
  */
 
-DROP TABLE IF EXISTS SUGAR_SCHEMA.sugar_db;
+-- DROP TABLE IF EXISTS SUGAR_SCHEMA.sugar_db;
 
 CREATE TABLE SUGAR_SCHEMA.sugar_db(
   funcname VARCHAR NOT NULL CHECK(funcname<>''),

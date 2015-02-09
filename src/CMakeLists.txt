@@ -120,7 +120,11 @@ macro(add_sql_files OUT_SQL_TARGET_FILES IN_SOURCE_DIR IN_TARGET_DIR)
   get_filename_component(TARGET_DIR_ABS "${IN_TARGET_DIR}" ABSOLUTE)
   file(GLOB_RECURSE SQL_FILES
     RELATIVE "${SOURCE_DIR_ABS}"
-    "${SOURCE_DIR_ABS}/*.sql_in")
+    "${SOURCE_DIR_ABS}/*.sql_in" "${SOURCE_DIR_ABS}/*.content"
+    "${SOURCE_DIR_ABS}/*.yml")
+
+    # The addition of '*.content' and '*.yml' files here is a patch.
+    # This should receive better handling.
  
     # psql of PostgreSQL < 9 does not like byte-order marks
     # TBD: This chunk has been copied & edited from MADlib cmake. Will need to

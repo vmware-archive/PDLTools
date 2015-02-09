@@ -64,7 +64,7 @@ the <code>i</code>'th key-value pair in the query string.
 @sa grp_uri_array_type
  */
 
-DROP TYPE IF EXISTS PDLTOOLS_SCHEMA.uri_type CASCADE;
+-- DROP TYPE IF EXISTS PDLTOOLS_SCHEMA.uri_type CASCADE;
 
 CREATE TYPE PDLTOOLS_SCHEMA.uri_type AS (
   scheme text,
@@ -82,7 +82,7 @@ CREATE TYPE PDLTOOLS_SCHEMA.uri_type AS (
   value text[]
 );
 
-DROP TYPE IF EXISTS PDLTOOLS_SCHEMA.uri_array_type CASCADE;
+-- DROP TYPE IF EXISTS PDLTOOLS_SCHEMA.uri_array_type CASCADE;
 
 /**
 @addtogroup grp_uri_array_type

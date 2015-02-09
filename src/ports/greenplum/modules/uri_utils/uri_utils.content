@@ -1,0 +1,10 @@
+UDF: FUNCTION PDLTOOLS_SCHEMA.extract_uri(pg_catalog.varchar)
+REL: TYPE PDLTOOLS_SCHEMA.uri_type
+UDF: FUNCTION PDLTOOLS_SCHEMA.parse_uri(pg_catalog.varchar)
+UDF: FUNCTION PDLTOOLS_SCHEMA.extract_uri(pg_catalog.text, pg_catalog.bool)
+REL: TYPE PDLTOOLS_SCHEMA.uri_array_type
+UDF: FUNCTION PDLTOOLS_SCHEMA.parse_uri()
+UDF: FUNCTION PDLTOOLS_SCHEMA.parse_uri(pg_catalog.text, pg_catalog.bool, pg_catalog.bool)
+UDF: FUNCTION PDLTOOLS_SCHEMA.parse_domain(pg_catalog.text)
+UDF: FUNCTION PDLTOOLS_SCHEMA.parse_domain()
+UDF: FUNCTION PDLTOOLS_SCHEMA.extract_uri()

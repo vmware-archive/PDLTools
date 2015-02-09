@@ -1,0 +1,9 @@
+UDF: FUNCTION PDLTOOLS_SCHEMA.assert(pg_catalog.text, pg_catalog.text)
+REL: TABLE SUGAR_SCHEMA.migrationhistory
+REL: TABLE PDLTOOLS_SCHEMA.migrationhistory
+REL: SEQUENCE PDLTOOLS_SCHEMA.migrationhistory_id_seq
+REL: SEQUENCE SUGAR_SCHEMA.migrationhistory_id_seq
+UDF: FUNCTION PDLTOOLS_SCHEMA.assert(pg_catalog.bool, pg_catalog.bool)
+UDF: FUNCTION PDLTOOLS_SCHEMA.pdltools_version()
+UDF: FUNCTION PDLTOOLS_SCHEMA.assert(pg_catalog.text, pg_catalog.text, pg_catalog.text)
+UDF: FUNCTION PDLTOOLS_SCHEMA.version()

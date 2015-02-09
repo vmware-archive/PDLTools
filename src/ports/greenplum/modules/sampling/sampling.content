@@ -1,0 +1,8 @@
+UDF: FUNCTION PDLTOOLS_SCHEMA.strat_sampling(pg_catalog.varchar)
+UDF: FUNCTION PDLTOOLS_SCHEMA.strat_partition(pg_catalog.varchar, pg_catalog.varchar, pg_catalog.varchar, pg_catalog.varchar, pg_catalog.varchar, pg_catalog._float8)
+UDF: FUNCTION PDLTOOLS_SCHEMA.__sampling_prep_grp(pg_catalog._float8)
+UDF: FUNCTION PDLTOOLS_SCHEMA.__sampling_samp_grp(pg_catalog.float8, pg_catalog.bytea)
+UDF: FUNCTION PDLTOOLS_SCHEMA.strat_sampling()
+UDF: FUNCTION PDLTOOLS_SCHEMA.strat_sampling(pg_catalog.varchar, pg_catalog.varchar, pg_catalog.varchar, pg_catalog.varchar, pg_catalog.float8)
+UDF: FUNCTION PDLTOOLS_SCHEMA.strat_partition()
+UDF: FUNCTION PDLTOOLS_SCHEMA.strat_partition(pg_catalog.varchar)

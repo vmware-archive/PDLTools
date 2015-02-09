@@ -15,7 +15,7 @@ python pdlpack.py [-s schema_name] -p platform [-S SUgAR_schema_name] [-M MADlib
 '''
 
 import os, sys, datetime, getpass, re, subprocess, tempfile, glob
-import argparse, configyml
+import argparse, configyml, yaml
 
 platform = 'greenplum'
 pdltoolsdir = None
@@ -32,7 +32,163 @@ plr_min_ver = '2.13'
 con_args={}
 verbose=False
 testcase=None
-tmpdir=None
+tmpdir_arg=None
+
+class session_manager:
+  def __init__(self,schema,platform,sugar_schema,madlib_schema,pre_sql=None):
+    self.name=None
+    self.schema=schema
+    self.platform=platform
+    self.sugar_schema=sugar_schema
+    self.madlib_schema=madlib_schema
+    self.pre_sql=pre_sql
+    self.session_content=[]
+    self.dsdir_mod_py_re=re.compile("PLPYTHON_LIBDIR")
+    self.module_re=re.compile("MODULE_NAME")
+    self.logfile=''
+    try:
+      self.tmpdir = tempfile.mkdtemp('', 'pdltools.', tmpdir_arg)
+    except OSError, e:
+      self.tmpdir = e.filename
+      _error("cannot create temporary directory: '%s'." % self.tmpdir, False)
+      raise
+  def logname(self):
+    return self.logfile
+  def set_pre_sql(self,pre_sql):
+    self.pre_sql=pre_sql
+  def begin(self,name):
+    if self.name!=None:
+      _error("Unexpected: BEGIN while already in transaction.", False)
+      raise Exception
+    self.name=name
+    self.session_content=["BEGIN;"]
+    if self.pre_sql:
+      self.session_content.append(self.pre_sql+";\n")
+  def rollback(self):
+    self.session_content=[]
+    self.name=None
+  def commit(self):
+    global rev, sugar_rev, pdltoolsdir_lib
+    if self.name == None:
+      _error("Unexpected: COMMIT instruction issued while not in transaction.",
+             False)
+      raise Exception
+    self.session_content.append("COMMIT;")
+    sqlfile = self.tmpdir + '/' + self.name + '.sql_in'
+    tmpfile = self.tmpdir + '/' + self.name + '.tmp'
+    self.logfile = self.tmpdir + '/' + self.name + '.log'
+    try:
+      sqlf = open(sqlfile, 'w')
+    except:
+      _error("Unable to open "+sqlfile+" for writing.", False)
+      raise
+    sqlf.write('\n'.join(self.session_content))
+    sqlf.close()
+    self.name=None
+    self.session_content=[]
+
+    # Prepare the file using M4
+    try:
+        f = open(tmpfile, 'w')
+
+        # Find the pdlpack dir (platform specific or generic)
+        if os.path.isdir(pdltoolsdir + "/ports/{platform}".format(platform=self.platform) + "/" + dbver + "/pdlpack"):
+            pdltoolsdir_pdlpack = pdltoolsdir + "/ports/{platform}".format(platform=self.platform) + "/" + dbver + "/pdlpack"
+        else:
+            pdltoolsdir_pdlpack = pdltoolsdir + "/pdlpack"
+
+        m4args = ['m4',
+                  '-P',
+                  '-DPDLTOOLS_SCHEMA=' + self.schema,
+                  '-DSUGAR_SCHEMA=' + self.sugar_schema,
+                  '-DMADLIB_SCHEMA=' + self.madlib_schema,
+                  '-DPDLTOOLS_VERSION=' + rev,
+                  '-DSUGAR_VERSION=' + sugar_rev,
+                  '-DMODULE_PATHNAME=' + pdltoolsdir_lib,
+                  '-I' + pdltoolsdir_pdlpack,
+                  sqlfile]
+
+        _info("> ... parsing: " + " ".join(m4args), verbose)
+
+        subprocess.call(m4args, stdout=f)
+        f.close()
+    except:
+        _error("Failed executing m4 on %s" % sqlfile, False)
+        raise Exception
+
+    # Run the SQL using DB command-line utility
+    sqlcmd = 'psql'
+    # Test the DB cmd line utility
+    std, err = subprocess.Popen(['which', sqlcmd], stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE).communicate()
+    if not std:
+        _error("Command not found: %s" % sqlcmd, True)
+
+    runcmd = [sqlcmd, '-a',
+    	      '-v', 'ON_ERROR_STOP=1',
+              '-h', con_args['host'].split(':')[0],
+              '-d', con_args['database'],
+              '-U', con_args['user'],
+              '-f', tmpfile]
+    runenv = os.environ
+    runenv["PGPASSWORD"] = con_args['password']
+
+    # Open log file
+    try:
+        log = open(self.logfile, 'w')
+    except:
+        _error("Cannot create log file: %s" % self.logfile, False)
+        raise Exception
+
+    # Run the SQL
+    try:
+        _info("> ... executing " + tmpfile, verbose)
+        retval = subprocess.call(runcmd, env=runenv, stdout=log, stderr=log)
+    except:
+        _error("Failed executing %s" % tmpfile, False)
+        raise Exception
+    finally:
+        log.close()
+
+    if retval!=0:
+      _error("Failed executing %s" % tmpfile, False)
+      _error("Check the log at %s" % self.logfile, False)
+    return retval
+
+  def exec_query(self,sql,show_error):
+    if self.name==None:
+      return _raw_run_sql_query(sql,show_error)
+    else:
+      self.session_content.append(sql+";\n")
+      return []
+  def exec_file(self, dsdir_mod_py, module, sqlfile, subdir=None):
+    if self.name==None:
+      if subdir==None:
+        tmpfile = self.tmpdir + '/' + os.path.basename(sqlfile) + '.tmp'
+        self.logfile = self.tmpdir + '/' + os.path.basename(sqlfile) + '.log'
+      else:
+        cur_tmpdir = self.tmpdir + "/" + subdir
+        _make_dir(cur_tmpdir)
+        tmpfile = cur_tmpdir + '/' + os.path.basename(sqlfile) + '.tmp'
+        self.logfile = cur_tmpdir + '/' + os.path.basename(sqlfile) + '.log'
+      retval=_raw_run_sql_file(self.schema, self.platform, self.sugar_schema,
+        self.madlib_schema, dsdir_mod_py, module, sqlfile, tmpfile,
+        self.logfile, self.pre_sql)
+      if retval!=0:
+        _error("Failed executing %s" % tmpfile, False)
+        _error("Check the log at %s" % self.logfile, False)
+      return retval
+    else:
+      for l in open(sqlfile).readlines():
+        self.session_content.append(
+          self.dsdir_mod_py_re.sub(dsdir_mod_py,
+            self.module_re.sub(module,l.rstrip('\n'))))
+      self.session_content.append(";\n")
+      return 0
+      
+  def __del__(self):
+    if self.name!=None:
+      self.rollback()
 
 def checkPythonVersion():
     # Required Python version
@@ -68,7 +224,7 @@ def init():
 init()
 
 
-def __get_rev_num(rev):
+def _get_rev_num(rev):
     """
     Convert version string into number for comparison
         @param rev version text
@@ -82,7 +238,7 @@ def __get_rev_num(rev):
     except:
         return ['0']
 
-def __get_rev_string(rev):
+def _get_rev_string(rev):
     """
     Convert version string into valid schema name suffix
         @param rev version text
@@ -99,19 +255,15 @@ def unescape(string):
     else:
         return re.sub(r'\\(?P<char>[/@:\\])', '\g<char>', string)
 
-def __run_sql_query(sql, show_error):
-    """
-    Runs a SQL query on the target platform DB
-    using the default command-line utility.
-    Very limited:
-      - no text output with "new line" characters allowed
-         @param sql query text to execute
-         @param show_error displays the SQL error msg
-    """
-    return ____run_sql_query(sql, show_error)
-
-def ____run_sql_query(sql, show_error):
-        ''' Running SQL command '''
+def _raw_run_sql_query(sql, show_error):
+	"""
+	Runs a SQL query on the target platform DB
+	using the default command-line utility.
+	Very limited:
+	  - no text output with "new line" characters allowed
+	     @param sql query text to execute
+	     @param show_error displays the SQL error msg
+	"""
 	sqlcmd = 'psql'
 	delimiter = '|'
 
@@ -119,9 +271,8 @@ def ____run_sql_query(sql, show_error):
 	std, err = subprocess.Popen(['which', sqlcmd], stdout=subprocess.PIPE,
 		                    stderr=subprocess.PIPE).communicate()
 
-
 	if std == '':
-	    __error("Command not found: %s" % sqlcmd, True)
+	    _error("Command not found: %s" % sqlcmd, True)
 
 	# Run the query
 	global con_args
@@ -130,6 +281,7 @@ def ____run_sql_query(sql, show_error):
 		  '-d', con_args['database'],
 		  '-U', con_args['user'],
 		  '-F', delimiter,
+                  '-x',
 		  '-Ac', "set CLIENT_MIN_MESSAGES=error; " + sql]
 	runenv = os.environ
 	runenv["PGPASSWORD"] = con_args['password']
@@ -139,32 +291,27 @@ def ____run_sql_query(sql, show_error):
 
 	if err:
 	    if show_error:
-		__error("SQL command failed: \nSQL: %s \n%s" % (sql, err), False)
+		_error("SQL command failed: \nSQL: %s \n%s" % (sql, err), False)
 	    raise Exception
 
 	# Convert the delimited output into a dictionary
 	results = []  # list of rows
-	i = 0
+	row = {}
 	for line in std.splitlines():
-	    if i == 0:
-		cols = [name for name in line.split(delimiter)]
-	    else:
-		row = {}  # dict of col_name:col_value pairs
-		c = 0
-		for val in line.split(delimiter):
-		    row[cols[c]] = val
-		    c += 1
-		results.insert(i, row)
-	    i += 1
-	# Drop the last line: "(X rows)"
-	try:
-	    results.pop()
-	except:
-	    pass
+		if len(line)==0:
+			if len(row)!=0:
+				results.append(row)
+				row={}
+		else:
+			val = line.split(delimiter,1)
+			if len(val)==2:
+				row[val[0]] = val[1]
 
+	if len(row)!=0:
+		results.append(row)
 	return results
 
-def __run_sql_file(schema, platform, sugar_schema, madlib_schema, dsdir_mod_py, module,
+def _raw_run_sql_file(schema, platform, sugar_schema, madlib_schema, dsdir_mod_py, module,
                    sqlfile, tmpfile, logfile, pre_sql):
     """Run SQL file
             @param schema name of the target schema
@@ -180,7 +327,7 @@ def __run_sql_file(schema, platform, sugar_schema, madlib_schema, dsdir_mod_py, 
     global rev, pdltoolsdir_lib
     # Check if the SQL file exists
     if not os.path.isfile(sqlfile):
-        __error("Missing module SQL file (%s)" % sqlfile, False)
+        _error("Missing module SQL file (%s)" % sqlfile, False)
         raise Exception
 
     # Prepare the file using M4
@@ -210,12 +357,12 @@ def __run_sql_file(schema, platform, sugar_schema, madlib_schema, dsdir_mod_py, 
                   '-I' + pdltoolsdir_pdlpack,
                   sqlfile]
 
-        __info("> ... parsing: " + " ".join(m4args), verbose)
+        _info("> ... parsing: " + " ".join(m4args), verbose)
 
         subprocess.call(m4args, stdout=f)
         f.close()
     except:
-        __error("Failed executing m4 on %s" % sqlfile, False)
+        _error("Failed executing m4 on %s" % sqlfile, False)
         raise Exception
 
     # Run the SQL using DB command-line utility
@@ -224,7 +371,7 @@ def __run_sql_file(schema, platform, sugar_schema, madlib_schema, dsdir_mod_py, 
     std, err = subprocess.Popen(['which', sqlcmd], stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE).communicate()
     if not std:
-        __error("Command not found: %s" % sqlcmd, True)
+        _error("Command not found: %s" % sqlcmd, True)
 
     runcmd = [sqlcmd, '-a',
     	      '-v', 'ON_ERROR_STOP=1',
@@ -239,15 +386,15 @@ def __run_sql_file(schema, platform, sugar_schema, madlib_schema, dsdir_mod_py, 
     try:
         log = open(logfile, 'w')
     except:
-        __error("Cannot create log file: %s" % logfile, False)
+        _error("Cannot create log file: %s" % logfile, False)
         raise Exception
 
     # Run the SQL
     try:
-        __info("> ... executing " + tmpfile, verbose)
+        _info("> ... executing " + tmpfile, verbose)
         retval = subprocess.call(runcmd, env=runenv, stdout=log, stderr=log)
     except:
-        __error("Failed executing %s" % tmpfile, False)
+        _error("Failed executing %s" % tmpfile, False)
         raise Exception
     finally:
         log.close()
@@ -255,32 +402,32 @@ def __run_sql_file(schema, platform, sugar_schema, madlib_schema, dsdir_mod_py, 
     return retval
 
 
-def __plpy_check(py_min_ver):
+def _plpy_check(py_min_ver):
     """
     Check pl/python existence and version
         @param py_min_ver min Python version to run PDL Tools
     """
 
-    __info("Testing PL/Python environment...", True)
+    _info("Testing PL/Python environment...", True)
 
     # Check PL/Python existence
-    rv = __run_sql_query("SELECT count(*) AS CNT FROM pg_language "
+    rv = _raw_run_sql_query("SELECT count(*) AS CNT FROM pg_language "
                          "WHERE lanname = 'plpythonu'", True)
 
     if int(rv[0]['cnt']) > 0:
-        __info("> PL/Python already installed", verbose)
+        _info("> PL/Python already installed", verbose)
     else:
-        __info("> PL/Python not installed", verbose)
-        __info("> Creating language PL/Python...", True)
+        _info("> PL/Python not installed", verbose)
+        _info("> Creating language PL/Python...", True)
         try:
-            __run_sql_query("CREATE LANGUAGE plpythonu;", True)
+            _raw_run_sql_query("CREATE LANGUAGE plpythonu;", True)
         except:
-            __error('Cannot create language plpythonu. Stopping installation...', False)
+            _error('Cannot create language plpythonu. Stopping installation...', False)
             raise Exception
 
     # Check PL/Python version
-    __run_sql_query("DROP FUNCTION IF EXISTS plpy_version_for_pdltools();", False)
-    __run_sql_query("""
+    _raw_run_sql_query("DROP FUNCTION IF EXISTS plpy_version_for_pdltools();", False)
+    _raw_run_sql_query("""
         CREATE OR REPLACE FUNCTION plpy_version_for_pdltools()
         RETURNS TEXT AS
         $$
@@ -290,45 +437,45 @@ def __plpy_check(py_min_ver):
         $$
         LANGUAGE plpythonu;
     """, True)
-    rv = __run_sql_query("SELECT plpy_version_for_pdltools() AS ver;", True)
+    rv = _raw_run_sql_query("SELECT plpy_version_for_pdltools() AS ver;", True)
     python = rv[0]['ver']
     py_cur_ver = [int(i) for i in python.split('.')]
     if py_cur_ver >= py_min_ver:
-        __info("> PL/Python version: %s" % python, verbose)
+        _info("> PL/Python version: %s" % python, verbose)
     else:
-        __error("PL/Python version too old: %s. You need %s or greater"
+        _error("PL/Python version too old: %s. You need %s or greater"
                 % (python, '.'.join(str(i) for i in py_min_ver)), False)
         raise Exception
 
-    __info("> PL/Python environment OK (version: %s)" % python, True)
+    _info("> PL/Python environment OK (version: %s)" % python, True)
 
 
-def __plr_check(plr_min_ver):
+def _plr_check(plr_min_ver):
     """
     Check pl/r existence and version
         @param plr_min_ver min PL/R version to run PDL Tools
     """
 
-    __info("Testing PL/R environment...", True)
+    _info("Testing PL/R environment...", True)
 
     # Check PL/R existence
-    rv = __run_sql_query("SELECT count(*) AS CNT FROM pg_language "
+    rv = _raw_run_sql_query("SELECT count(*) AS CNT FROM pg_language "
                          "WHERE lanname = 'plr'", True)
 
     if int(rv[0]['cnt']) > 0:
-        __info("> PL/R already installed", verbose)
+        _info("> PL/R already installed", verbose)
     else:
-        __info("> PL/R not installed", verbose)
-        __info("> Creating language PL/R...", True)
+        _info("> PL/R not installed", verbose)
+        _info("> Creating language PL/R...", True)
         try:
-            __run_sql_query("CREATE LANGUAGE plr;", True)
+            _raw_run_sql_query("CREATE LANGUAGE plr;", True)
         except:
-            __error('Cannot create language plr. Stopping installation...', False)
+            _error('Cannot create language plr. Stopping installation...', False)
             raise Exception
 
     # Check PL/R version
-    __run_sql_query("DROP FUNCTION IF EXISTS plr_version_for_pdltools();", False)
-    __run_sql_query("""
+    _raw_run_sql_query("DROP FUNCTION IF EXISTS plr_version_for_pdltools();", False)
+    _raw_run_sql_query("""
         CREATE OR REPLACE FUNCTION plr_version_for_pdltools()
         RETURNS TEXT AS
         $$
@@ -336,12 +483,12 @@ def __plr_check(plr_min_ver):
         $$
         LANGUAGE plr;
     """, True)
-    rv = __run_sql_query("SELECT plr_version_for_pdltools() AS ver;", True)
+    rv = _raw_run_sql_query("SELECT plr_version_for_pdltools() AS ver;", True)
     plr_cur_ver = rv[0]['ver']
     if plr_cur_ver >= plr_min_ver:
-        __info("> PL/R version: %s" % plr_cur_ver, verbose)
+        _info("> PL/R version: %s" % plr_cur_ver, verbose)
     else:
-        __error("PL/R version too old: {cur_ver}. You need {min_ver} or greater".format(
+        _error("PL/R version too old: {cur_ver}. You need {min_ver} or greater".format(
                                 cur_ver=plr_cur_ver,
                                 min_ver=plr_min_ver
                                 ), 
@@ -349,36 +496,36 @@ def __plr_check(plr_min_ver):
                 )
         raise Exception
 
-    __info("> PL/R environment OK (version: %s)" % plr_cur_ver, True)
+    _info("> PL/R environment OK (version: %s)" % plr_cur_ver, True)
 
 
-def __plperl_check(perl_min_ver,perl_max_ver):
+def _plperl_check(perl_min_ver,perl_max_ver):
     """
     Check pl/perl existence and version
         @param perl_min_ver min Perl version to run PDL Tools
         @param perl_max_ver max Perl version to run PDL Tools
     """
 
-    __info("Testing PL/Perl environment...", True)
+    _info("Testing PL/Perl environment...", True)
 
     # Check PL/Perl existence
-    rv = __run_sql_query("SELECT count(*) AS CNT FROM pg_language "
+    rv = _raw_run_sql_query("SELECT count(*) AS CNT FROM pg_language "
                          "WHERE lanname = 'plperl'", True)
 
     if int(rv[0]['cnt']) > 0:
-        __info("> PL/Perl already installed", verbose)
+        _info("> PL/Perl already installed", verbose)
     else:
-        __info("> PL/Perl not installed", verbose)
-        __info("> Creating language PL/Perl...", True)
+        _info("> PL/Perl not installed", verbose)
+        _info("> Creating language PL/Perl...", True)
         try:
-            __run_sql_query("CREATE LANGUAGE plperl;", True)
+            _raw_run_sql_query("CREATE LANGUAGE plperl;", True)
         except:
-            __error('Cannot create language plperl. Stopping installation...', False)
+            _error('Cannot create language plperl. Stopping installation...', False)
             raise Exception
 
     # Check PL/Perl version
-    __run_sql_query("DROP FUNCTION IF EXISTS plperl_version_for_pdltools();", False)
-    __run_sql_query("""
+    _raw_run_sql_query("DROP FUNCTION IF EXISTS plperl_version_for_pdltools();", False)
+    _raw_run_sql_query("""
         CREATE OR REPLACE FUNCTION plperl_version_for_pdltools()
         RETURNS TEXT STABLE AS
         $$
@@ -386,22 +533,22 @@ def __plperl_check(perl_min_ver,perl_max_ver):
         $$
         LANGUAGE plperl;
     """, True)
-    rv = __run_sql_query("SELECT plperl_version_for_pdltools() AS ver;", True)
+    rv = _raw_run_sql_query("SELECT plperl_version_for_pdltools() AS ver;", True)
     perl_cur_ver = float(rv[0]['ver'])
     if perl_cur_ver <= perl_min_ver:
-        __error("PL/Perl version too old: %s. You need %s or greater"
+        _error("PL/Perl version too old: %s. You need %s or greater"
                 % (str(perl_cur_ver),str(perl_min_ver)), False)
         raise Exception
     elif perl_cur_ver >= perl_max_ver:
-        __error("PL/Perl version too new: %s. You need %s or less"
+        _error("PL/Perl version too new: %s. You need %s or less"
                 % (str(perl_cur_ver),str(perl_max_ver)), False)
         raise Exception
     else:
-        __info("> PL/Perl version: %s" % str(perl_cur_ver), verbose)
+        _info("> PL/Perl version: %s" % str(perl_cur_ver), verbose)
 
-    __info("> PL/Perl environment OK (version: %s)" % str(perl_cur_ver), True)
+    _info("> PL/Perl environment OK (version: %s)" % str(perl_cur_ver), True)
 
-def __error(msg, stop):
+def _error(msg, stop):
     """
     Error message wrapper
         @param msg error message
@@ -413,7 +560,7 @@ def __error(msg, stop):
     if stop:
         exit(2)
 
-def __info(msg, verbose=True):
+def _info(msg, verbose=True):
     """
     Info message wrapper (verbose)
         @param msg info message
@@ -423,7 +570,7 @@ def __info(msg, verbose=True):
     if verbose:
         print this + ' : INFO : ' + msg
 
-def __print_revs(rev, dbrev, sugar_dbrev, con_args, schema, sugar_schema):
+def _print_revs(rev, dbrev, sugar_dbrev, con_args, schema, sugar_schema):
     """
     Print version information
         @param rev OS-level PDL Tools version
@@ -432,28 +579,28 @@ def __print_revs(rev, dbrev, sugar_dbrev, con_args, schema, sugar_schema):
         @param con_args database connection arguments
         @param schema PDL Tools schema name
     """
-    __info("PDL Tools version    = %s (%s)" % (rev, sys.argv[0]), True)
-    __info("SUgAR version    = %s" % sugar_rev, True)
+    _info("PDL Tools version    = %s (%s)" % (rev, sys.argv[0]), True)
+    _info("SUgAR version    = %s" % sugar_rev, True)
     if con_args:
         try:
-            __info("PDL Tools database version = %s (host=%s, db=%s, schema=%s)"
+            _info("PDL Tools database version = %s (host=%s, db=%s, schema=%s)"
                    % (dbrev, con_args['host'], con_args['database'], schema), True)
         except:
-            __info("PDL Tools database version = [Unknown] (host=%s, db=%s, schema=%s)"
+            _info("PDL Tools database version = [Unknown] (host=%s, db=%s, schema=%s)"
                    % (con_args['host'], con_args['database'], schema), True)
         try:
-            __info("SUgAR database version = %s (host=%s, db=%s, schema=%s)"
+            _info("SUgAR database version = %s (host=%s, db=%s, schema=%s)"
                    % (sugar_dbrev, con_args['host'], con_args['database'], schema), True)
         except:
-            __info("SUgAR database version = [Unknown] (host=%s, db=%s, schema=%s)"
+            _info("SUgAR database version = [Unknown] (host=%s, db=%s, schema=%s)"
                    % (con_args['host'], con_args['database'], schema), True)
     return
 
 
-def __get_dbver(platform):
+def _get_dbver(platform):
     """ Read version number from database (of form X.Y) """
     try:
-        versionStr = __run_sql_query("""SELECT pg_catalog.version()""",
+        versionStr = _raw_run_sql_query("""SELECT pg_catalog.version()""",
                                      True)[0]['version']
         if(platform=='hawq'):
             match = re.search("HAWQ[a-zA-Z\s]*(\d+\.\d+)", versionStr)
@@ -461,9 +608,9 @@ def __get_dbver(platform):
             match = re.search("Greenplum[a-zA-Z\s]*(\d+\.\d+)", versionStr)
         return None if match is None else match.group(1)
     except:
-        __error("Failed reading database version", True)
+        _error("Failed reading database version", True)
 
-def __make_dir(dir):
+def _make_dir(dir):
     """
     # Create a temp dir
     # @param dir temp directory path
@@ -475,102 +622,149 @@ def __make_dir(dir):
             print "ERROR: can not create directory: %s. Check permissions." % dir
             exit(1)
 
-def __db_create_schema(schema):
+def _db_create_schema(schema,session):
     """
     Create schema
         @param schema name of the schema to create
     """
 
-    __info("> Creating %s schema" % schema.upper(), True)
+    _info("> Creating %s schema" % schema.upper(), True)
     try:
-        __run_sql_query("CREATE SCHEMA %s;" % schema, True)
+        session.exec_query("CREATE SCHEMA %s;" % schema, True)
     except:
-        __Error('Cannot create new schema. Rolling back installation...', False)
+        _Error('Cannot create new schema.', False)
         raise Exception
 
-def __db_grant_usage(schema):
+def _db_grant_usage(schema,session):
     """
     Grant usage
         @param schema name of the schema to grant permissions to
     """
 
-    __info("> Granting usage on %s schema" % schema.upper(), True)
+    _info("> Granting usage on %s schema" % schema.upper(), True)
     try:
-        __run_sql_query("GRANT USAGE ON SCHEMA %s TO PUBLIC;" % schema, True)
+        session.exec_query("GRANT USAGE ON SCHEMA %s TO PUBLIC;" % schema, True)
     except:
-        __Error('Cannot grant permissions on schema. Rolling back installation...', False)
+        _Error('Cannot grant permissions on schema.', False)
         raise Exception
 
-def __db_update_migration_history(schema, platform, backup_schema, curr_rev,
-                                  old_sugar=False):
+def _db_update_migration_history(schema, curr_rev, session):
     """
-    Create MigrationTable
+    Create/update MigrationTable
         @param schema Name of the target schema
-        @param backup_schema Name of backup schema
+        @param curr_rev Revision number to add.
     """
-    # Create MigrationHistory table
-    # For hawq, if there is an existing pdltools schema, we will simply append to existing migration
+    # Create MigrationHistory table if it does not already exist.
     # history table without recreating it.
-    if( not (platform == 'hawq' and backup_schema)):
-        try:
-            __info("> Creating %s.MigrationHistory table" % schema.upper(), True)
-            sql = """CREATE TABLE %s.migrationhistory
-                   (id serial, version varchar(255),
-                   applied timestamp default current_timestamp);""" % schema
-            __run_sql_query(sql, True)
-        except:
-            __error("Cannot create MigrationHistory table in schema %s."
-                    % schema.upper(), False)
-            raise Exception
-
-    # Copy MigrationHistory table for record keeping purposes
-    if old_sugar:
-        __info("> Old version of SUgAR does not have a MigrationHistory table.",verbose)
-        try:
-            sql = """INSERT INTO %s.migrationhistory (version,applied)
-                     VALUES ('0.4',NULL);""" % schema
-            __run_sql_query(sql,True)
-        except:
-            __error("Cannot insert data into MigrationHistory table.", False)
-            raise Exception
-    elif backup_schema and platform != 'hawq':
-        try:
-            __info("> Saving data from %s.MigrationHistory table" % backup_schema.upper(), True)
-            sql = """INSERT INTO %s.migrationhistory (version, applied)
-                   SELECT version, applied FROM %s.migrationhistory
-                   ORDER BY id;""" % (schema, backup_schema)
-            __run_sql_query(sql, True)
-        except:
-            __error("Cannot copy MigrationHistory table", False)
-            raise Exception
+    results = _raw_run_sql_query("""SELECT * FROM pg_catalog.pg_tables
+                 WHERE schemaname='%s' AND tablename='migrationhistory';"""
+                 % schema,True)
+    if len(results)==0:
+        _info("> %s.MigrationHistory table does not exist. Creating." % schema.upper(), verbose)
+        sql = """CREATE TABLE %s.migrationhistory
+               (id serial, version varchar(255),
+               applied timestamp default current_timestamp);""" % schema
+        session.exec_query(sql, True)
+        _info("> %s.MigrationHistory table created." % schema.upper(), True)
+    else:
+        _info("> %s.MigrationHistory table exists." % schema.upper(), True)
 
     # Stamp the DB installation
     try:
-        __info("> Writing version info in %s.MigrationHistory table"
+        _info("> Writing version info in %s.MigrationHistory table"
                % schema.upper(), True)
-        __run_sql_query("INSERT INTO %s.migrationhistory(version) "
+        session.exec_query("INSERT INTO %s.migrationhistory(version) "
                         "VALUES('%s')" % (schema, curr_rev), True)
     except:
-        __error("Cannot insert data into %s.migrationhistory table"
+        _error("Cannot insert data into %s.migrationhistory table"
                 % schema.upper(), False)
         raise Exception
 
-def __db_create_objects(schema, platform, sugar_schema, madlib_schema,
-                        backup_schema, backup_sugar_schema, old_sugar):
+def _db_install_module(module, platform, session):
     """
-    Create PDL Tools DB objects in the schema
+    Create module objects in the schema
+        @param module Name of module to install
+        @param platform Type of target DB
+        @param session Name of transaction manager
+    """
+    # Find the Python module dir (platform specific or generic)
+    if os.path.isdir(pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/" + dbver + "/modules/" + module):
+        dsdir_mod_py = pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/" + dbver + "/modules"
+    else:
+        dsdir_mod_py = pdltoolsdir + "/modules"
+
+    # Find the SQL module dir (platform specific or generic)
+    if os.path.isdir(pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/modules/" + module):
+        dsdir_mod_sql = pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/modules"
+        rel_path = "/ports/"+platform+"/modules/"+module
+    elif os.path.isdir(pdltoolsdir + "/modules/" + module):
+        dsdir_mod_sql = pdltoolsdir + "/modules"
+        rel_path = "/modules/"+module
+    else:
+        # This was a platform-specific module, for which no default exists.
+        # We can just skip this module.
+        rel_path = None
+        return rel_path
+
+    # Loop through all SQL files for this module
+    mask = dsdir_mod_sql + '/' + module + '/*.sql_in'
+    sql_files = glob.glob(mask)
+
+    if not sql_files:
+        _info("No files found in: %s" % mask, True)
+        raise Exception
+
+    # Execute all SQL files for the module
+    for sqlfile in sql_files:
+        retval = session.exec_file(dsdir_mod_py, module, sqlfile, module)
+        # Check the exit status
+        if retval != 0:
+            raise Exception
+
+    return rel_path
+
+class install_monitor:
+    def __init__(self, schema, sugar_schema, madlib_schema):
+      self.schema=schema
+      self.sugar_schema=sugar_schema
+      self.objects=set()
+      self.schema_re=re.compile(r"\b"+schema.lower()+r"\b")
+      self.sugar_schema_re=re.compile(r"\b"+sugar_schema.lower()+r"\b")
+      self.madlib_schema_re=re.compile(r"\b"+madlib_schema.lower()+r"\b")
+    def post_install_printout(self,module,session):
+      current=set(_multi_format_schema_objects(self.schema,session).keys()
+                   ).union(set(_multi_format_schema_objects(
+                             self.sugar_schema,session).keys()))
+      newobj=current.difference(self.objects)
+      self.objects=current
+      for x in newobj:
+        obj=self.madlib_schema_re.sub("MADLIB_SCHEMA",
+              self.sugar_schema_re.sub("SUGAR_SCHEMA",
+                self.schema_re.sub("PDLTOOLS_SCHEMA",x)))
+        _info("MODULE(%s): %s" % (module,obj), True)
+
+def _db_clean_create_objects(schema, platform, sugar_schema, madlib_schema,
+                             output, session):
+    """
+    Create PDL Tools DB objects in the schema and print objects belonging
+    to each module.
         @param schema Name of the target PDL Tools schema
+        @param platform Type of target DB
         @param sugar_schema Name of the target SUgARlib schema
-        @param backup_schema Name of backup schema of latest PDL Tools
-        @param backup_sugar_schema Name of backup schema of latest SUgAR
+        @param madlib_schema Name of schema where MADlib resides
+        @param output Enable per-module-function printing
     """
-    __info("> Updating PDL Tools migration history.", True)
-    __db_update_migration_history(schema, platform, backup_schema, rev)
-    __info("> Updating SUgAR migration history.", True)
-    __db_update_migration_history(sugar_schema, platform, backup_sugar_schema, sugar_rev, old_sugar)
+    if output:
+      monitor=install_monitor(schema,sugar_schema, madlib_schema)
+    _info("> Updating PDL Tools migration history.", True)
+    _db_update_migration_history(schema, rev, session)
+    _info("> Updating SUgAR migration history.", True)
+    _db_update_migration_history(sugar_schema, sugar_rev, session)
+    if output:
+      monitor.post_install_printout("/ports/greenplum/modules/common",session)
+    # We're annexing the update history table et al. to the "common" module.
 
-    __info("> Creating objects for modules:", True)
-
+    _info("> Creating objects for modules:", True)
 
     # Loop through all modules/modules
     ## portspecs is a global variable
@@ -578,86 +772,29 @@ def __db_create_objects(schema, platform, sugar_schema, madlib_schema,
     for moduleinfo in portspecs['modules']:
         # Get the module name
         module = moduleinfo['name']
-        __info("> - %s" % module, True)
- 
-        # Find the Python module dir (platform specific or generic)
-        if os.path.isdir(pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/" + dbver + "/modules/" + module):
-            dsdir_mod_py = pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/" + dbver + "/modules"
-        else:
-            dsdir_mod_py = pdltoolsdir + "/modules"
+        _info("> - %s" % module, True)
+        rel_path=_db_install_module(module, platform, session) 
+        if output and rel_path:
+          monitor.post_install_printout(rel_path,session)
 
-        # Find the SQL module dir (platform specific or generic)
-        if os.path.isdir(pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/modules/" + module):
-            dsdir_mod_sql = pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/modules"
-        elif os.path.isdir(pdltoolsdir + "/modules/" + module):
-            dsdir_mod_sql = pdltoolsdir + "/modules"
-        else:
-            # This was a platform-specific module, for which no default exists.
-            # We can just skip this module.
-            continue
-
-        # Make a temp dir for log files
-        cur_tmpdir = tmpdir + "/" + module
-        __make_dir(cur_tmpdir)
-
-        # Loop through all SQL files for this module
-        mask = dsdir_mod_sql + '/' + module + '/*.sql_in'
-        sql_files = glob.glob(mask)
-
-        if not sql_files:
-            __error("No files found in: %s" % mask, True)
-
-        # Execute all SQL files for the module
-        for sqlfile in sql_files:
-            algoname = os.path.basename(sqlfile).split('.')[0]
-            # Set file names
-            tmpfile = cur_tmpdir + '/' + os.path.basename(sqlfile) + '.tmp'
-            logfile = cur_tmpdir + '/' + os.path.basename(sqlfile) + '.log'
-
-            retval = __run_sql_file(schema, platform, sugar_schema, madlib_schema,
-                                    dsdir_mod_py, module,
-                                    sqlfile, tmpfile, logfile, None)
-            # Check the exit status
-            if retval != 0:
-                __error("Failed executing %s" % tmpfile, False)
-                __error("Check the log at %s" % logfile, False)
-                raise Exception
-
-def __db_rollback(drop_schema, keep_schema):
-    """
-    Rollback installation
-        @param drop_schema name of the schema to drop
-        @param keep_schema name of the schema to rename and keep
-    """
-
-    __info("Rolling back the installation...", True)
-
-    if not drop_schema:
-        __error('No schema name to drop. Stopping rollback...', True)
-
-    # Drop the current schema
-    __info("> Dropping schema %s" % drop_schema.upper(), verbose)
+def _drop_schema(schema, session):
+    # Drop the schema
+    _info("> Dropping schema %s" % schema.upper(), verbose)
     try:
-        __run_sql_query("DROP SCHEMA %s CASCADE;" % (drop_schema), True)
+        session.exec_query("DROP SCHEMA %s CASCADE;" % schema, True)
     except:
-        __error("Cannot drop schema %s. Stopping rollback..." % drop_schema.upper(), True)
-
-    # Rename old to current schema
-    if keep_schema:
-        __db_rename_schema(keep_schema, drop_schema)
-
-    __info("Rollback finished successfully.", True)
+        _error("Cannot drop schema %s. Stopping." % schema.upper(), True)
 
 ## # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Read version from MigrationHistory table in database
 # @param schema schema-name in which to look for table
 ## # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-def __get_installed_ver(schema):
+def _get_installed_ver(schema,session):
     try:
-        row = __run_sql_query("""SELECT count(*) AS cnt FROM pg_tables
+        row = _raw_run_sql_query("""SELECT count(*) AS cnt FROM pg_tables
             WHERE schemaname='%s' AND tablename='migrationhistory'""" % (schema), True)
         if int(row[0]['cnt']) > 0:
-            row = __run_sql_query("""SELECT version FROM %s.migrationhistory
+            row = _raw_run_sql_query("""SELECT version FROM %s.migrationhistory
                 WHERE applied IS NOT NULL
                 ORDER BY applied DESC LIMIT 1""" % schema, True)
             if row:
@@ -667,225 +804,25 @@ def __get_installed_ver(schema):
 
     return None
 
-## # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Rename schema
-# @param from_schema name of the schema to rename
-# @param to_schema new name for the schema
-## # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-def __db_rename_schema(from_schema, to_schema):
+def _schema_exists(schema, session):
+    # Test if schema exists
+    result=_raw_run_sql_query("SELECT schema_name FROM information_schema.schemata WHERE schema_name='%s';" % schema, True)
+    return len(result)!=0
 
-    __info("> Renaming schema %s to %s" % (from_schema.upper(), to_schema.upper()), True)
-    try:
-        __run_sql_query("ALTER SCHEMA %s RENAME TO %s;" % (from_schema, to_schema), True)
-    except:
-        __error('Cannot rename schema. Stopping installation...', False)
-        raise Exception
-
-def __cmp_versions(ver_a, ver_b):
-  a_list = [int(x) for x in ver_a.split('.')]
-  b_list = [int(x) for x in ver_b.split('.')]
-  return cmp(a_list,b_list)
-
-def __check_prev_install(schema, platform, current_rev, is_sugar=False):
-    """ is_newer can take the following values:
-     -1 -- current version is older than db version
-      0 -- current version is the same as db version
-      1 -- current version is newer than db version
-      2 -- schema for current version exists, but library not installed
-      3 -- current installation is for an old version of SUgAR that did not
-           have a migration table and is older than the current version.
-    """
-    backup_schema = None
-    is_newer = 1
-
-    schema_writable = None
+def _schema_writable(schema,session):
     # Test if schema is writable
     try:
-        __run_sql_query("CREATE TABLE %s.__pdltools_test_table (A INT);" % schema, False)
-        __run_sql_query("DROP TABLE %s.__pdltools_test_table;" % schema, False)
+        session.exec_query("CREATE TABLE %s.__pdltools_test_table (A INT);" % schema, False)
+        session.exec_query("DROP TABLE %s.__pdltools_test_table;" % schema, False)
         schema_writable = True
     except:
         schema_writable = False
+    return schema_writable
 
-    
-    #CASE #1: Target schema exists with library objects:
-    rc=0
-    if schema_writable:
-      dbrev = __get_installed_ver(schema)
-      if is_sugar and dbrev == None:
-          try:
-              rc = __run_sql_query("""
-                         select count(*) AS cnt 
-                         from pg_catalog.pg_proc p, pg_catalog.pg_namespace ns 
-                         where ns.nspname='%s' and 
-                               pronamespace=ns.oid and 
-                               p.proname='sugar_version';
-                        """ % schema.lower(),
-                        True
-                   )[0]['cnt']
-          except:
-              rc = 0
-          if rc > 0:
-              dbrev = '0.4' # SUgAR's v0.4 came without a migration table.
-      if dbrev != None:
-          dbrev_string = __get_rev_string(dbrev)
-          backup_schema = schema + '_v' + dbrev_string
-          is_newer = __cmp_versions(current_rev, dbrev)
-          if is_newer == 1:
-              if rc>0:
-                  is_newer = 3
-              __info("***************************************************************************", True)
-              __info("* Schema %s already exists and includes library objects." % schema.upper(), True)
-              __info("* Installed version is %s." % dbrev, True)
-              if(platform != 'hawq'):
-                  __info("* Installer will rename it to %s and will upgrade to version %s." % (backup_schema.upper(), current_rev), True)
-              __info("***************************************************************************", True)
-          elif is_newer == 0:
-              __info("> Schema %s already exists and includes latest version of the library (%s)." % (schema.upper(), dbrev), verbose)
-              if(platform != 'hawq'):
-                  __info("> Installer will rename it temporarily to %s, will reinstall," % backup_schema.upper(), verbose)
-                  __info("> and will remove old copy upon successfully re-install.", verbose)
-          else:
-              __info("> Schema %s already exists and is at newer version." % schema.upper(), True)
-              __info("> Installed version is %s." % dbrev, True)
-              __info("> Installer version is %s." % current_rev, True)
-              __info("> Halting installation.",True)
-              __info("Before retrying: drop %s schema OR install into a different schema." % schema.upper(), True)
-          return (backup_schema, is_newer)
-      #CASE #2: Target schema exists w/o library objects:
-      else:
-          __info("> Schema %s already exists but does not include library objects." % schema.upper(), True)
-          __info("> Installation stopped.", True)
-          __info("> Before retrying: drop %s schema OR install into a different schema." % schema.upper(), True)
-          is_newer = 2
-          return (backup_schema, is_newer)
-    #CASE #3: Target schema does not exist
-    else:
-        __info("> Schema %s does not exist." % schema.upper(), verbose)
-    return (backup_schema, is_newer)
-
-
-def __db_drop_backup_schema(backup_schema, is_newer):
-  if (is_newer==1 or is_newer==3) and backup_schema != None:
-    __info("Keep old schema %s? [Y/N]" % backup_schema.upper(), True)
-    go = raw_input('>>> ').upper()
-    while go =='' or go[0] not in 'YN':
-        go = raw_input('Yes or No >>> ').upper()
-    if go[0] == 'Y':
-        return
-  if backup_schema != None:
-    __info("> Dropping old schema %s." % backup_schema.upper(), verbose)
-    try:
-      __run_sql_query("DROP SCHEMA %s CASCADE;" % backup_schema, True)
-    except:
-      __info("Unable to drop schema %s." % backup_schema.upper(), True)
-
-def __db_install(schema, platform, sugar_schema, madlib_schema):
-    """
-    Install PDL Tools
-        @param schema pdltools schema name
-        @param sugar_schema name of SUgARlib schema
-        @param madlib_schema name of MADlib schema
-    """
-    __info("Installing pdltools into %s schema and SUgAR into %s schema..."
-           % (schema.upper(),sugar_schema.upper()), True)
-
-    __info("Looking for MADlib installation in %s schema..."
-           % (madlib_schema.upper()), True)
-
-    (backup_schema, pdltools_newer) = __check_prev_install(schema, platform, rev)
-    if pdltools_newer == -1 or pdltools_newer == 2:
-      return
-
-    (backup_sugar_schema, sugar_newer) = __check_prev_install(sugar_schema, platform, sugar_rev, True)
-    if sugar_newer == -1 or sugar_newer == 2:
-      return
-
-    if pdltools_newer == 0 and sugar_newer == 0:
-        __info("**********************************************************************", True)
-        __info("* NOTE:", True)
-        __info("* Both PDL Tools and SUgAR installations are already at latest version.", True)
-        __info("**********************************************************************", True)
-
-    if (backup_schema or backup_sugar_schema) and platform == 'hawq':
-        __info("* Schema PDLTools and/or SUgAR already exists", True)
-        __info("* For HAWQ, these schemas will be overwritten by the objects in this installer", True)
-        __info("* It may drop any database objects (tables, views, etc.) that depend on 'pdltools or SUgAR' SCHEMA!!!!!!!!!!!!!", True)
-        __info("***************************************************************************", True)
-
-  
-    if backup_schema or backup_sugar_schema or (pdltools_newer == 0 and suger_newer == 0):
-        __info("Would you like to continue?", True)
-        go = raw_input('>>> ').upper()
-        while go == '' or go[0] not in 'YN':
-            go = raw_input('Yes or No >>> ').upper()
-        if go[0] == 'N':
-            __info('Installation stopped.', True)
-            return
-  
-    if backup_schema and platform != 'hawq':
-        # Rename PDL Tools schema
-        __db_rename_schema(schema, backup_schema)
-  
-    if backup_sugar_schema and platform != 'hawq':
-        # Rename SUgAR schema
-        __db_rename_schema(sugar_schema, backup_sugar_schema)
-
-    # Create PDL Tools schema
-    if(platform != 'hawq' or not backup_schema):
-        try:
-            __db_create_schema(schema)
-        except:
-            __db_rollback(schema, backup_schema)
-            raise Exception
-
-    # Create SUgARlib schema
-    if(platform != 'hawq' or not backup_sugar_schema):
-        try:
-            __db_create_schema(sugar_schema)
-        except:
-            __db_rollback(sugar_schema, backup_sugar_schema)
-            __db_rollback(schema, backup_schema)
-            raise Exception
-
-    # Granting Usage on Schemas
-    try:
-        __db_grant_usage(schema)
-        __db_grant_usage(sugar_schema)
-    except:
-        #Rolling back in HAWQ will drop catalog functions, simply bubble the exception up in these cases.
-        if(platform != 'hawq'):
-            __db_rollback(sugar_schema, backup_sugar_schema)
-            __db_rollback(schema, backup_schema)
-        else:
-            __error("""Cannot grant usage on schemas {schema} and {sugar_schema}
-                    """.format(schema=schema, sugar_schema=sugar_schema), 
-                    False
-                   )
-        raise Exception
-
-    # Create pdltools objects
-    try:
-        __db_create_objects(schema, platform, sugar_schema, madlib_schema,
-                            backup_schema, backup_sugar_schema, sugar_newer==3)
-    except:
-        #Rolling back in HAWQ will drop catalog functions, simply bubble the exception up in these cases.
-        if(platform != 'hawq'):
-            __db_rollback(sugar_schema, backup_sugar_schema)
-            __db_rollback(schema, backup_schema)
-        else:
-            __error("""Cannot create objects""", False)
-        raise Exception
-
-    __info("PDL Tools %s installed successfully in %s schema." % (rev, schema.upper()), True)
-    if(platform != 'hawq'):
-        __db_drop_backup_schema(backup_schema,pdltools_newer)
-
-    if(platform != 'hawq'):
-        __info("SUgAR %s installed successfully in %s schema." % (sugar_rev, sugar_schema.upper()), True)
-        __db_drop_backup_schema(backup_sugar_schema,sugar_newer)
-
-    __info("Installation completed successfully.",True)
+def _cmp_versions(ver_a, ver_b):
+  a_list = [int(x) for x in ver_a.split('.')]
+  b_list = [int(x) for x in ver_b.split('.')]
+  return cmp(a_list,b_list)
 
 def parseConnectionStr(connectionStr):
     """
@@ -909,10 +846,235 @@ def parseConnectionStr(connectionStr):
         match.group('port'),
         unescape(match.group('database')))
 
+def _find_schema_objects(schema, session):
+    '''
+       Return all objects in a given schema.
+    '''
+    # For PostgreSQL, replace "opcamid" by "opcmethod".
+    iam_results=_raw_run_sql_query("""
+SELECT
+                opcname,
+                amname AS index,
+                oc.oid AS objid
+            FROM
+                pg_namespace AS ns,
+                pg_opclass AS oc,
+                pg_am AS am
+            WHERE
+                ns.nspname = '{schema}'
+                AND oc.opcnamespace = ns.oid
+                AND am.oid = oc.opcamid;
+                     """.format(schema=schema), True)
+    udo_results=_raw_run_sql_query("""
+SELECT
+                oprname,
+                oprleft::regtype AS lefttype,
+                oprright::regtype AS righttype,
+                o.oid AS objid
+            FROM
+                pg_operator AS o,
+                pg_namespace AS ns
+            WHERE
+                ns.nspname = '{schema}'
+                AND o.oprnamespace = ns.oid;
+                   """.format(schema=schema), True)
+    for i in range(len(udo_results)):
+      if udo_results[i]['lefttype']=='-':
+        udo_results[i]['lefttype']='NONE'
+      if udo_results[i]['righttype']=='-':
+        udo_results[i]['righttype']='NONE'
+    udt_results=_raw_run_sql_query("""
+SELECT
+		t.typname AS typname,
+                CASE WHEN t.typtype='b' THEN 'BASE'
+		WHEN t.typtype='d' THEN 'DOMAIN'
+		WHEN t.typtype='e' THEN 'ENUM'
+		WHEN t.typtype='r' THEN 'RANGE'
+		ELSE 'UNRECOGNIZED' END AS kind,
+                t.oid AS objid
+            FROM
+                pg_namespace AS nsp,
+                pg_type AS t
+            WHERE
+                nsp.nspname = '{schema}'
+                AND t.typnamespace = nsp.oid
+		AND t.typtype NOT IN ('c','p');
+          """.format(schema=schema), True)
+    for i in range(len(udt_results)):
+      if udt_results[i]['kind'] in ['BASE', 'ENUM', 'RANGE']:
+        udt_results[i]['kind']='TYPE'
+      if udt_results[i]['kind']=='UNRECOGNIZED':
+        _error("Found UDT "+udt_results[i]['typname']
+               +" of unexpected type. Stopping.",True)
+    rel_results=_raw_run_sql_query("""
+SELECT
+                c.relname AS relation,
+                CASE WHEN c.relkind='r' THEN 'TABLE'
+                     WHEN c.relkind='v' THEN 'VIEW'
+                     WHEN c.relkind='i' THEN 'INDEX'
+                     WHEN c.relkind='S' THEN 'SEQUENCE'
+                     WHEN c.relkind='c' THEN 'TYPE'
+                     WHEN c.relkind='t' THEN 'TOAST'
+                     ELSE 'UNRECOGNIZED' END AS kind,
+                c.oid AS objid
+            FROM
+                pg_namespace nsp,
+                pg_class c
+            WHERE
+                nsp.nspname = '{schema}'
+                AND c.relnamespace = nsp.oid;
+          """.format(schema=schema), True)
+    for i in range(len(rel_results)):
+      if rel_results[i]['kind'] in ['TOAST','UNRECOGNIZED']:
+        _error("Found relation "+rel_results[i]['relation']
+               +" of unexpected type. Stopping.",True)
+    udf_results=_raw_run_sql_query("""
+SELECT
+        proctyp || ' ' || procnamespace || '.' || procname || '(' ||
+            string_agg(argnamespace || '.' || argtypname, ', '
+                     ORDER BY rn)
+            || ')' AS signature,
+        procname,
+        procoid AS objid
+   FROM (
+        SELECT
+                procnamespace,
+                procname,
+                num_args,
+                procoid,
+                CASE WHEN proisagg THEN 'AGGREGATE' ELSE 'FUNCTION'
+                  END AS proctyp,
+                arg_oids[rn] AS elem,
+                nsp1.nspname AS argnamespace,
+                t.typname argtypname,
+                rn
+             FROM (
+                SELECT *, generate_series(array_lower(arg_oids,1),
+                                          array_upper(arg_oids,1)) AS rn
+                    FROM (
+                        SELECT
+                        nsp.nspname AS procnamespace,
+                        p.proname AS procname,
+                        p.pronargs AS num_args,
+                        p.proargtypes AS arg_oids,
+                        p.oid AS procoid,
+                        p.proisagg AS proisagg
+                    FROM
+                        pg_namespace AS nsp,
+                        pg_proc AS p
+                    WHERE
+                        nsp.nspname = '{schema}'
+                        AND p.pronamespace = nsp.oid
+                    ) x
+              ) y,
+                  pg_type t,
+                  pg_namespace AS nsp1
+              WHERE
+                t.oid=arg_oids[rn]
+                AND nsp1.oid=t.typnamespace
+  ) z
+      GROUP BY (procoid,procnamespace,procname,num_args,proctyp)
+UNION
+SELECT
+        proctyp || ' ' || procnamespace || '.' || procname || '()' AS signature,
+        procname,
+        procoid AS objid
+                   FROM (
+                        SELECT
+                        nsp.nspname AS procnamespace,
+                        p.proname AS procname,
+                        p.pronargs AS num_args,
+                        p.oid AS procoid,
+                        CASE WHEN p.proisagg THEN 'AGGREGATE' ELSE 'FUNCTION'
+                          END AS proctyp
+                    FROM
+                        pg_namespace AS nsp,
+                        pg_proc AS p
+                    WHERE
+                        nsp.nspname = '{schema}'
+                        AND p.pronamespace = nsp.oid
+                        AND p.pronargs = 0
+                    ) x;
+          """.format(schema=schema), True);
+    # Note, a more user-friendly output can be generated by use of
+    # "textin(regtypeout(elem:regtype))" instead of "argnamespace.argtypname",
+    # but this is less machine-friendly. It uses "[]" and spaces
+    # (e.g. "character varying") in type names, and outputs them without
+    # schema names if they are on the path (thus creating a dependence on the
+    # currently-set search_path).
+    return (iam_results, udo_results, udt_results, rel_results, udf_results)
+
+def _multi_format_schema_objects(schema, session):
+    '''
+       Reformat a listing of all objects for multiple uses.
+    '''
+    (iam_results, udo_results, udt_results, rel_results, udf_results)= \
+      _find_schema_objects(schema, session)
+    results={}
+    for result in iam_results:
+      results["IAM: OPERATOR_CLASS {schema}.{opcname} USING {index}"
+             .format(schema=schema, opcname=result['opcname'],
+                     index=result['index'])]=('pg_opclass',result['objid'],
+                      result['opcname'],schema)
+    for result in udo_results:
+      results["UDO: OPERATOR {schema}.{opname}({left},{right})".format(
+          schema=schema,opname=result['oprname'],
+          left=result['lefttype'],right=result['righttype'])]=('pg_operator',
+                      result['objid'],result['oprname'],schema)
+    for result in udt_results:
+      results["UDT: {kind} {schema}.{typname}".format(
+          schema=schema,typname=result['typname'],kind=result['kind'])]=(
+                      'pg_type',result['objid'],result['typname'],schema)
+    for result in rel_results:
+      results["REL: {kind} {schema}.{relation}".format(
+         schema=schema, kind=result['kind'], relation=result['relation'])]=(
+                      'pg_class',result['objid'],result['relation'],schema)
+    for result in udf_results:
+      results["UDF: {signature}".format(signature=result['signature'])]=(
+                      'pg_proc',result['objid'],result['procname'],schema)
+    return results
+
+def _list_schema_objects(schema, session):
+    '''
+       Print a listing of all objects in a given schema.
+    '''
+    results=_multi_format_schema_objects(schema, session).keys()
+    _info("\nUser-defined operator classes:", True)
+    _info("Format: OPERATOR CLASS schema.operator_class USING index_access_method", True)
+    for result in results:
+      if result[:3]=='IAM':
+        x=result
+        x[13]=' '
+        _info(x, True)
+    _info("\nUser-defined operators:", True)
+    _info("Format: OPERATOR schema.oper_name(left_type,right_type)", True)
+    for result in results:
+      if result[:3]=='UDO':
+        _info(result, True)
+    _info("\nUser-defined non-composite types:", True)
+    _info("Format: TYPE/DOMAIN schema.type_name", True)
+    for result in results:
+      if result[:3]=='UDT':
+        _info(result, True)
+    _info("\nTables and table-like objects (e.g., composite types):", True)
+    _info("Format: TABLE/VIEW/INDEX/SEQUENCE/TYPE schema.relation", True)
+    for result in results:
+      if result[:3]=='REL':
+        _info(result, True)
+    _info("\nUser-defined functions and aggregates:", True)
+    _info("Format: FUNCTION/AGGREGATE schema.procname(schema.argtype,...)",
+           True)
+    for result in results:
+      if result[:3]=='UDF':
+        _info(result, True)
+
 def main():
     '''
         Fetch arguments and prepare installation of pdltools in target DB
     '''
+
+    global session
+
     parser = argparse.ArgumentParser(
                 description='PDL Tools package manager (' + rev + ')',
                 argument_default=False,
@@ -931,10 +1093,19 @@ def main():
 
     parser.add_argument(
         'command', metavar='COMMAND', nargs=1,
-        choices=['install', 'install-check'],
+        choices=['install', 'install-check', 'reinstall', 'uninstall',
+                 'check-dep', 'list-lib', 'list-db',
+                 'clean-install'],
         help = "One of the following options:\n"
-            + "  install        : run sql scripts to load into DB\n"
-            + "  install-check  : Run test scripts"
+            + "  install         : Install or upgrade library\n"
+            + "  install-check   : Run test scripts\n"
+            + "  reinstall       : Overwrite an existing installation\n"
+            + "  uninstall       : Remove an existing installation\n"
+            + "  check-dep       : Show DB dependencies on library\n"
+            + "  list-lib        : List objects in library modules\n"
+            + "  list-db         : List objects installed in DB schema\n"
+            + "  clean-install : Clean installation, output which objects\n"
+            + "                    belong to which  sub-module"
     )
     
     parser.add_argument(
@@ -973,16 +1144,11 @@ def main():
                         help="Temporary directory location for installation log files.")
 
     args = parser.parse_args()
-    global platform, verbose, testcase, tmpdir
+    global platform, verbose, testcase, tmpdir_arg
     verbose = args.verbose
     testcase = args.testcase
     platform = args.platform[0]
-
-    try:
-        tmpdir = tempfile.mkdtemp('', 'pdltools.', args.tmpdir)
-    except OSError, e:
-        tmpdir = e.filename
-        __error("cannot create temporary directory: '%s'." % tmpdir, True)
+    tmpdir_arg = args.tmpdir
 
     '''Parse SCHEMA'''
     if len(args.schema[0]) > 1:
@@ -1030,20 +1196,20 @@ def main():
     con_args['password'] = c_pass
 
     global dbver
-    dbver = __get_dbver(platform)
+    dbver = _get_dbver(platform)
 
     portdir = os.path.join(pdltoolsdir, "ports", platform)
     supportedVersions = [dirItem for dirItem in os.listdir(portdir) if os.path.isdir(os.path.join(portdir, dirItem))
                              and re.match("^\d+\.\d+", dirItem)]
     if dbver is None:
        dbver = ".".join(map(str, max([map(int, versionStr.split('.')) for versionStr in supportedVersions])))
-       __info("Could not parse version string reported by {DBMS}. Will "
+       _info("Could not parse version string reported by {DBMS}. Will "
               "default to newest supported version of {DBMS} "
               "({version}).".format(DBMS=platform, version=dbver), True)
     else:
-       __info("Detected %s version %s." % (platform, dbver),True)
+       _info("Detected %s version %s." % (platform, dbver),True)
        if not os.path.isdir(os.path.join(portdir, dbver)):
-            __error("This version is not among the %s versions for which "
+            _error("This version is not among the %s versions for which "
                     "PDL Tools support files have been installed (%s)." %
                    (platform, ", ".join(supportedVersions)), True)
 
@@ -1062,56 +1228,54 @@ def main():
     portspecs = configyml.get_modules(pdltoolsdir_conf)
 
     if(args.command[0]=='install'):
-        install(py_min_ver, perl_min_ver, perl_max_ver, plr_min_ver, schema, platform, 
-                sugar_schema, madlib_schema)
+        install(schema, platform, sugar_schema, madlib_schema)
     elif(args.command[0]=='install-check'):
         install_check(schema, platform, sugar_schema, madlib_schema, args)
-
-def install(py_min_ver, perl_min_ver, perl_max_ver, plr_min_ver, schema, platform,
-            sugar_schema, madlib_schema):
-    '''
-        Install pdlpack
-    '''
-    # Run installation
-    try:
-        __plpy_check(py_min_ver)
-        '''PL/Perl installer is currently only available for GPDB, so we won't check this for HAWQ'''
-        if(platform != 'hawq'):
-            __plperl_check(perl_min_ver,perl_max_ver)
-        __db_install(schema, platform, sugar_schema, madlib_schema)
-    except:
-        __error("PDL Tools installation failed.", True)
-
+    elif(args.command[0]=='reinstall'):
+        reinstall(schema, platform, sugar_schema, madlib_schema)
+    elif(args.command[0]=='uninstall'):
+        uninstall(schema, sugar_schema)
+    elif(args.command[0]=='check-dep'):
+        check_dep(schema, sugar_schema)
+    elif(args.command[0]=='list-lib'):
+        list_lib(schema, platform, sugar_schema)
+    elif(args.command[0]=='list-db'):
+        list_db(schema, sugar_schema)
+    elif(args.command[0]=='clean-install'):
+        clean_install(schema, platform, sugar_schema, madlib_schema, verbose)
+    else:
+        _info("Command not recognized.", True)
 
 def install_check(schema, platform, sugar_schema, madlib_schema, args):
 	'''
 	Run install checks
 	'''
 	global con_args, portspecs
+        session=session_manager(schema,platform,sugar_schema,madlib_schema)
 	# 0) First check if PDL Tools schema exists, if not we'll exit (install-check should only be called post installation of pdltools)
-	pdltools_schema_exists = __run_sql_query("select schema_name from information_schema.schemata where schema_name='{pdltools_schema}';".format(pdltools_schema=schema), False)
+	pdltools_schema_exists = _raw_run_sql_query("select schema_name from information_schema.schemata where schema_name='{pdltools_schema}';".format(pdltools_schema=schema), False)
 	if(not pdltools_schema_exists):
-	    __info("{pdltools_schema} schema does not exist. Please run install-check after installing PDL Tools. Install-check stopped.".format(pdltools_schema=schema), True)
+	    _info("{pdltools_schema} schema does not exist. Please run install-check after installing PDL Tools. Install-check stopped.".format(pdltools_schema=schema), True)
             return
 	# Now check if SUgARlib schema exists.
-	sugar_schema_exists = __run_sql_query("select schema_name from information_schema.schemata where schema_name='{sugarlib_schema}';".format(sugarlib_schema=sugar_schema), False)
+	sugar_schema_exists = _raw_run_sql_query("select schema_name from information_schema.schemata where schema_name='{sugarlib_schema}';".format(sugarlib_schema=sugar_schema), False)
 	if(not sugar_schema_exists):
-	    __info("{sugarlib_schema} schema does not exist. Please run install-check after installing PDL Tools. Install-check stopped.".format(sugarlib_schema=sugar_schema), True)
+	    _info("{sugarlib_schema} schema does not exist. Please run install-check after installing PDL Tools. Install-check stopped.".format(sugarlib_schema=sugar_schema), True)
             return
 
 	# Create install-check user
 	test_user = 'pdltools_installcheck'
 	try:
-	    __run_sql_query("DROP USER IF EXISTS %s;" % (test_user), False)
+	    session.exec_query("DROP USER IF EXISTS %s;" % (test_user), False)
 	except:
-	    __run_sql_query("DROP OWNED BY %s CASCADE;" % (test_user), True)
-	    __run_sql_query("DROP USER IF EXISTS %s;" % (test_user), True)
-	__run_sql_query("CREATE USER %s;" % (test_user), True)
-	__run_sql_query("GRANT ALL ON SCHEMA %s TO %s;" %(schema, test_user), True)
-	__run_sql_query("GRANT ALL ON SCHEMA %s TO %s;" %(sugar_schema, test_user), True)
+	    session.exec_query("DROP OWNED BY %s CASCADE;" % (test_user), True)
+	    session.exec_query("DROP USER IF EXISTS %s;" % (test_user), True)
+	session.exec_query("CREATE USER %s;" % (test_user), True)
+	session.exec_query("GRANT ALL ON SCHEMA %s TO %s;" %(schema, test_user), True)
+	session.exec_query("GRANT ALL ON SCHEMA %s TO %s;" %(sugar_schema, test_user), True)
 
 	# 2) Run test SQLs
-	__info("> Running test scripts for:", verbose)
+	_info("> Running test scripts for:", verbose)
 
 	caseset = (set([test.strip() for test in args.testcase.split(',')])
 		   if args.testcase != "" else set())
@@ -1126,11 +1290,7 @@ def install_check(schema, platform, sugar_schema, madlib_schema, args):
 	    if len(caseset) > 0 and module not in caseset:
 		continue
 
-	    __info("> - %s" % module, verbose)
-
-	    # Make a temp dir for this module (if doesn't exist)
-	    cur_tmpdir = tmpdir + '/' + module + '/test'  # tmpdir is a global variable
-	    __make_dir(cur_tmpdir)
+	    _info("> - %s" % module, verbose)
 
 	    # Find the Python module dir (platform specific or generic)
 	    if os.path.isdir(pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/" + dbver + "/modules/" + module):
@@ -1146,9 +1306,9 @@ def install_check(schema, platform, sugar_schema, madlib_schema, args):
 
 	    # Prepare test schema
 	    test_schema = "pdltools_installcheck_%s" % (module)
-	    __run_sql_query("DROP SCHEMA IF EXISTS %s CASCADE; CREATE SCHEMA %s;"
+	    session.exec_query("DROP SCHEMA IF EXISTS %s CASCADE; CREATE SCHEMA %s;"
 			    % (test_schema, test_schema), True)
-	    __run_sql_query("GRANT ALL ON SCHEMA %s TO %s;"
+	    session.exec_query("GRANT ALL ON SCHEMA %s TO %s;"
 			    % (test_schema, test_user), True)
 
 	    # Switch to test user and prepare the search_path
@@ -1157,22 +1317,18 @@ def install_check(schema, platform, sugar_schema, madlib_schema, args):
 		      '-- Set SEARCH_PATH for install-check:\n' \
 		      'SET search_path=%s,%s,%s;\n' \
 		      % (test_user, test_schema, schema, sugar_schema)
+            session.set_pre_sql(pre_sql)
 
 	    # Loop through all test SQL files for this module
 	    sql_files = dsdir_mod_sql + '/' + module + '/test/*.sql_in'
 	    for sqlfile in sorted(glob.glob(sql_files), reverse=True):
-		# Set file names
-		tmpfile = cur_tmpdir + '/' + os.path.basename(sqlfile) + '.tmp'
-		logfile = cur_tmpdir + '/' + os.path.basename(sqlfile) + '.log'
-
 		# If there is no problem with the SQL file
 		milliseconds = 0
 
 		# Run the SQL
 		run_start = datetime.datetime.now()
-		retval = __run_sql_file(schema, platform, sugar_schema, madlib_schema,
-                                        dsdir_mod_py, module,
-					sqlfile, tmpfile, logfile, pre_sql)
+		retval = session.exec_file(dsdir_mod_py, module,
+					sqlfile, module+'/test')
 		# Runtime evaluation
 		run_end = datetime.datetime.now()
 		milliseconds = round((run_end - run_start).seconds * 1000 +
@@ -1180,13 +1336,12 @@ def install_check(schema, platform, sugar_schema, madlib_schema, args):
 
 		# Check the exit status
 		if retval != 0:
-		    __error("Failed executing %s" % tmpfile, False)
-		    __error("Check the log at %s" % logfile, False)
 		    result = 'FAIL'
 		    keeplogs = True
 		# Since every single statement in the test file gets logged,
 		# an empty log file indicates an empty or a failed test
-		elif os.path.isfile(logfile) and os.path.getsize(logfile) > 0:
+		elif os.path.isfile(session.logname()) and \
+                     os.path.getsize(session.logname()) > 0:
 		    result = 'PASS'
 		# Otherwise
 		else:
@@ -1198,12 +1353,645 @@ def install_check(schema, platform, sugar_schema, madlib_schema, args):
 		    "|Time: %d milliseconds" % (milliseconds)
 
 	    # Cleanup test schema for the module
-	    __run_sql_query("DROP SCHEMA IF EXISTS %s CASCADE;" % (test_schema), True)
+	    session.exec_query("DROP SCHEMA IF EXISTS %s CASCADE;" % (test_schema), True)
 
 	# Drop install-check user
-	__run_sql_query("DROP OWNED BY %s CASCADE;" % (test_user), True)
-	__run_sql_query("DROP USER %s;" % (test_user), True)
+	session.exec_query("DROP OWNED BY %s CASCADE;" % (test_user), True)
+	session.exec_query("DROP USER %s;" % (test_user), True)
 
+def _dep_graph(schema,sugar_schema,session):
+  # Build dependence graph
+  namemap={'class':'rel','constraint':'con','conversion':'con','opclass':'opc',
+           'operator':'opr','proc':'pro','type':'typ'}
+  query_template='''
+SELECT
+                 p.relname AS kind,
+                 d.{obj}objid   AS objid,
+                 x.{pfx}name AS name,
+                 n.nspname AS namespace
+               FROM
+                 pg_depend d,
+                 pg_class p,
+                 pg_{table} x,
+                 pg_namespace n
+               WHERE
+                 p.oid=d.{obj}classid AND
+                 p.relname='pg_{table}' AND
+                 x.oid=d.{obj}objid AND
+                 n.oid=x.{pfx}namespace
+    '''
+  query=" UNION ".join([query_template.format(obj='',pfx=namemap[x],table=x)
+                          for x in namemap.keys()]+
+                       [query_template.format(obj='ref',pfx=namemap[x],table=x)
+                          for x in namemap.keys()])+";"
+  known_list=_raw_run_sql_query(query, True)
+  known_map={}
+  for x in known_list:
+    known_map[(x['kind'],x['objid'],None,None)]=(x['kind'],x['objid'],
+                                               x['name'],x['namespace'])
+
+  dependencies=_raw_run_sql_query('''
+SELECT
+                 p.relname AS depender_kind,
+                 d.objid   AS depender_oid,
+                 p1.relname AS dependee_kind,
+                 d.refobjid AS dependee_oid
+              FROM
+                pg_depend d,
+                pg_class p,
+                pg_class p1
+              WHERE
+                d.classid=p.oid AND d.refclassid=p1.oid
+UNION
+SELECT
+                'pg_class' AS depender_kind,
+                r.ev_class AS depender_oid,
+                'pg_rewrite' AS dependee_kind,
+                r.oid AS dependee_oid
+              FROM
+                pg_rewrite r
+UNION
+SELECT
+                'pg_class' AS depender_kind,
+                a.attrelid AS depender_oid,
+                'pg_type' AS dependee_kind,
+                a.atttypid AS dependee_oid
+              FROM
+                pg_attribute a;
+    ''', True)
+  dependence_graph={}
+  for d in dependencies:
+    depender=(d['depender_kind'],d['depender_oid'],None,None)
+    dependee=(d['dependee_kind'],d['dependee_oid'],None,None)
+    if depender in known_map:
+      depender=known_map[depender]
+    if dependee in known_map:
+      dependee=known_map[dependee]
+    if depender not in dependence_graph:
+      dependence_graph[depender]=set()
+    if dependee not in dependence_graph:
+      dependence_graph[dependee]=set()
+    dependence_graph[dependee].add(depender)
+
+  return dependence_graph
+
+def _find_deps(schema,sugar_schema,base_objects,dependence_graph):
+  # Find dependencies from base_objects in dependence_graph
+  # That are neither in schema nor in sugar_schema.
+
+  new_depender=base_objects.values()
+
+  recursive_depender={}
+  for x in base_objects:
+    recursive_depender[base_objects[x]]=set([x])
+
+  while len(new_depender)!=0:
+    old_depender=new_depender
+    new_depender=set()
+    for dependee in old_depender:
+      if dependee in dependence_graph:
+        for depender in dependence_graph[dependee]:
+          if depender not in recursive_depender:
+            recursive_depender[depender]=set()
+          old_len=len(recursive_depender[depender])
+          recursive_depender[depender] |= recursive_depender[dependee]
+          new_len=len(recursive_depender[depender])
+          if old_len!=new_len:
+            new_depender.add(depender)
+
+  # Consider only dependencies not in schema.
+  # Disregard toast tables.
+  unwanted_keys = [x for x in recursive_depender
+                      if x[3] in [None,schema,sugar_schema,'pg_toast']]
+  for key in unwanted_keys:
+    del recursive_depender[key]
+
+  # Disregard type names that relate to already-printed table types.
+  oid_map=dict([((x[0],x[2],x[3]),x) for x in recursive_depender.keys()])
+  unwanted_keys = [oid_map[('pg_type',x[1],x[2])] for x in oid_map if
+                   x[0]=='pg_class' and ('pg_type',x[1],x[2]) in oid_map]
+  for key in unwanted_keys:
+    del recursive_depender[key]
+
+  return recursive_depender
+
+def _print_deps(deps):
+  for dep in deps:
+    _info("\n",True)
+    if dep[2]!=None and dep[3]!=None:
+      _info("Object "+dep[3]+"."+dep[2]+"(oid="+str(dep[1])+") listed in "+dep[0]+" depends on:",True)
+    else:
+      _info("Object oid="+str(dep[1])+" listed in "+dep[0]+" depends on:",True)
+    for dependee in deps[dep]:
+      _info(_pretty(dependee),True)
+
+def uninstall(schema, sugar_schema):
+    '''
+    Uninstall library
+    '''
+    _info("Uninstalling PDL Tools.", True)
+    session=session_manager(schema,'',sugar_schema,'')
+    try:
+      session.exec_query("SELECT "+schema+".pdltools_version(), "+
+                     sugar_schema+".sugar_version();", False)
+    except:
+      _error("PDL Tools installation not found in given schemata or is too old to be uninstalled. (To brute-force uninstall, drop the pdltools and SUgARlib schemas.) Aborting.", True)
+    # load existing installation information
+    db_objects={}
+    db_objects.update(_multi_format_schema_objects(schema, session))
+    db_objects.update(_multi_format_schema_objects(sugar_schema, session))
+
+    # Find dependencies
+    dependence_graph=_dep_graph(schema,sugar_schema, session)
+    deps=_find_deps(schema,sugar_schema,db_objects,dependence_graph)
+    if len(deps)==0:
+      _info("No dependencies detected.", verbose)
+    else:
+      _info("Cannot uninstall PDL Tools, because the following objects depend on it.", True)
+      _print_deps(deps)
+      _info("Please resolve dependencies before trying again.", True)
+      exit(0)
+    _info("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", True)
+    _info("Proceeding with uninstall will drop all schema objects.", True)
+    _info("While no direct DB dependence exists on these objects, it is still possible that UDFs/views/etc. rely on the library.", True)
+    _info("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", True)
+    _info("Are you sure you want to proceed?", True)
+    go = raw_input('>>> ').upper()
+    while go =='' or go[0] not in 'YN':
+      go = raw_input('Yes or No >>> ').upper()
+    if go[0] == 'N':
+      _info("Stopping uninstallation.", True)
+      exit(0)
+    _drop_schema(schema, session)
+    _drop_schema(sugar_schema, session)
+    _info("Library successfully uninstalled.", True)
+
+def check_dep(schema, sugar_schema):
+    '''
+    Find objects that depend on currently-installed version.
+    '''
+    session=session_manager(schema,'',sugar_schema,'')
+    # load existing installation information
+    db_objects={}
+    db_objects.update(_multi_format_schema_objects(schema, session))
+    db_objects.update(_multi_format_schema_objects(sugar_schema, session))
+
+    # Find dependencies
+    dependence_graph=_dep_graph(schema,sugar_schema, session)
+    deps=_find_deps(schema,sugar_schema,db_objects,dependence_graph)
+    if len(deps)==0:
+      _info("No dependencies detected.", verbose)
+    else:
+      _print_deps(deps)
+
+def _find_lib_objects(schema, platform, sugar_schema):
+  '''
+  Find objects in library modules and lib compatibility status.
+  '''
+  # Loop through all modules
+  ## portspecs is a global variable
+
+  lib_objects={}
+  lib_comp={}
+
+  try:
+    for moduleinfo in portspecs['modules']:
+      # Get the module name
+      module = moduleinfo['name']
+  
+      # Find the SQL module dir (platform specific or generic)
+      if os.path.isdir(pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/modules/" + module):
+        dsdir_mod_sql = pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/modules/" + module + "/"
+      elif os.path.isdir(pdltoolsdir + "/modules/" + module):
+        dsdir_mod_sql = pdltoolsdir + "/modules/" + module + "/"
+      else:
+        _info("Directory not found for module "+module, True)
+        raise Exception
+
+      filename=dsdir_mod_sql+module+".content"
+      if not os.path.isfile(filename):
+        _info("File not found: "+filename+".",True)
+        raise Exception
+      lib_objects[module]=[x.strip() for x in file(filename).readlines()]
+      filename=dsdir_mod_sql+module+".yml"
+      if not os.path.isfile(filename):
+        _info("File not found: "+filename+".",True)
+        raise Exception
+      lib_comp[module]=yaml.load(file(filename))
+      for x in lib_comp[module]:
+        lib_comp[module][x]=str(lib_comp[module][x])
+  except:
+    _info("Aborting on errors.",True)
+    exit(2)
+  return (lib_objects,lib_comp)
+
+def list_lib(schema, platform, sugar_schema):
+  '''
+  Print objects in library modules.
+  '''
+
+  _info("Objects in present version of the library.",True)
+
+  lib_objects=_find_lib_objects(schema, platform, sugar_schema)[0]
+
+  for module in lib_objects:
+    _info("> - %s" % module, True)
+    for o in lib_objects[module]:
+      print "MODULE("+module+"): "+o
+
+def list_db(schema, sugar_schema):
+	'''
+	List library objects installed in schemas.
+	'''
+	session=session_manager(schema,'',sugar_schema,'')
+        _info("Objects in PDL Tools schema:", True)
+        _list_schema_objects(schema, session)
+        _info("\nObjects in SUgAR library schema:", True)
+        _list_schema_objects(sugar_schema, session)
+
+def clean_install(schema, platform, sugar_schema, madlib_schema, output=True, session=None):
+    '''
+    Fresh install. Report which objects belong to each module.
+    May be slow compared to regular installation. For internal uses.
+    '''
+    if session==None:
+        session=session_manager(schema,platform,sugar_schema,madlib_schema)
+    try:
+        _plpy_check(py_min_ver)
+        '''PL/Perl installer is currently only available for GPDB, so we won't check this for HAWQ'''
+        if(platform != 'hawq'):
+            _plperl_check(perl_min_ver,perl_max_ver)
+
+        if _schema_exists(schema, session):
+          _error("PDL Tools schema already exists. Cannot proceed with clean installation.", False)
+          raise Exception
+        if _schema_exists(sugar_schema, session):
+          _error("SUgAR schema already exists. Cannot proceed with clean installation.", False)
+          raise Exception
+
+        # Create schemata
+        _db_create_schema(schema, session)
+        try:
+            _db_create_schema(sugar_schema, session)
+        except:
+            _error("Rolling back installation.", False)
+            _drop_schema(schema, session)
+            raise Exception
+        try:
+            if not _schema_writable(schema, session):
+              _error("PDL Tools schema not writable. Aborting installation.", False)
+              raise Exception
+            if not _schema_writable(sugar_schema,session):
+              _error("SUgAR schema not writable. Aborting installation.", False)
+              raise Exception
+    
+            # Granting Usage on Schemas
+            _db_grant_usage(schema, session)
+            _db_grant_usage(sugar_schema, session)
+        
+            # Create pdltools objects
+            try:
+                _db_clean_create_objects(schema, platform, sugar_schema, madlib_schema,output,session)
+            except:
+                _error("Object creation failed. Aborting installation.", False)
+                raise
+        
+            _info("PDL Tools %s installed successfully in %s schema." % (rev, schema.upper()), True)
+            _info("SUgAR %s installed successfully in %s schema." % (sugar_rev, sugar_schema.upper()), True)
+            _info("Installation completed successfully.",True)
+
+        except:
+            _error("Rolling back installation.", False)
+            _drop_schema(schema, session)
+            _drop_schema(sugar_schema, session)
+            raise Exception
+    
+    except:
+        _error("PDL Tools installation failed. Installation aborted.", True)
+
+def reinstall(schema, platform, sugar_schema, madlib_schema):
+    '''
+        Re-install pdlpack
+    '''
+    # Run re-installation
+    _info("Preparing for PDL Tools re-installation.", True)
+    uninstall(schema, sugar_schema)
+    clean_install(schema, platform, sugar_schema, madlib_schema, False)
+
+def _pretty(objdef):
+  '''
+  Pretty-print object definition.
+  '''
+  if len(objdef)<5:
+    _info("Unexpected object definition: "+objdef+". Aborting.", True)
+    raise Exception
+  rc=objdef[5:]
+  prefix="OPERATOR_CLASS"
+  if len(rc)>=len(prefix):
+    if rc[:len(prefix)]==prefix:
+      rc[8]=' '
+  return rc
+
+def _run_drop_command(objdef, session):
+  '''
+  Drop object.
+  '''
+  if len(objdef)<5:
+    _info("Unexpected object definition: "+objdef+". Aborting.", True)
+    raise Exception
+  rc=objdef[5:]
+  rc=rc.split(' ',1)
+  if len(rc)!=2:
+    _info("Malformed object definition: "+objdef+". Aborting.", True)
+    raise Exception
+  prefix="OPERATOR_CLASS"
+  if rc[0]==prefix:
+    rc[0]="OPERATOR CLASS"
+  _info("Dropping "+objdef+".", verbose)
+  session.exec_query("DROP "+rc[0]+" IF EXISTS "+rc[1]+" CASCADE;", True)
+
+def _safe_drop(obj, session, db_objects, dependence_graph):
+  if obj not in db_objects or db_objects[obj] not in dependence_graph:
+    _info("Object "+obj+" no longer exists. No need to drop.", verbose)
+    return
+  _run_drop_command(obj, session)
+  drop_list=[db_objects[obj]]
+  while len(drop_list)!=0:
+    x=drop_list[0]
+    drop_list=drop_list[1:]
+    if x in dependence_graph:
+      drop_list.extend(dependence_graph[x])
+      del dependence_graph[x]
+
+def _db_create_objects(schema, platform, sugar_schema, madlib_schema,
+                       dbrev, dbsugarrev, session):
+    """
+    Create PDL Tools DB objects in the schema
+        @param schema Name of the target PDL Tools schema
+        @param platform Type of target DB
+        @param sugar_schema Name of the target SUgARlib schema
+        @param madlib_schema Name of schema where MADlib resides
+        @param dbrev Database version of pdltools
+        @param dbsugarrev Database version of sugarlib
+    """
+
+    # load library information
+    (lib_objects,lib_comp)=_find_lib_objects(schema, platform, sugar_schema)
+
+    schema_re=re.compile("PDLTOOLS_SCHEMA")
+    sugar_schema_re=re.compile("SUGAR_SCHEMA")
+    madlib_schema_re=re.compile("MADLIB_SCHEMA")
+    for module in lib_objects:
+      lib_objects[module]=set([madlib_schema_re.sub(madlib_schema,
+                   sugar_schema_re.sub(sugar_schema,
+                   schema_re.sub(schema,x))) for x in lib_objects[module]])
+
+    # load existing installation information
+
+    db_objects={}
+    db_objects.update(_multi_format_schema_objects(schema, session))
+    db_objects.update(_multi_format_schema_objects(sugar_schema, session))
+
+    # Build dependence graph
+
+    dependence_graph=_dep_graph(schema, sugar_schema, session)
+
+    # Find objects that will need to be removed
+
+    _info("Finding objects to be removed and their dependencies.",verbose)
+
+    defunct_objects=db_objects.copy()
+    module_objects={}
+    for module in lib_objects:
+      module_objects[module]={}
+      for x in lib_objects[module]:
+        module_objects[module][x]=db_objects[x]
+        if x in defunct_objects:
+          del defunct_objects[x]
+
+    # Find their dependencies
+
+    defunct_deps=_find_deps(schema,sugar_schema,defunct_objects,
+                            dependence_graph)
+
+    # Per module checks
+
+    _info("Checking per-module upgrade needs and dependencies.",verbose)
+
+    module_status={}
+    module_deps={}
+    upgrade_issues=0
+    
+    for moduleinfo in portspecs['modules']:
+        # Get the module name
+        module = moduleinfo['name']
+        _info("> - %s" % module, verbose)
+        mod_comp=lib_comp[module]
+        if mod_comp['libpart']=='pdltools':
+          installed_rev=dbrev
+        elif mod_comp['libpart']=='sugar':
+          installed_rev=dbsugarrev
+        else:
+          _error("Unable to determine library part from yml file for module "+module+". Should be one of 'pdltools' or 'sugar'. Actual value: "+mod_comp['libpart']+". Aborting",True)
+        ident_cmp=_cmp_versions(mod_comp['identical'],installed_rev)
+        compat_cmp=_cmp_versions(mod_comp['compatible'],installed_rev)
+        if compat_cmp>0:
+          module_status[module]=2 # incompatible
+          _info("Module's installed version not compatible with new version.", verbose)
+        elif ident_cmp>0:
+          module_status[module]=1 # non-identical
+          _info("Module's installed version compatible with but not identical to new version.", verbose)
+        else:
+          module_status[module]=0 # no need to upgrade.
+          _info("Module's installed version is identical to new version. Module will not be upgraded", verbose)
+
+        if module_status[module]>0:
+          if module=="common": # Ignoring migration history, etc.
+            non_udfs=[x for x in module_objects[module].keys() if len(x)<13 or
+                  x[:13]!="UDF: FUNCTION"]
+            for non_udf in non_udfs:
+              del module_objects[module][non_udf]
+          if module_status[module]==1: # If compatible, ignore UDFs.
+            udfs=[x for x in module_objects[module].keys() if len(x)>=13 and
+                  x[:13]=="UDF: FUNCTION"]
+            for udf in udfs:
+              del module_objects[module][udf]
+          else:
+            upgrade_issues=max(upgrade_issues,1) # warning needed
+          module_deps[module]=_find_deps(schema,sugar_schema,
+                            module_objects[module],dependence_graph)
+          if len(module_deps[module])>0:
+            module_status[module]+=2
+            _info("Module has outside dependencies and cannot be upgraded.", verbose)
+            upgrade_issues=max(upgrade_issues,2) # Cannot upgrade.
+          else:
+            _info("No outside dependencies detected for module.", verbose)
+
+    if upgrade_issues==0 and len(defunct_deps)==0:
+      _info("No upgrade issues detected. Proceeding.", verbose)
+    elif upgrade_issues==2 or len(defunct_deps)>0:
+      _info("Library cannot be upgraded, because existing modules that need replacing have objects that depend on them.", True)
+      if len(defunct_deps)>0:
+        _info("The following are dependencies on objects that no longer exist in the present version.", True)
+        _print_deps(defunct_deps)
+      if upgrade_issues==2:
+        _info("The following are dependencies on objects that have changed and will need to be dropped to be upgraded.", True)
+      for module in module_status.keys():
+        if module_status[module]>2:
+          _info("> - %s:" % module, True)
+          _print_deps(module_deps[module])
+      _info("Cannot upgrade library because this will drop dependent objects.", True)
+      _info("Please resolve these dependencies before re-attempting upgrade.", True)
+      _error("Aborting.",True)
+    else: # upgrade issues==1:
+      _info("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", True)
+      _info("WARNING: Upgrading PDL Tools will cause the following existing modules to be rewritten by new versions.", True)
+      _info("No direct dependence has been detected to existing code, but other dependence types may still exist.", True)
+      _info("The new code is incompatible with the old code, changing either interface or behavior. Code depending on it may not function properly after an upgrade.", True)
+      _info("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", True)
+      for module in module_status.keys():
+        if module_status[module]==2:
+          _info("> - %s:" % module, True)
+          for obj in module_objects[module]:
+            _info(_pretty(obj), True)
+      _info("Are you sure you wish to proceed with installation? [Y/N]", True)
+      go = raw_input('>>> ').upper()
+      while go =='' or go[0] not in 'YN':
+        go = raw_input('Yes or No >>> ').upper()
+      if go[0] == 'N':
+        _info("Stopping installation.", True)
+        exit(0)
+
+    session.begin("install")
+    try:
+      _info("> Building upgrade plan.", True)
+      _info("[Plan:] Updating PDL Tools migration history.", True)
+      _db_update_migration_history(schema, rev, session)
+      _info("[Plan:] Updating SUgAR migration history.", True)
+      _db_update_migration_history(sugar_schema, sugar_rev, session)
+      _info("[Plan:] Dropping old objects.", True)
+      for obj in defunct_objects:
+        _safe_drop(obj, session, db_objects, dependence_graph)
+  
+      _info("[Plan:] Creating objects for modules:", True)
+  
+      for module in module_status:
+        _info("> - %s" % module, True)
+        session.exec_query("-- Begin of module installation: "+module, True)
+        if module_status[module]!=0:
+          _info("[Plan:] Upgrading module.", verbose)
+          _info("[Plan:] Dropping old module objects.", verbose)
+          for object in module_objects[module]:
+            _safe_drop(object, session, db_objects, dependence_graph)
+          _info("[Plan:] Installing new module objects.", verbose)
+          _db_install_module(module, platform, session) 
+        else:
+          _info("[Plan:] Module already up to date.", verbose)
+
+      _info("Executing plan on database.", True)
+      retval=session.commit()
+      if retval!=0:
+        _error("Errors encountered while executing plan.", False)
+        raise Exception
+    except:
+      _info("> Rolling back installation.", True)
+      session.rollback()
+      _error("> Installation rolled back. Stopping.", True)
+    _info("Installation successful.", True)
+
+def install(schema, platform, sugar_schema, madlib_schema):
+    '''
+    Library installation and upgrade.
+    '''
+    session=session_manager(schema,platform,sugar_schema,madlib_schema)
+    _info("Installing PDL Tools.", True)
+    try:
+      if not _schema_exists(schema, session):
+        if not _schema_exists(sugar_schema, session):
+          _info("Schemas not found. Proceeding with fresh installation.", True)
+          clean_install(schema, platform, sugar_schema, madlib_schema, False, session)
+          exit(0)
+        else:
+          _info("Schema "+schema+" exists but schema "+sugar_schema+" does not exist.", True)
+          _error("Library not properly installed and cannot be upgraded. Use 'reinstall' instead.",False)
+          raise Exception
+
+      if not _schema_exists(sugar_schema, session):
+        _info("Schema "+sugar_schema+" exists but schema "+schema+" does not exist.", True)
+        _error("Library not properly installed and cannot be upgraded. Use 'reinstall' instead.",False)
+        raise Exception
+ 
+      # Get DB version
+      dbrev = _get_installed_ver(schema, session)
+      dbsugarrev = _get_installed_ver(sugar_schema, session)
+      if dbsugarrev == None:
+          try:
+              rc = _raw_run_sql_query("""
+                         select count(*) AS cnt 
+                         from pg_catalog.pg_proc p, pg_catalog.pg_namespace ns 
+                         where ns.nspname='%s' and 
+                               pronamespace=ns.oid and 
+                               p.proname='sugar_version';
+                        """ % sugar_schema.lower(),
+                        False
+                   )[0]['cnt']
+          except:
+              rc = 0
+          if rc > 0:
+              dbsugarrev = '0.4' # SUgAR's v0.4 came without a migration table.
+
+      # Existing installation
+      if dbrev==None or dbsugarrev==None:
+        _error("Library not properly installed and cannot be upgraded. Use 'reinstall' instead.",False)
+        raise Exception
+
+      # version compare.
+      rev_cmp=_cmp_versions(rev,dbrev)
+      sugarrev_cmp=_cmp_versions(sugar_rev,dbsugarrev)
+      if rev_cmp==0 and sugarrev_cmp==0:
+        _info("Library already up-to-date. Use 'reinstall' for a fresh installation.", True)
+        exit(0)
+      if rev_cmp<0 or sugarrev_cmp<0:
+        _info("DB version is newer than library version. Use 'reinstall' for a fresh install.", True)
+        exit(0)
+
+      # Language check
+      _plpy_check(py_min_ver)
+      '''PL/Perl installer is currently only available for GPDB, so we won't check this for HAWQ'''
+      if(platform != 'hawq'):
+          _plperl_check(perl_min_ver,perl_max_ver)
+
+      # Write permission
+      if not _schema_writable(schema, session):
+        _error("PDL Tools schema not writable. Aborting installation.", False)
+        raise Exception
+      if not _schema_writable(sugar_schema, session):
+        _error("SUgAR schema not writable. Aborting installation.", False)
+        raise Exception
+  
+      # Granting Usage on Schemas
+      _db_grant_usage(schema, session)
+      _db_grant_usage(sugar_schema, session)
+      
+      # Create pdltools objects
+      try:
+          _db_create_objects(schema, platform, sugar_schema, madlib_schema,
+                             dbrev,dbsugarrev, session)
+      except SystemExit:
+          raise
+      except:
+          _error("Object creation failed. Aborting installation", False)
+          raise Exception
+      
+      _info("PDL Tools %s installed successfully in %s schema." % (rev, schema.upper()), True)
+      _info("SUgAR %s installed successfully in %s schema." % (sugar_rev, sugar_schema.upper()), True)
+      _info("Installation completed successfully.",True)
+
+    except SystemExit:
+        raise
+    except Exception, e:
+        print "MSG:",e
+        _error("PDL Tools installation failed. Installation aborted.", True)
 
 if(__name__=='__main__'):
     main()

@@ -1,0 +1,4 @@
+UDF: FUNCTION PDLTOOLS_SCHEMA.__session_sessionization_imp(pg_catalog.varchar, pg_catalog.varchar, pg_catalog.varchar, pg_catalog.varchar, pg_catalog.varchar)
+UDF: FUNCTION PDLTOOLS_SCHEMA.session_split(pg_catalog.varchar)
+UDF: FUNCTION PDLTOOLS_SCHEMA.session_split(pg_catalog.varchar, pg_catalog.varchar, pg_catalog.varchar, pg_catalog.varchar, pg_catalog.interval)
+UDF: FUNCTION PDLTOOLS_SCHEMA.session_split()
