@@ -31,10 +31,15 @@ special add-ons that SUgAR enables.
 @anchor sugar_syntax
 @par Syntax
 <pre class="syntax">
-FUNCTION sugar(orig_query VARCHAR) RETURNS TEXT;
+FUNCTION sugar(orig_query VARCHAR [, user_table VARCHAR]) RETURNS TEXT;
 </pre>
 
 @param orig_query The SUgAR query to be executed.
+@param user_table Name of optional user table, to supplement the built-in SUgAR
+                  functions described in the table \c sugar_db. The table
+                  should follow the same format as \c sugar_db. The function
+                  acts as if the rows of \a user_table are appended into
+                  \c sugar_db.
 
 @returns
 SUgAR's return value is a text parameter, usually the empty string but
@@ -55,8 +60,9 @@ are notoriously difficult to support with native SQL.
 
 The functions that SUgAR recognizes, which we call 'SUgAR functions', are
 not part of the definition of the \c 'sugar' function. Rather, they are defined
-inside the tables \c sugar_db and and \c sugar_help_db. This makes SUgAR 100%
-extendable.
+inside the tables \c sugar_db and \c sugar_help_db (which can be
+supplemented by the additional \a user_table argument).
+This design makes SUgAR 100% extendable.
 
 Because SUgAR's functions can do things that normal SQL functions cannot,
 they are not, technically, functions. We refer to them as 'pseudofunctions'.
@@ -69,6 +75,11 @@ We note that GPDB does not currently support user-defined window functions,
 so SUgAR's pseudo-window-functions are the only way to define such UDWFs,
 even though this particular SUgAR feature does not require breaking the
 SQL standard.
+
+@warning Never add function definitions directly into \c sugar_db and
+\c sugar_help_db, as such additons will be overwritten and erased next time
+the library is upgraded. To extend SUgAR, always use the \c 'user_table'
+functionality.
 
 @note
 A limitation when using SUgAR is that it cannot return tables.
@@ -107,8 +118,8 @@ SELECT sugar('about');
 </pre>
 Overview of the SUgAR library.
 
-<pre class="example">
-SELECT sugar('list');
+<pre class='example'>
+SELECT sugar('list' [, '\a func_pattern' [, '\a user_table'] ]);
 </pre>
 Listing of the various SUgAR pseudofunctions supported,
 with a brief apropos-style description of each.
@@ -119,15 +130,17 @@ the SQL function \c 'proportional_trans', use
 All (non-aggregate) SQL functions in the SUgAR library
 provide help when invoked with either no parameters or with
 the single textual parameter \c 'usage'.)
-
-<pre class='example'>
-SELECT sugar('list','\a func_pattern');
-</pre>
-With '\a func_pattern' being a pattern (possibly
-simply being the name of a pseudofunction), the function
-returns a brief apropos-style description of each
-SUgAR pseudofunction matching the pattern.
+The optional argument '\a func_pattern' is a pattern (possibly
+simply being the name of a pseudofunction). If given, the
+function only returns information about SUgAR pseudofunctions
+matching the pattern.
 The supported pattern format is the PostgreSQL \c 'LIKE'.
+If omitted, \a func_pattern defaults to '%' (all
+pseudofunctions).
+The optional parameter \a user_table is the name of a table
+with the same format as \a sugar_help_db. If used, rows in
+\a user_table are treated as though they have been appended
+to \a sugar_help_db.
 
 <pre class="example">
 SELECT sugar('usage');
@@ -136,7 +149,7 @@ A full description of the \c 'sugar' function, including
 usage examples.
 
 <pre class="example">
-SELECT sugar('usage','\a funcname');
+SELECT sugar('usage','\a funcname' [, '\a user_table']);
 </pre>
 Get usage help on any particular pseduofunction.
 (In this case: \a funcname.)
@@ -145,6 +158,10 @@ Use <code>"SELECT sugar('usage','sugar_db');"</code> and
 help regarding the two database tables used by SUgAR and
 how to use these in order to write your own SUgAR
 extensions.
+The optional parameter \a user_table is the name of a table
+with the same format as \a sugar_help_db. If used, rows in
+\a user_table are treated as though they have been appended
+to \a sugar_help_db.
 
 <pre class="example">
 SELECT sugar_version();
@@ -1412,11 +1429,19 @@ All of SUgAR's pseudofunctions are defined in the table
 The complete documentation for SUgAR pseudofunctions is
 available in the table \c 'SUGAR_SCHEMA.sugar_help_db'
 (see \ref grp_sugar_help_db). The purpose of this is
-to make SUgAR 100% extendable. Any future pseudofunction that you want to add
-can extend the syntax supported by \c 'sugar' simply by adding the relevant rows
-to \c 'sugar_db' and \c 'sugar_help_db'. (The existing rows, in addition to
+to make SUgAR 100% extendable. A user wishing to introduce new
+pseudofunctions merely needs to add their definitions as rows in tables
+shaped like \c 'SUGAR_SCHEMA.sugar_db' and \c 'SUGAR_SCHEMA.sugar_help_db'.
+Calls to \c sugar accept an extra optional parameter \a user_table that
+tells \c sugar to treat the table whose name is \a user_table as though its
+rows are extra rows appearing in \c sugar_db / \c sugar_help_db.
+(The existing rows, in addition to
 providing all of SUgAR's functionality, can be used as examples to work off
 of.)
+
+@warning Never add function definitions directly into \c sugar_db and
+\c sugar_help_db, as such additons will be overwritten and erased next time
+the library is upgraded.
 
 @par
 AN IMPORTANT NOTE REGARDING SCHEMA QUALIFIERS
@@ -1621,8 +1646,8 @@ SELECT sugar('about');
 </pre>
                   Overview of the SUgAR library.
  
-<pre class="example">
-SELECT sugar('list');
+<pre class='example'>
+SELECT sugar('list' [, '\a func_pattern' [, '\a user_table'] ]);
 </pre>
                   Listing of the various SUgAR pseudofunctions supported,
                   with a brief apropos-style description of each.
@@ -1630,34 +1655,42 @@ SELECT sugar('list');
                   regular SQL functions. So, for example, to get help on
                   the SQL function \c 'proportional_trans', use
                   <code>"SELECT proportional_trans('usage');"</code>, instead.
-                  All SQL functions in the SUgAR library provide help when
-                  invoked with either no parameters or with the single
-                  textual parameter \c 'usage'.)
- 
-<pre class="example">
-SELECT sugar('list','\a func_pattern');
-</pre>
-                  With '\a func_pattern' being a pattern (possibly
-                  simply being the name of a pseudofunction), the function
-                  returns a brief apropos-style description of each
-                  SUgAR pseudofunction matching the pattern.
+                  All (non-aggregate) SQL functions in the SUgAR library
+                  provide help when invoked with either no parameters or with
+                  the single textual parameter \c 'usage'.)
+                  The optional argument '\a func_pattern' is a pattern (possibly
+                  simply being the name of a pseudofunction). If given, the
+                  function only returns information about SUgAR pseudofunctions
+                  matching the pattern.
                   The supported pattern format is the PostgreSQL \c 'LIKE'.
- 
+                  If omitted, \a func_pattern defaults to '%' (all
+                  pseudofunctions).
+                  The optional parameter \a user_table is the name of a table
+                  with the same format as \a sugar_help_db. If used, rows in
+                  \a user_table are treated as though they have been appended
+                  to \a sugar_help_db.
+
 <pre class="example">
 SELECT sugar('usage');
 </pre>
                   A full description of the \c 'sugar' function, including
                   usage examples.
- 
+
 <pre class="example">
-SELECT sugar('usage','\a funcname');
+SELECT sugar('usage','\a funcname' [, '\a user_table']);
 </pre>
                   Get usage help on any particular pseduofunction.
                   (In this case: \a funcname.)
                   Use <code>"SELECT sugar('usage','sugar_db');"</code> and
-                  <code>"SELECT sugar('usage','sugar_help_db');"</code> to get
-                  usage help regarding the two database tables used by SUgAR.
- 
+                  <code>"SELECT sugar('usage','sugar_help_db');"</code> to get usage
+                  help regarding the two database tables used by SUgAR and
+                  how to use these in order to write your own SUgAR
+                  extensions.
+                  The optional parameter \a user_table is the name of a table
+                  with the same format as \a sugar_help_db. If used, rows in
+                  \a user_table are treated as though they have been appended
+                  to \a sugar_help_db.
+
 <pre class="example">
 SELECT sugar_version();
 </pre>
@@ -3308,6 +3341,13 @@ with. The \c sugar_db table is the definitive source for what SUgAR
 pseudofunctions are defined and how they are defined, in the sense that
 adding a line to \c sugar_db adds a pseudofunction to the library.
 This design supports the original intent for SUgAR to be easily extendable.
+The \c sugar function allows users to create tables that are effectively
+appended to \c sugar_db, thereby supplementing the library.
+
+@warning
+Never add rows directly to \c sugar_db, as they would be overwritten and
+erased when the library is upgraded. Users should not change the content
+of library schemas.
 
 @note
 The documentation of the various functions appears in \c sugar_help_db.
@@ -3370,7 +3410,12 @@ SUgAR functions.
 Much as SUgAR functions can be added to the library by appending their
 definitions to the table \c 'sugar_db', so can documentation be added for them
 by adding it to \c sugar_help_db. This documentation then becomes accessible
-via calls to <code>sugar('usage')</code>.
+via calls to <code>sugar('usage')</code>. Users should never append such
+rows directly (as they would be erased on library upgrades). Rather, users
+can create their own tables, outside of library schemas, and have them
+function as extensions to \c 'sugar_db' and \c 'sugar_help_db'. The
+\c sugar function allows for this by having the name of the user extension
+table be given as an extra parameter to the function call.
 
 @anchor sugar_help_db_syntax
 @par Syntax
@@ -3414,6 +3459,8 @@ with. The sugar_db table is the definitive source for what SUgAR
 pseudofunctions are defined and how they are defined, in the sense that
 adding a line to sugar_db adds a pseudofunction to the library.
 This design supports the original intent for SUgAR to be easily extendable.
+The 'sugar' function allows users to create tables that are effectively
+appended to 'sugar_db', thereby supplementing the library.
 
 Synopsis
 ========
@@ -3438,6 +3485,11 @@ template - A string, indicating how calls to the function are handled.
 dynamic  - Determines whether the SUgAR function is static or dynamic.
            See the explanation of the 'template' parameter, above.
 
+Warning:
+Never add rows directly to 'sugar_db', as they would be overwritten and
+erased when the library is upgraded. Users should not change the content
+of library schemas.
+
 Note:
 The documentation of the various functions appears in sugar_help_db.
 Run "SELECT SUGAR_SCHEMA.sugar('usage');" for more on SUgAR documentation.
@@ -3448,8 +3500,13 @@ The table 'sugar_help_db' is the definitive source of documentation for
 SUgAR functions.
 Much as SUgAR functions can be added to the library by appending their
 definitions to the table 'sugar_db', so can documentation be added for them
-by adding it to sugar_help_db. This documentation then becomes accessible
-via calls to SUGAR_SCHEMA.SUgAR('usage').
+by adding it to 'sugar_help_db'. This documentation then becomes accessible
+via calls to "sugar('usage')". Users should never append such
+rows directly (as they would be erased on library upgrades). Rather, users
+can create their own tables, outside of library schemas, and have them
+function as extensions to 'sugar_db' and 'sugar_help_db'. The
+'sugar' function allows for this by having the name of the user extension
+table be given as an extra parameter to the function call.
 
 Synopsis
 ========
@@ -3458,6 +3515,11 @@ The following are the columns of 'sugar_help_db'.
 funcname  - The name of the SUgAR function. Case insensitive.
 brief_doc - A brief documentation string, in the style of the Unix 'apropos'.
 full_doc  - The complete function documentation, as a string.
+
+Warning:
+Never add rows directly to 'sugar_help_db', as they would be overwritten and
+erased when the library is upgraded. Users should not change the content
+of library schemas.
 
 Note:
 Run "SELECT SUGAR_SCHEMA.sugar('usage','sugar_db');" for help on how to
@@ -4290,6 +4352,132 @@ $SUGARDOC$)
 ;
 
 
+CREATE OR REPLACE FUNCTION SUGAR_SCHEMA.__sugar_imp(
+    orig_query VARCHAR, user_table VARCHAR
+)
+RETURNS TEXT
+VOLATILE
+LANGUAGE plpythonu
+AS $FUNCBODY$
+  import re
+
+  if orig_query==None:
+    return None
+
+  on_path=re.search(r'\b'+'SUGAR_SCHEMA'+r'\b',plpy.execute("show search_path;")[0]['search_path'],re.IGNORECASE)!=None
+
+  strpat='(?:(?:"(?:[^"]|(?:""))*")|(?:\'(?:[^\']|(?:\'\'))*\'))'
+  strre=re.compile(strpat)
+  literalescape=re.compile("'")
+  identifierescape=re.compile('"')
+
+  query=orig_query
+
+  if user_table==None:
+    sugar_db=plpy.execute("SELECT * FROM SUGAR_SCHEMA.sugar_db")
+  else:
+    try:
+      sugar_db=plpy.execute('''
+        SELECT * FROM SUGAR_SCHEMA.sugar_db
+          UNION
+        SELECT * FROM "'''+identifierescape.sub('""',user_table)+'"')
+    except:
+      plpy.error('Unable to read from table '+user_table+'.')
+      return ''
+  fdict={}
+  funcnameset=set()
+  for i in sugar_db:
+    if on_path or i['funcname']=='@':
+      fdict[(i['funcname'].lower(),i['argnum'])]=(i['template'],i['dynamic'])
+      funcnameset.add(i['funcname'].lower())
+    if i['funcname']!='@':
+      fdict[(('SUGAR_SCHEMA.'+i['funcname']).lower(),i['argnum'])]= \
+        (i['template'],i['dynamic'])
+      funcnameset.add(('SUGAR_SCHEMA.'+i['funcname']).lower())
+
+  use_default_window=re.search(r'\bDEFAULT_WINDOW\b',strre.sub(' ',query), \
+    re.IGNORECASE)!=None
+
+  if use_default_window:
+    fdict[('@',1)]=(' (SUGAR_SCHEMA.__sugar_fast_agg({1}) over (DEFAULT_WINDOW)) ',False)
+  else:
+    fdict[('@',1)]=(' (SUGAR_SCHEMA.__sugar_fast_agg({1})) ',False)
+
+  keywords=reduce(lambda x,y:x+'|'+y,funcnameset) 
+
+  keywords=re.compile('(?:('+keywords+ '|' +strpat+ r')\s*\()|@',re.IGNORECASE)
+
+  firstnp=re.compile(r'[-~!$%^&*+=<>/\s|]*(?:[a-zA-Z0-9_.]+|' +strpat+ r')(?:(?:\s*[-~!$%^&*+=<>/|]+)*(?:[a-zA-Z0-9_.]+|' +strpat+ r'))*\s*(.)')
+  nextnp=re.compile(r'(?:(?:\s*[-~!$%^&*+=<>/|]+)*[a-zA-Z0-9_.]+)*\s*(.)')
+
+  counter=0
+  mlist=[m for m in keywords.finditer(query) if m.group()[0] not in '"\'']
+  mlist.reverse();
+  for m in mlist:
+    info=[]
+    if m.group(1)!=None:
+      info.append(m.group(1))
+      counter=1
+      j=m.end()
+      start=j
+      stringtype=''
+      while j<len(query) and counter!=0:
+        if stringtype!='':
+          if query[j]==stringtype:
+            stringtype=''
+        elif query[j] in '"\'':
+          stringtype=query[j]
+        elif query[j]=='(':
+          counter+=1
+        elif query[j]==')':
+          counter-=1
+        elif counter==1 and query[j]==',':
+          info.append(query[start:j])
+          start=j+1
+        j+=1
+      if counter==0:
+        info.append(query[start:j-1])
+        d=fdict[(info[0].lower(),len(info)-1)]
+        if d[1]==False:
+          result=d[0].format(*info)
+        else:
+          info=["'"+literalescape.sub("''",x).strip()+"'" for x in info]
+          rc=plpy.execute('SELECT '+d[0].format(*info)+' AS col1;')
+          result=rc[0]['col1']
+    else: # m.group()=='@':
+      info.append(m.group())
+      n=firstnp.match(query[m.end():])
+      counter=0
+      j=n.end()+m.end()-1
+      stringtype=''
+      while j<len(query) and counter==0 and n.group(1)[-1] in '({[':
+        counter=1
+        while j<len(query) and counter!=0:
+          if stringtype!='':
+            if query[j]==stringtype:
+              stringtype=''
+          elif query[j] in '"\'':
+            stringtype=query[j]
+          elif query[j] in '({[':
+            counter+=1
+          elif query[j] in ')}]':
+            counter-=1
+          j+=1
+        if j<len(query):
+          n=nextnp.match(query[j:])
+          j+=n.end()-1
+      if counter==0:
+        info.append(query[m.end():j])
+        result=fdict[(info[0].lower(),len(info)-1)][0].format(*info)
+    query=query[:m.start()]+result+query[j:]
+
+  if counter>0:
+    plpy.error("Unmatched parentheses in query.")
+
+  plpy.execute(query)
+  return ''
+$FUNCBODY$;
+
 CREATE OR REPLACE FUNCTION SUGAR_SCHEMA.sugar(
     orig_query VARCHAR
 )
@@ -4375,11 +4563,21 @@ AS $FUNCBODY$
   'SUGAR_SCHEMA.sugar_db'.
   The complete documentation for SUgAR pseudofunctions is
   available in the table 'SUGAR_SCHEMA.sugar_help_db'. The purpose of this is
-  to make SUgAR 100% extendable. Any future pseudofunction that you want to add
-  can extend the syntax supported by 'sugar' simply by adding the relevant rows
-  to 'sugar_db' and 'sugar_help_db'. (The existing rows, in addition to
+  to make SUgAR 100% extendable. A user wishing to introduce new
+  pseudofunctions merely needs to add their definitions as rows in tables
+  shaped like 'SUGAR_SCHEMA.sugar_db' and 'SUGAR_SCHEMA.sugar_help_db'.
+  Calls to 'sugar' accept an extra optional parameter 'user_table' that
+  tells 'sugar' to treat the table whose name is 'user_table' as though its
+  rows are extra rows appearing in 'sugar_db'/'sugar_help_db'.
+  (The existing rows, in addition to
   providing all of SUgAR's functionality, can be used as examples to work off
   of.)
+
+  Warning:
+  Never add function definitions directly into sugar_db and
+  sugar_help_db, as such additons will be overwritten and erased next time
+  the library is upgraded. To extend SUgAR, always use the 'user_table'
+  functionality.
 
   AN IMPORTANT NOTE REGARDING SCHEMA QUALIFIERS
   =============================================
@@ -4549,35 +4747,45 @@ AS $FUNCBODY$
   SELECT sugar('about');
                     Overview of the SUgAR library.
  
-  SELECT sugar('list');
+  SELECT sugar('list' [, '<func_pattern>' [, '<user_table>'] ]);
                     Listing of the various SUgAR pseudofunctions supported,
                     with a brief apropos-style description of each.
                     (Note that this function lists only pseudofunctions, not
                     regular SQL functions. So, for example, to get help on
                     the SQL function 'proportional_trans', use
                     "SELECT proportional_trans('usage');", instead.
-                    All SQL functions in the SUgAR library provide help when
-                    invoked with either no parameters or with the single
-                    textual parameter 'usage'.)
- 
-  SELECT sugar('list','<func_pattern>');
-                    With '<func_pattern>' being a pattern (possibly
-                    simply being the name of a pseudofunction), the function
-                    returns a brief apropos-style description of each
-                    SUgAR pseudofunction matching the pattern.
+                    All (non-aggregate) SQL functions in the SUgAR library
+                    provide help when invoked with either no parameters or with
+                    the single textual parameter 'usage'.)
+                    The optional argument '<func_pattern>' is a pattern
+                    (possibly simply being the name of a pseudofunction). If
+                    given, the function only returns information about SUgAR
+                    pseudofunctions matching the pattern.
                     The supported pattern format is the PostgreSQL 'LIKE'.
- 
+                    If omitted, '<func_pattern>' defaults to '%' (all
+                    pseudofunctions).
+                    The optional parameter '<user_table>' is the name of a
+                    table with the same format as 'sugar_help_db'. If used,
+                    rows in '<user_table>' are treated as though they have been
+                    appended to 'sugar_help_db'.
+  
   SELECT sugar('usage');
                     A full description of the 'sugar' function, including
                     usage examples.
- 
-  SELECT sugar('usage','<funcname>');
+  
+  SELECT sugar('usage','<funcname>' [, '<user_table>']);
                     Get usage help on any particular pseduofunction.
-                    (In this case: <funcname>.)
+                    (In this case: '<funcname>'.)
                     Use "SELECT sugar('usage','sugar_db');" and
                     "SELECT sugar('usage','sugar_help_db');" to get usage
-                    help regarding the two database tables used by SUgAR.
- 
+                    help regarding the two database tables used by SUgAR and
+                    how to use these in order to write your own SUgAR
+                    extensions.
+                    The optional parameter <user_table> is the name of a table
+                    with the same format as 'sugar_help_db'. If used, rows in
+                    'user_table' are treated as though they have been appended
+                    to 'sugar_help_db'.
+
   SELECT sugar_version();
                     Get the version-string describing the version number of
                     the SUgAR library.
@@ -4619,9 +4827,10 @@ to easily support common analytics activities (such as pivoting) that
 are notoriously difficult to support with native SQL.
 
 The functions that SUgAR recognizes, which we call 'SUgAR functions', are
-not part of the definition of the SUgAR function. Rather, they are defined
-inside the tables sugar_db and and sugar_help_db. This makes SUgAR 100%
-extendable.
+not part of the definition of the 'sugar' function. Rather, they are defined
+inside the tables sugar_db and sugar_help_db (which can be
+supplemented by the additional 'user_table' argument).
+This design makes SUgAR 100% extendable.
 
 Because SUgAR's functions can do things that normal SQL functions cannot,
 they are not, technically, functions. We refer to them as 'pseudofunctions'.
@@ -4637,10 +4846,21 @@ SQL standard.
 
 Synopsis
 ========
-SUGAR_SCHEMA.sugar(orig_query VARCHAR)
+SUGAR_SCHEMA.sugar(orig_query VARCHAR [, user_table VARCHAR])
 RETURNS TEXT
 
 orig_query - the SUgAR query to be executed.
+user_table - Name of optional user table, to supplement the built-in SUgAR
+             functions described in the table sugar_db. The table
+             should follow the same format as sugar_db. The function
+             acts as if the rows of user_table are appended into
+             sugar_db.
+
+Warning:
+  Never add function definitions directly into sugar_db and
+  sugar_help_db, as such additons will be overwritten and erased next time
+  the library is upgraded. To extend SUgAR, always use the 'user_table'
+  functionality.
 
 Note:
    A limitation when using SUgAR is that it cannot return tables.
@@ -4677,7 +4897,7 @@ SELECT sugar('');
 SELECT sugar('about');
                   Overview of the SUgAR library.
 
-SELECT sugar('list');
+SELECT sugar('list' [, '<func_pattern>' [, '<user_table>'] ]);
                   Listing of the various SUgAR pseudofunctions supported,
                   with a brief apropos-style description of each.
                   (Note that this function lists only pseudofunctions, not
@@ -4687,26 +4907,34 @@ SELECT sugar('list');
                   All (non-aggregate) SQL functions in the SUgAR library
                   provide help when invoked with either no parameters or with
                   the single textual parameter 'usage'.)
-
-SELECT sugar('list','<func_pattern>');
-                  With '<func_pattern>' being a pattern (possibly
-                  simply being the name of a pseudofunction), the function
-                  returns a brief apropos-style description of each
-                  SUgAR pseudofunction matching the pattern.
+                  The optional argument '<func_pattern>' is a pattern
+                  (possibly simply being the name of a pseudofunction). If
+                  given, the function only returns information about SUgAR
+                  pseudofunctions matching the pattern.
                   The supported pattern format is the PostgreSQL 'LIKE'.
+                  If omitted, '<func_pattern>' defaults to '%' (all
+                  pseudofunctions).
+                  The optional parameter '<user_table>' is the name of a
+                  table with the same format as 'sugar_help_db'. If used,
+                  rows in '<user_table>' are treated as though they have been
+                  appended to 'sugar_help_db'.
 
 SELECT sugar('usage');
                   A full description of the 'sugar' function, including
                   usage examples.
 
-SELECT sugar('usage','<funcname>');
+SELECT sugar('usage','<funcname>' [, '<user_table>']);
                   Get usage help on any particular pseduofunction.
-                  (In this case: <funcname>.)
+                  (In this case: '<funcname>'.)
                   Use "SELECT sugar('usage','sugar_db');" and
                   "SELECT sugar('usage','sugar_help_db');" to get usage
                   help regarding the two database tables used by SUgAR and
                   how to use these in order to write your own SUgAR
                   extensions.
+                  The optional parameter <user_table> is the name of a table
+                  with the same format as 'sugar_help_db'. If used, rows in
+                  'user_table' are treated as though they have been appended
+                  to 'sugar_help_db'.
 
 SELECT sugar_version();
                   Get the version-string describing the version number of
@@ -4801,107 +5029,11 @@ See also: sugar_db, sugar_help_db
       rc+=row["funcname"]+" - \t"+row["brief_doc"]+"\n"
     return rc
 
-  on_path=re.search(r'\b'+'SUGAR_SCHEMA'+r'\b',plpy.execute("show search_path;")[0]['search_path'],re.IGNORECASE)!=None
-
-  strpat='(?:(?:"(?:[^"]|(?:""))*")|(?:\'(?:[^\']|(?:\'\'))*\'))'
-  strre=re.compile(strpat)
   literalescape=re.compile("'")
 
-  query=orig_query
-
-  sugar_db=plpy.execute("SELECT * FROM SUGAR_SCHEMA.sugar_db")
-  fdict={}
-  funcnameset=set()
-  for i in sugar_db:
-    if on_path or i['funcname']=='@':
-      fdict[(i['funcname'].lower(),i['argnum'])]=(i['template'],i['dynamic'])
-      funcnameset.add(i['funcname'].lower())
-    if i['funcname']!='@':
-      fdict[(('SUGAR_SCHEMA.'+i['funcname']).lower(),i['argnum'])]= \
-        (i['template'],i['dynamic'])
-      funcnameset.add(('SUGAR_SCHEMA.'+i['funcname']).lower())
-
-  use_default_window=re.search(r'\bDEFAULT_WINDOW\b',strre.sub(' ',query), \
-    re.IGNORECASE)!=None
-
-  if use_default_window:
-    fdict[('@',1)]=(' (SUGAR_SCHEMA.__sugar_fast_agg({1}) over (DEFAULT_WINDOW)) ',False)
-  else:
-    fdict[('@',1)]=(' (SUGAR_SCHEMA.__sugar_fast_agg({1})) ',False)
-
-  keywords=reduce(lambda x,y:x+'|'+y,funcnameset) 
-
-  keywords=re.compile('(?:('+keywords+ '|' +strpat+ r')\s*\()|@',re.IGNORECASE)
-
-  firstnp=re.compile(r'[-~!$%^&*+=<>/\s|]*(?:[a-zA-Z0-9_.]+|' +strpat+ r')(?:(?:\s*[-~!$%^&*+=<>/|]+)*(?:[a-zA-Z0-9_.]+|' +strpat+ r'))*\s*(.)')
-  nextnp=re.compile(r'(?:(?:\s*[-~!$%^&*+=<>/|]+)*[a-zA-Z0-9_.]+)*\s*(.)')
-
-  counter=0
-  mlist=[m for m in keywords.finditer(query) if m.group()[0] not in '"\'']
-  mlist.reverse();
-  for m in mlist:
-    info=[]
-    if m.group(1)!=None:
-      info.append(m.group(1))
-      counter=1
-      j=m.end()
-      start=j
-      stringtype=''
-      while j<len(query) and counter!=0:
-        if stringtype!='':
-          if query[j]==stringtype:
-            stringtype=''
-        elif query[j] in '"\'':
-          stringtype=query[j]
-        elif query[j]=='(':
-          counter+=1
-        elif query[j]==')':
-          counter-=1
-        elif counter==1 and query[j]==',':
-          info.append(query[start:j])
-          start=j+1
-        j+=1
-      if counter==0:
-        info.append(query[start:j-1])
-        d=fdict[(info[0].lower(),len(info)-1)]
-        if d[1]==False:
-          result=d[0].format(*info)
-        else:
-          info=["'"+literalescape.sub("''",x).strip()+"'" for x in info]
-          rc=plpy.execute('SELECT '+d[0].format(*info)+' AS col1;')
-          result=rc[0]['col1']
-    else: # m.group()=='@':
-      info.append(m.group())
-      n=firstnp.match(query[m.end():])
-      counter=0
-      j=n.end()+m.end()-1
-      stringtype=''
-      while j<len(query) and counter==0 and n.group(1)[-1] in '({[':
-        counter=1
-        while j<len(query) and counter!=0:
-          if stringtype!='':
-            if query[j]==stringtype:
-              stringtype=''
-          elif query[j] in '"\'':
-            stringtype=query[j]
-          elif query[j] in '({[':
-            counter+=1
-          elif query[j] in ')}]':
-            counter-=1
-          j+=1
-        if j<len(query):
-          n=nextnp.match(query[j:])
-          j+=n.end()-1
-      if counter==0:
-        info.append(query[m.end():j])
-        result=fdict[(info[0].lower(),len(info)-1)][0].format(*info)
-    query=query[:m.start()]+result+query[j:]
-
-  if counter>0:
-    plpy.error("Unmatched parentheses in query.")
-
-  plpy.execute(query)
-  return ''
+  return plpy.execute("SELECT SUGAR_SCHEMA.__sugar_imp('"+
+                       literalescape.sub("''",orig_query)+
+                       "', NULL) AS sugar;")[0]["sugar"]
 $FUNCBODY$;
 
 CREATE OR REPLACE FUNCTION SUGAR_SCHEMA.sugar()
@@ -4911,6 +5043,53 @@ STRICT
 LANGUAGE SQL
 AS $$
 SELECT SUGAR_SCHEMA.sugar('');
+$$;
+
+CREATE OR REPLACE FUNCTION SUGAR_SCHEMA.sugar(
+    option VARCHAR, funcname VARCHAR, user_table VARCHAR
+)
+RETURNS TEXT
+VOLATILE
+STRICT
+LANGUAGE plpythonu
+AS $$
+  import re
+
+  literalescape=re.compile("'")
+  identifierescape=re.compile('"')
+
+  if option.lower()=="usage":
+    try:
+      row=plpy.execute('''SELECT * FROM (SELECT * FROM
+                            SUGAR_SCHEMA.sugar_help_db
+                              UNION
+                            SELECT * FROM "'''+
+                        identifierescape.sub('""',user_table)+'"'+""") x
+                          WHERE funcname='"""
+                       +literalescape.sub("''",funcname)+"';")[0]
+    except:
+      plpy.error("Unable to read from table "+user_table+".")
+      return ''
+    return row["funcname"]+": "+row["brief_doc"]+"\n\n"+row["full_doc"]
+  elif option.lower()=="list":
+    try:
+      rows=plpy.execute('''SELECT funcname, brief_doc
+                        FROM (SELECT * FROM SUGAR_SCHEMA.sugar_help_db
+                                UNION
+                              SELECT * FROM "'''+
+                        identifierescape.sub('""',user_table)+'"'+""") x
+                        WHERE funcname LIKE '"""
+                        +literalescape.sub("''",funcname)
+                        +"' ORDER BY funcname;")
+    except:
+      plpy.error("Unable to read from table "+user_table+".")
+      return ''
+    rc=""
+    for row in rows:
+      rc+=row["funcname"]+" - \t"+row["brief_doc"]+"\n"
+    return rc
+  else:
+    return plpy.execute("SELECT SUGAR_SCHEMA.sugar('') AS doc;")[0]["doc"]
 $$;
 
 CREATE OR REPLACE FUNCTION SUGAR_SCHEMA.sugar(
@@ -4940,7 +5119,10 @@ AS $$
       rc+=row["funcname"]+" - \t"+row["brief_doc"]+"\n"
     return rc
   else:
-    return plpy.execute("SELECT SUGAR_SCHEMA.sugar('') AS doc;")[0]["doc"]
+    return plpy.execute("SELECT SUGAR_SCHEMA.__sugar_imp('"+
+                         literalescape.sub("''",option)+"','"+
+                         literalescape.sub("''",funcname)+
+                         "') AS sugar;")[0]["sugar"]
 $$;
 
 CREATE OR REPLACE FUNCTION SUGAR_SCHEMA.sugar_version()

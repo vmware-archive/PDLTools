@@ -1,3 +1,4 @@
+UDF: FUNCTION SUGAR_SCHEMA.__sugar_imp(pg_catalog.varchar, pg_catalog.varchar)
 UDF: FUNCTION SUGAR_SCHEMA.clamp()
 UDF: FUNCTION SUGAR_SCHEMA.__sugar_pivot_expand_compress(pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.text)
 UDF: FUNCTION SUGAR_SCHEMA.clamp(pg_catalog.numeric, pg_catalog.numeric, pg_catalog.numeric)
@@ -14,6 +15,7 @@ UDF: FUNCTION SUGAR_SCHEMA.__sugar_pivot_expand(pg_catalog.text, pg_catalog.text
 UDF: FUNCTION SUGAR_SCHEMA.all_vals()
 REL: TABLE SUGAR_SCHEMA.sugar_help_db
 UDF: FUNCTION SUGAR_SCHEMA.clamp(pg_catalog.varchar)
+UDF: FUNCTION SUGAR_SCHEMA.sugar(pg_catalog.varchar, pg_catalog.varchar, pg_catalog.varchar)
 UDF: FUNCTION SUGAR_SCHEMA.all_but_one(pg_catalog.varchar)
 UDF: AGGREGATE SUGAR_SCHEMA.choose_any(pg_catalog.anyelement)
 REL: TABLE SUGAR_SCHEMA.sugar_db

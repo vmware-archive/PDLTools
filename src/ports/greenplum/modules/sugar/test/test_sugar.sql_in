@@ -312,3 +312,38 @@ DROP TABLE outtable;
 DROP TABLE correct_result;
 DROP TABLE result_comp;
 
+CREATE TABLE my_db (funcname varchar, argnum integer, template varchar,
+                    dynamic boolean) DISTRIBUTED BY (funcname);
+
+INSERT INTO my_db VALUES
+('test_func',1,'25',false);
+
+SELECT sugar($$
+  CREATE TABLE outtable AS
+    SELECT test_func(7) AS x
+  DISTRIBUTED RANDOMLY;
+$$, 'my_db');
+
+SELECT assert(count(*),1) FROM outtable;
+SELECT assert(x,25) FROM outtable;
+
+DROP TABLE my_db;
+drop TABLE outtable;
+
+CREATE TABLE my_help_db (funcname varchar, brief_doc varchar,
+                         full_doc varchar) DISTRIBUTED BY (funcname);
+
+INSERT INTO my_help_db VALUES
+('test_func','my_brief_doc','my_full_doc');
+
+CREATE TABLE outtable AS SELECT sugar('list','test_func','my_help_db') brief,
+                            sugar('usage','test_func','my_help_db') full_doc
+                         DISTRIBUTED RANDOMLY;
+
+SELECT assert(count(*),1) FROM outtable;
+SELECT assert(brief,'test_func - \tmy_brief_doc\n') FROM outtable;
+SELECT assert(full_doc,'test_func: my_brief_doc\n\nmy_full_doc') FROM outtable;
+
+DROP TABLE my_help_db;
+DROP TABLE outtable;
+
