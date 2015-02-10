@@ -1336,9 +1336,135 @@ Note that the order in which the columns appear in the glob (and therefore also
 the order of the coefficients) is the same as their order in the original
 table (the order they will appear in, in a <code>'SELECT *'</code>).
 
-@sa grp_all_but_one
+@sa grp_all_but_one, grp_format_glob
 
 (Written by [Michael Brand](mailto:mbrand@pivotal.io), 26 Jun 2014.)
+
+ */
+
+/**
+@addtogroup grp_format_glob
+
+@brief Glob the names of table columns and transform them.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#format_glob_syntax">Syntax</a>
+<li class="level1"><a href="#format_glob_usage">Usage</a>
+<li class="level1"><a href="#format_glob_example">Example</a>
+</ul>
+</div>
+
+@about
+Given a table, this SUgAR pseudofunction returns a list of its column names
+after a user-chosen transformation (which can be a general function).
+This can be used for easily selecting multiple columns using a pattern, and is
+more generic than \c "glob" in that it is useful, for example, where globbed
+columns require renaming.
+
+@anchor format_glob_syntax
+@par Syntax
+<pre class="syntax">
+format_glob(formatspec,table,schema)
+</pre>
+Return a comma-separated list of all the table's columns after \a formatspec transformation.
+
+<pre class="syntax">
+format_glob(formatspec,table,schema,incl_pat)
+</pre>
+Same, but return only columns matching pattern.
+
+<pre class="syntax">
+format_glob(formatspec,table,schema,incl_pat,excl_pat)
+</pre>
+Same, but futher exclude second pattern.
+
+<pre class="syntax">
+format_glob(formatspec,table,schema,incl_pat,excl_pat,sep)
+</pre>
+Same, but use \a sep as the string separator, instead of a comma.
+
+@param formatspec
+           Specification of the transformation to be applied on the column
+           names. The parameter can be either the name of a function accepting
+           a string and returning a string or can be a (properly-quoted)
+           string literal. If it is a string literal, it is used as a pattern:
+           it is reproduced as-is, except for appearances of \c '{c}', which are
+           replaced by the names of the retrieved columns.
+           If \a formatspec is the name of a function, this function is called
+           for every column name, and the returned value is the function's
+           output. Using NULL for formatspec will cause the original column
+           names to appear in the output without undergoing any transformation.
+@param table The name of the table to glob from.
+@param schema The name of the schema the table resides in.
+@param incl_pat A string denoting a \c 'SIMILAR TO' regex pattern to match.
+Defaults to <code>'%'</code> ("match every column").
+@param excl_pat A string denoting a \c 'SIMILAR TO' regex pattern to exclude.
+Defaults to '' ("exclude nothing").
+Column names returned will match \a incl_pat but not \a excl_pat.
+@param sep A separator string to appear between column names. Defaults to
+comma separation.
+
+@returns The set of retrieved columns. (This is not a valid return type in
+standard SQL.)
+
+@anchor format_glob_usage
+@usage
+This SUgAR pseudofunction is used to fetch the names of multiple table columns
+at once by use of patterns. Columns can also be excluded by a second pattern.
+This is especially important in analytics, where machine-learning training
+functions may require a large number of independent variable columns to be
+given as inputs.
+
+@note
+-# Patterns are matched accoring to PostgreSQL \c "SIMILAR TO" rules.
+-# Similar to the Unix method, if nothing matches, returns the original pattern.
+-# The columns are fetched in the order that they would appear in a
+<code>'SELECT *'</code> from the original table.
+
+@anchor format_glob_example
+@examp
+@verbatim
+user=# CREATE TABLE public.test_table (y float8, x1 float8, x2 float8,
+user(#                                 x3 float8)
+user-#   DISTRIBUTED RANDOMLY;
+CREATE TABLE
+user=# INSERT INTO public.test_table VALUES
+user-#   (5.1,3.3,10.0,-2.4);
+INSERT 0 1
+user=# CREATE FUNCTION test_function(text)
+user-# RETURNS text
+user-# STRICT
+user-# IMMUTABLE
+user-# LANGUAGE SQL
+user-# AS $$
+user$#   SELECT 'abs(' || $1 || ') AS "' || upper($1) || '"';
+user$# $$;
+CREATE FUNCTION
+user=# SELECT sugarlib.sugar($$
+user$#   CREATE TABLE outtable AS
+user$#     SELECT y, glob('test_table','public','x%'),
+user$#            format_glob('{c}*{c} AS {c}_sqr','test_table','public','x%'),
+user$#            format_glob(test_function,'test_table','public','x%')
+user$#     FROM public.test_table
+user$#   DISTRIBUTED RANDOMLY;
+user$# $$);
+ sugar 
+-------
+ 
+(1 row)
+
+user=# SELECT * FROM outtable;
+  y  | x1  | x2 |  x3  | x1_sqr | x2_sqr | x3_sqr | X1  | X2 | X3  
+-----+-----+----+------+--------+--------+--------+-----+----+-----
+ 5.1 | 3.3 | 10 | -2.4 |  10.89 |    100 |   5.76 | 3.3 | 10 | 2.4
+(1 row)
+
+@endverbatim
+
+@sa grp_glob
+
+(Written by [Michael Brand](mailto:mbrand@pivotal.io), 10 Feb 2015.)
 
  */
 
@@ -1418,6 +1544,7 @@ Currently supported pseudofunctions are:
  - *pivot01* -- Make 0/1 columns out of a categorical column.
  - *pivot* -- Cross-tabulate one column according to another.
  - *glob* -- Glob column names by a pattern.
+ - *format_glob* -- Glob column names by a pattern and transform them.
 (See \ref grp_sugar_funcs for the complete documentation.)
 
 Importantly, however, the function \c 'sugar' itself is unaware of any of these
@@ -1702,15 +1829,16 @@ SELECT sugar_version();
 
 /**
  * @internal
- * @brief __sugar_get_col_names: Backend function for SUgAR's pseudofunction
- *                               \c 'glob'.
+ * @brief __sugar_get_col_names: Backend function for SUgAR's pseudofunctions
+ *                               \c 'glob' and \c 'format_glob'.
  *
  * @about
- * A backend function for SUgAR's pseudofunction \c 'glob'.
+ * A backend for SUgAR's pseudofunctions \c 'glob' and \c 'format_glob'.
  *
  * @par Syntax
  * <pre class="syntax">
  * FUNCTION __sugar_get_col_names(
+ *   formatspec TEXT,
  *   tablename TEXT,
  *   schemaname TEXT,
  *   include_cols TEXT,
@@ -1720,6 +1848,17 @@ SELECT sugar_version();
  * RETURNS TEXT;
  * </pre>
  *
+ * @param formatspec
+ *         Specification of the transformation to be applied on the column
+ *         names. The parameter can be either the name of a function accepting
+ *         a string and returning a string or can be a (properly-quoted)
+ *         string literal. If it is a string literal, it is used as a pattern:
+ *         it is reproduced as-is, except for appearances of '{c}', which are
+ *         replaced by the names of the retrieved columns.
+ *         If 'formatspec' is the name of a function, this function is called
+ *         for every column name, and the returned value is the function's
+ *         output. Using NULL for formatspec will cause the original column
+ *         names to appear in the output without undergoing any transformation.
  * @param tablename    Table whose columns are to be globbed.
  * @param schemaname   Schema of table to be globbed.
  * @param include_cols Columns to be included (PostgreSQL <code>SIMILAR TO</code> regex).
@@ -1737,6 +1876,7 @@ SELECT sugar_version();
 **/
 
 CREATE OR REPLACE FUNCTION SUGAR_SCHEMA.__sugar_get_col_names(
+  formatspec TEXT,
   tablename TEXT,
   schemaname TEXT,
   include_cols TEXT,
@@ -1748,23 +1888,59 @@ STABLE
 STRICT
 LANGUAGE plpythonu
 AS $$
+  import re
+  literalunescape=re.compile("''")
+  literalescape=re.compile("'")
+  identifierunescape=re.compile('""')
+  identifierescape=re.compile('"')
+  if formatspec.lower()=='null':
+    nformatspec="'{c}'"
+  else:
+    nformatspec=formatspec
+  format_as_text=re.match(r'^\s*(\'(?:[^\']|\'\')*\'|"(?:[^"]|"")*")\s*$',
+                          nformatspec)
+  if format_as_text:
+    format_as_text=format_as_text.group(1)
+    if format_as_text[0]=="'":
+      format_as_text=literalunescape.sub("'",format_as_text[1:-1])
+      # format_as_text='"'+identifierescape.sub('""',format_as_text)+'"'
+
   params=dict(tablename=tablename,schemaname=schemaname,
               include_cols=include_cols,exclude_cols=exclude_cols,
-              separator=separator)
-  cols=plpy.execute("""SELECT attname,{separator} AS sep
-                         FROM pg_attribute, pg_class, pg_namespace
-                         WHERE nspname={schemaname} AND relname={tablename}
-                           AND relnamespace=pg_namespace.oid
-                           AND attrelid=pg_class.oid AND attnum>0
-                           AND attname SIMILAR TO {include_cols}
-                           AND attname NOT SIMILAR TO {exclude_cols}
-                         ORDER BY attnum;""".format(**params))
-  if len(cols)!=0:
-    rc=cols[0]['sep'].join([x['attname'] for x in cols])
+              separator=separator,nformatspec=nformatspec)
+
+  if format_as_text:
+    cols=plpy.execute("""SELECT attname,{separator} AS sep
+                           FROM pg_attribute, pg_class, pg_namespace
+                           WHERE nspname={schemaname} AND relname={tablename}
+                             AND relnamespace=pg_namespace.oid
+                             AND attrelid=pg_class.oid AND attnum>0
+                             AND attname SIMILAR TO {include_cols}
+                             AND attname NOT SIMILAR TO {exclude_cols}
+                           ORDER BY attnum;""".format(**params))
+    if len(cols)!=0:
+      rc=cols[0]['sep'].join([format_as_text.format(c=x['attname'])
+                                for x in cols])
+    else:
+      rc=plpy.execute("""SELECT {include_cols} AS incl;"""
+          .format(**params))[0]['incl']
+      # Doing the Unix thing: if nothing matches, return original pattern.
   else:
-    rc=plpy.execute("""SELECT {include_cols} AS incl;"""
-        .format(**params))[0]['incl']
-    # Doing the Unix thing: if nothing matches, return original pattern.
+    cols=plpy.execute("""SELECT {nformatspec}(attname::text) AS col,
+                                {separator} AS sep
+                           FROM pg_attribute, pg_class, pg_namespace
+                           WHERE nspname={schemaname} AND relname={tablename}
+                             AND relnamespace=pg_namespace.oid
+                             AND attrelid=pg_class.oid AND attnum>0
+                             AND attname SIMILAR TO {include_cols}
+                             AND attname NOT SIMILAR TO {exclude_cols}
+                           ORDER BY attnum;""".format(**params))
+    if len(cols)!=0:
+      rc=cols[0]['sep'].join([x['col'] for x in cols])
+    else:
+      rc=plpy.execute("""SELECT {include_cols} AS incl;"""
+          .format(**params))[0]['incl']
+      # Doing the Unix thing: if nothing matches, return original pattern.
   return rc
 $$;
 
@@ -3387,10 +3563,14 @@ INSERT INTO SUGAR_SCHEMA.sugar_db VALUES
   ('pivot',6,$$SUGAR_SCHEMA.__sugar_pivot_expand_compress({1},{2},{3},{4},{5},{6},'''{{c}}_{{v}}''','''SELECT DISTINCT {{col}} AS col_name FROM {{tabl}};''')$$,true),
   ('pivot',7,$$SUGAR_SCHEMA.__sugar_pivot_expand_compress({1},{2},{3},{4},{5},{6},{7},'''SELECT DISTINCT {{col}} AS col_name FROM {{tabl}};''')$$,true),
   ('pivot',8,$$SUGAR_SCHEMA.__sugar_pivot_expand_compress({1},{2},{3},{4},{5},{6},{7},{8})$$,true),
-  ('glob',2,$$SUGAR_SCHEMA.__sugar_get_col_names({1},{2},'''%''','''''',''', ''')$$,true),
-  ('glob',3,$$SUGAR_SCHEMA.__sugar_get_col_names({1},{2},{3},'''''',''', ''')$$,true),
-  ('glob',4,$$SUGAR_SCHEMA.__sugar_get_col_names({1},{2},{3},{4},''', ''')$$,true),
-  ('glob',5,$$SUGAR_SCHEMA.__sugar_get_col_names({1},{2},{3},{4},{5})$$,true)
+  ('glob',2,$$SUGAR_SCHEMA.__sugar_get_col_names('NULL',{1},{2},'''%''','''''',''', ''')$$,true),
+  ('glob',3,$$SUGAR_SCHEMA.__sugar_get_col_names('NULL',{1},{2},{3},'''''',''', ''')$$,true),
+  ('glob',4,$$SUGAR_SCHEMA.__sugar_get_col_names('NULL',{1},{2},{3},{4},''', ''')$$,true),
+  ('glob',5,$$SUGAR_SCHEMA.__sugar_get_col_names('NULL',{1},{2},{3},{4},{5})$$,true),
+  ('format_glob',3,$$SUGAR_SCHEMA.__sugar_get_col_names({1},{2},{3},'''%''','''''',''', ''')$$,true),
+  ('format_glob',4,$$SUGAR_SCHEMA.__sugar_get_col_names({1},{2},{3},{4},'''''',''', ''')$$,true),
+  ('format_glob',5,$$SUGAR_SCHEMA.__sugar_get_col_names({1},{2},{3},{4},{5},''', ''')$$,true),
+  ('format_glob',6,$$SUGAR_SCHEMA.__sugar_get_col_names({1},{2},{3},{4},{5},{6})$$,true)
 ;
 
 /**
@@ -4348,6 +4528,93 @@ condition_no | 9683.22896325205
 Note that the order in which the columns appear in the glob (and therefore also
 the order of the coefficients) is the same as their order in the original
 table (the order they will appear in, in a 'SELECT *').
+$SUGARDOC$),
+('format_glob','Glob the names of table columns and transform them.',$SUGARDOC$
+Given a table, this SUgAR pseudofunction returns a list of its column names
+after a user-chosen transformation (which can be a general function).
+This can be used for easily selecting multiple columns using a pattern, and is
+more generic than "glob" in that it is useful, for example, where globbed
+columns require renaming.
+
+Synopsis
+========
+format_glob(formatspec,table,schema) - Return a comma-separated list of all the table's columns after formatspec transformation.
+format_glob(formatspec,table,schema,incl_pat) - Same, but return only columns matching pattern.
+format_glob(formatspec,table,schema,incl_pat,excl_pat) - Same, but futher exclude second pattern.
+format_glob(formatspec,table,schema,incl_pat,excl_pat,sep) - Same, but use sep as the string separator, instead of a comma.
+
+formatspec - Specification of the transformation to be applied on the column
+           names. The parameter can be either the name of a function accepting
+           a string and returning a string or can be a (properly-quoted)
+           string literal. If it is a string literal, it is used as a pattern:
+           it is reproduced as-is, except for appearances of '{c}', which are
+           replaced by the names of the retrieved columns.
+           If 'formatspec' is the name of a function, this function is called
+           for every column name, and the returned value is the function's
+           output. Using NULL for formatspec will cause the original column
+           names to appear in the output without undergoing any transformation.
+table    - The name of the table to glob from.
+schema   - The name of the schema the table resides in.
+incl_pat - A string denoting a 'SIMILAR TO' regex pattern to match.
+           Defaults to '%' ("match every column").
+excl_pat - A string denoting a 'SIMILAR TO' regex pattern to exclude.
+           Defaults to '' ("exclude nothing").
+           Column names returned will match incl_pat but not excl_pat.
+sep      - A separator string to appear between column names. Defaults to
+           comma separation.
+
+Usage
+=====
+This SUgAR pseudofunction is used to fetch the names of multiple table columns
+at once by use of patterns. Columns can also be excluded by a second pattern.
+This is especially important in analytics, where machine-learning training
+functions may require a large number of independent variable columns to be
+given as inputs, especially when these inputs need to be transformed and
+renamed before they become usable.
+
+Notes:
+1. Patterns are matched accoring to PostgreSQL "SIMILAR TO" rules.
+2. Similar to the Unix method, if nothing matches, returns the original pattern.
+3. The columns are fetched in the order that they would appear in a 'SELECT *'
+   from the original table.
+
+Example
+=======
+user=# CREATE TABLE public.test_table (y float8, x1 float8, x2 float8,
+user(#                                 x3 float8)
+user-#   DISTRIBUTED RANDOMLY;
+CREATE TABLE
+user=# INSERT INTO public.test_table VALUES
+user-#   (5.1,3.3,10.0,-2.4);
+INSERT 0 1
+user=# CREATE FUNCTION test_function(text)
+user-# RETURNS text
+user-# STRICT
+user-# IMMUTABLE
+user-# LANGUAGE SQL
+user-# AS $$
+user$#   SELECT 'abs(' || $1 || ') AS "' || upper($1) || '"';
+user$# $$;
+CREATE FUNCTION
+user=# SELECT sugarlib.sugar($$
+user$#   CREATE TABLE outtable AS
+user$#     SELECT y, glob('test_table','public','x%'),
+user$#            format_glob('{c}*{c} AS {c}_sqr','test_table','public','x%'),
+user$#            format_glob(test_function,'test_table','public','x%')
+user$#     FROM public.test_table
+user$#   DISTRIBUTED RANDOMLY;
+user$# $$);
+ sugar 
+-------
+ 
+(1 row)
+
+user=# SELECT * FROM outtable;
+  y  | x1  | x2 |  x3  | x1_sqr | x2_sqr | x3_sqr | X1  | X2 | X3  
+-----+-----+----+------+--------+--------+--------+-----+----+-----
+ 5.1 | 3.3 | 10 | -2.4 |  10.89 |    100 |   5.76 | 3.3 | 10 | 2.4
+(1 row)
+
 $SUGARDOC$)
 ;
 
@@ -4554,6 +4821,7 @@ AS $FUNCBODY$
   pivot01 -- Make 0/1 columns out of a categorical column
   pivot -- Cross-tabulate one column according to another
   glob -- Glob column names by a pattern
+  format_glob -- Glob column names by a pattern and transform them
 
   Importantly, however, the function 'sugar' itself is unaware of any of these
   extension functions. All 'sugar' does is some shallow parsing of the SQL

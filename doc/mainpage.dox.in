@@ -263,6 +263,7 @@ The SUgAR pseudofunctions available out-of-the-box.
         @defgroup grp_pivot01 pivot01 (Pseudofunction)
         @defgroup grp_pivot pivot (Pseudo-aggregate)
         @defgroup grp_glob glob (Pseudofunction)
+        @defgroup grp_format_glob format_glob (Pseudofunction)
     @}
 
     @defgroup grp_helper Helper Routines
