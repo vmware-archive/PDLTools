@@ -4,16 +4,21 @@
 
 ## PDL Tools Revision History
 
-### PDL Tools 1.3.1 (packaged with SUgAR 0.4.4) -- Current version
-- Added module to balance datasets for classification 
+### PDL Tools 1.4 (packaged with SUgAR 1.0) -- Current version
+- Added module for prediction metrics (regression+binary+multi-class).
+- Added module to balance datasets for classification.
+- Added SUgAR "format_glob" (globbing with user-defined transformation).
+- Added SUgAR support for user-extension tables.
+- Installer rewritten for database-safe upgrades.
+- More modules (e.g. SUgAR) now supported on HAWQ.
 
-### PDL Tools 1.3 (packaged with SUgAR 0.4.4) -- Current version
+### PDL Tools 1.3 (packaged with SUgAR 0.4.4)
 - Ported PDL Tools to work on HAWQ (1.2 and 1.3)
 - Modified pdlpack to accommodate installation on HAWQ
 - Added Complete Linkage algorithm.
 - Added multi-graph support for Connected Components algorithm.
 
-### PDL Tools 1.2.2 (packaged with SUgAR 0.4.4) -- Current version
+### PDL Tools 1.2.2 (packaged with SUgAR 0.4.4)
 - Added Stratified Sampling.
 - Added installation instructions for non-gpadmin install.
 
