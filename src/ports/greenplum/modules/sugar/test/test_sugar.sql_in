@@ -327,7 +327,7 @@ SELECT sugar($$
 $$, 'my_db');
 
 SELECT assert(count(*),1) FROM outtable;
-SELECT assert(x::TEXT,25::TEXT) FROM outtable;
+SELECT assert(x::TEXT,25::TEXT,'Assertion test') FROM outtable;
 
 DROP TABLE my_db;
 drop TABLE outtable;
@@ -343,8 +343,8 @@ CREATE TABLE outtable AS SELECT sugar('list','test_func','my_help_db') brief,
                          DISTRIBUTED RANDOMLY;
 
 SELECT assert(count(*),1) FROM outtable;
-SELECT assert(brief,'test_func - \tmy_brief_doc\n') FROM outtable;
-SELECT assert(full_doc,'test_func: my_brief_doc\n\nmy_full_doc') FROM outtable;
+SELECT assert(brief,'test_func - \tmy_brief_doc\n','Assertion test') FROM outtable;
+SELECT assert(full_doc,'test_func: my_brief_doc\n\nmy_full_doc','Assertion test') FROM outtable;
 
 DROP TABLE my_help_db;
 DROP TABLE outtable;

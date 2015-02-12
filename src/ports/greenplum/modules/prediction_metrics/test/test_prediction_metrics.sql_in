@@ -317,7 +317,7 @@ SELECT
   assert(max(class)::TEXT,5::TEXT)
 FROM out_table;
 
-SELECT assert(array_to_string(conf,','),array_to_string(confusion_arr,','))
+SELECT assert(array_to_string(conf,','),array_to_string(confusion_arr,','),'Assertion test')
 FROM out_table t, comparison c
 WHERE class=cls;
 
