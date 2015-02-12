@@ -327,7 +327,7 @@ SELECT sugar($$
 $$, 'my_db');
 
 SELECT assert(count(*),1) FROM outtable;
-SELECT assert(x,25) FROM outtable;
+SELECT assert(x::TEXT,25::TEXT) FROM outtable;
 
 DROP TABLE my_db;
 drop TABLE outtable;

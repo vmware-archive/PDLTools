@@ -123,7 +123,7 @@ INSERT INTO binary_classifier VALUES
 ( 0.12500000000000000000 ,   0 ,  1 ,  0),
 ( 0.25000000000000000000 ,   0 ,  0 ,  1);
 
-SELECT assert((abs(mf_auc('binary_classifier','pred','obs')-0.814769481844)<1E-10),true);
+SELECT assert(CASE WHEN (abs(mf_auc('binary_classifier','pred','obs')-0.814769481844)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test');
 
 SELECT mf_auc('binary_classifier','pred','obs','auc_table','m1, m2');
 
@@ -148,7 +148,7 @@ SELECT
 FROM auc_table;
 
 SELECT
-  assert((abs(c.auc-a.auc)<1E-10),true)
+  assert(CASE WHEN (abs(c.auc-a.auc)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test')
 FROM auc_table a, auc_table_comparison c
 WHERE a.m1=c.m1 AND a.m2=c.m2;
 
@@ -196,19 +196,19 @@ FROM out_table_comparison c FULL JOIN out_table o
   ON c.c_threshold=o.threshold;
 
 SELECT
-  assert((abs(tp-c_tp)<1E-10),true),
-  assert((abs(fp-c_fp)<1E-10),true),
-  assert((abs(fn-c_fn)<1E-10),true),
-  assert((abs(tn-c_tn)<1E-10),true),
-  assert((abs(tpr-c_tpr)<1E-10),true),
-  assert((abs(tnr-c_tnr)<1E-10),true),
-  assert((abs(ppv-c_ppv)<1E-10),true),
-  assert(((npv IS NULL) AND (c_npv IS NULL)) OR (abs(npv-c_npv)<1E-10),true),
-  assert((abs(fpr-c_fpr)<1E-10),true),
-  assert((abs(fdr-c_fdr)<1E-10),true),
-  assert((abs(fnr-c_fnr)<1E-10),true),
-  assert((abs(acc-c_acc)<1E-10),true),
-  assert((abs(f1-c_f1)<1E-10),true)
+  assert(CASE WHEN (abs(tp-c_tp)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test'),
+  assert(CASE WHEN (abs(fp-c_fp)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test'),
+  assert(CASE WHEN (abs(fn-c_fn)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test'),
+  assert(CASE WHEN (abs(tn-c_tn)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test'),
+  assert(CASE WHEN (abs(tpr-c_tpr)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test'),
+  assert(CASE WHEN (abs(tnr-c_tnr)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test'),
+  assert(CASE WHEN (abs(ppv-c_ppv)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test'),
+  assert(CASE WHEN ((npv IS NULL) AND (c_npv IS NULL)) OR (abs(npv-c_npv)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test'),
+  assert(CASE WHEN (abs(fpr-c_fpr)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test'),
+  assert(CASE WHEN (abs(fdr-c_fdr)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test'),
+  assert(CASE WHEN (abs(fnr-c_fnr)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test'),
+  assert(CASE WHEN (abs(acc-c_acc)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test'),
+  assert(CASE WHEN (abs(f1-c_f1)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test')
 FROM out_table_comparison c FULL JOIN out_table o
   ON c.c_threshold=o.threshold;
 
@@ -272,19 +272,19 @@ FROM out_table2_comparison c FULL JOIN out_table2 o
 ON c.m1=o.m1 AND c.m2=o.m2 AND c.c_threshold=o.threshold;
 
 SELECT
-  assert((abs(tp-c_tp)<1E-10),true),
-  assert((abs(fp-c_fp)<1E-10),true),
-  assert((abs(fn-c_fn)<1E-10),true),
-  assert((abs(tn-c_tn)<1E-10),true),
-  assert((abs(tpr-c_tpr)<1E-10),true),
-  assert((abs(tnr-c_tnr)<1E-10),true),
-  assert((abs(ppv-c_ppv)<1E-10),true),
-  assert(((npv IS NULL) AND (c_npv IS NULL)) OR (abs(npv-c_npv)<1E-10),true),
-  assert((abs(fpr-c_fpr)<1E-10),true),
-  assert((abs(fdr-c_fdr)<1E-10),true),
-  assert((abs(fnr-c_fnr)<1E-10),true),
-  assert((abs(acc-c_acc)<1E-10),true),
-  assert((abs(f1-c_f1)<1E-10),true)
+  assert(CASE WHEN (abs(tp-c_tp)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test'),
+  assert(CASE WHEN (abs(fp-c_fp)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test'),
+  assert(CASE WHEN (abs(fn-c_fn)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test'),
+  assert(CASE WHEN (abs(tn-c_tn)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test'),
+  assert(CASE WHEN (abs(tpr-c_tpr)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test'),
+  assert(CASE WHEN (abs(tnr-c_tnr)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test'),
+  assert(CASE WHEN (abs(ppv-c_ppv)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test'),
+  assert(CASE WHEN ((npv IS NULL) AND (c_npv IS NULL)) OR (abs(npv-c_npv)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test'),
+  assert(CASE WHEN (abs(fpr-c_fpr)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test'),
+  assert(CASE WHEN (abs(fdr-c_fdr)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test'),
+  assert(CASE WHEN (abs(fnr-c_fnr)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test'),
+  assert(CASE WHEN (abs(acc-c_acc)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test'),
+  assert(CASE WHEN (abs(f1-c_f1)<1E-10) THEN 't' ELSE 'f' END,'t','Assertion test')
 FROM out_table2_comparison c FULL JOIN out_table2 o
 ON c.m1=o.m1 AND c.m2=o.m2 AND c.c_threshold=o.threshold;
 

@@ -25,8 +25,8 @@ modules:
       depends: ['common']
 #    - name: sampling
 #      depends: ['common']
-    - name: complete_linkage
-      depends: ['common']
+#    - name: complete_linkage
+#      depends: ['common']
     - name: prediction_metrics
       depends: ['common']
 #    - name: plr_placeholder
