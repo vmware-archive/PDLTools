@@ -1436,7 +1436,6 @@ binary classification.
 FUNCTION mf_binary_classifier(
                               in_table TEXT,
                               prediction_col TEXT, observed_col TEXT,
-                              truth_value INTEGER,
                               out_table TEXT
                               [, grouping_col TEXT])
 RETURNS VOID
@@ -1444,8 +1443,11 @@ RETURNS VOID
 
 @param in_table Name of the input table.
 @param prediction_col Name of the column of predicted values.
-@param observed_col Name of the column of observed values.
-@param truth_value Value in table that indicates a positive result, as a string.
+       (These are numeric values corresponding to
+       likelihood/probability: a larger value corresponds to greater
+       certainty that the observed value will be '1', lower value
+       corresponds to a greater certainty that it will be '0'.)
+@param observed_col Name of the column of observed values. (A 0/1 column.)
 @param out_table Name of the output table.
 @param grouping_col Optional argument, indicating which column(s) to group by.
                     If grouping by multiple columns, these should be passed
@@ -1460,9 +1462,11 @@ true negative rate [=specificity] (TNR),
 positive predictive value [=precision] (PPV),
 negative predictive value (NPV), false positive rate [=fall-out] (FPR),
 false discovery rate (FDR), false negative rate [=miss rate] (FNR),
-accuracy (ACC), F1 score (F1) metrics and area under the ROC curve (AUC).
-
-These are given as columns in the output table. If grouping columns are
+accuracy (ACC) and F1 score (F1) metrics, each of which is calculated for
+every mapping of the prediction column values into 0/1 choices based on a
+threshold value. The maximum threshold value resulting in each such mapping is
+given in the output column \c 'threshold' in the output table. Each metric
+is detailed in its own column in the same table. If grouping columns are
 specified, they appear in the output as additional columns, with their
 original names.
 
@@ -1481,16 +1485,14 @@ The definitions of the various metrics are as follows.
 - \f$\textit{fnr}=\textit{fn}/(\textit{fn}+\textit{tp})\f$.
 - \f$\textit{acc}=(\textit{tp}+\textit{tn})/(\textit{tp}+\textit{tn}+\textit{fp}+\textit{fn})\f$.
 - \f$\textit{f1}=2*\textit{tp}/(2*\textit{tp}+\textit{fp}+\textit{fn})\f$.
-- \f$\textit{auc}=(\textit{fpr}+\textit{fnr})/2\f$.
 
-Rows containing NULLs are ignored. The predicted and observed columns can be
-of any type. The "truth value" should be a constant of the same type, passed
-into the function as a string.
+Rows with NULL observations are ignored in the metric calculation. The
+ predicted value should not be NULL.
 
 @anchor mf_binary_classifier_example
 @examp
 
-Assume we have trained a model and used it to reach binary predictions on
+Assume we have trained a model and used it to perform binary classification on
 certain values of the independent parameters. (In the example, these
 values are taken to be from a "test_set", implying that they are
 distinct from those values on which the model was trained. However,
@@ -1499,227 +1501,91 @@ although the interpretation of the results will be different.)
 In parallel, for each set of values of the independent parameters
 we also have the ground truth, e.g. an observed value.
 
+The observed value is a 0/1 binary classification, and the predicted value
+is a number, corresponding to the probability/likelihood of a '1'. For example,
+such a value may be the resulto of logistic regression.
+
 We place the predicted and observed values into the "pred" and "obs"
 columns of the "test_set" table, respectively.
 
 For the example, we will create the following dummy test_set table:
 
 \code
-user=# CREATE TABLE test_set AS SELECT (x+y)%(m1+2*m2) AS pred,
-user-#                                  (x*y)%(m1+2*m2) AS obs,
-user-#                                   m1,m2
-user-# FROM generate_series(0,1) m1, generate_series(1,2) m2,
-user-#      generate_series(0,59) x, generate_series(0,59) y
+user=# CREATE TABLE test_set AS
+user-#   SELECT ((a*8)::integer)/8.0 pred,
+user-#          ((a*0.5+random()*0.5)>0.5)::integer obs
+user-#   FROM (select random() as a from generate_series(1,100)) x
 user-# DISTRIBUTED RANDOMLY;
-SELECT 14400
 \endcode
 
 In this toy example, "obs" takes the place of the observed parameter, and
 "pred" takes the place of its approximation by a model. We are interested
-in determining the quality of this approximation for predicting the value '0'.
+in determining the quality of this approximation at the various possible
+decision thresholds.
 
 \code
-user=# SELECT mf_binary_classifier('test_set','pred','obs','0','out_table');
+user=# SELECT mf_binary_classifier('test_set','pred','obs','out_table');
  mf_binary_classifier   
 ----------------------
 (1 row)
-
-user=# \x
-Expanded display is on.
-user=# SELECT * FROM out_table;
--[ RECORD 1 ]---------------
-tp  | 1894
-tn  | 3878
-fp  | 2726
-fn  | 5902
-tpr | 0.24294510005130836326
-tnr | 0.58721986674742580254
-ppv | 0.40995670995670995671
-npv | 0.39652351738241308793
-fpr | 0.41278013325257419746
-fdr | 0.59004329004329004329
-fnr | 0.75705489994869163674
-acc | 0.40083333333333333333
-f1  | 0.30509020618556701031
-auc | 0.41508248339936708290
-
-user=# \x
-Expanded display is off.
 \endcode
 
-We now repeat the same analysis, but using "m1" and "m2" as grouping columns.
+Suppose, now, that we are interested in observing the True Positive Rate and
+the False Positive Rate. They can be retrieved as follows.
 
 \code
-user=# SELECT mf_binary_classifier('test_set','pred','obs','0','out_table2',
-user-#                             'm1,m2');
- mf_binary_classifier   
-----------------------
-(1 row)
+user=# SELECT threshold, tpr, fpr FROM out_table ORDER BY threshold;
+       threshold        |          tpr           |          fpr           
+------------------------+------------------------+------------------------
+ 0.00000000000000000000 | 1.00000000000000000000 | 1.00000000000000000000
+ 0.12500000000000000000 | 1.00000000000000000000 | 0.91228070175438596491
+ 0.25000000000000000000 | 0.97674418604651162791 | 0.70175438596491228070
+ 0.37500000000000000000 | 0.83720930232558139535 | 0.42105263157894736842
+ 0.50000000000000000000 | 0.72093023255813953488 | 0.29824561403508771930
+ 0.62500000000000000000 | 0.60465116279069767442 | 0.15789473684210526316
+ 0.75000000000000000000 | 0.48837209302325581395 | 0.07017543859649122807
+ 0.87500000000000000000 | 0.30232558139534883721 | 0.00000000000000000000
+ 1.00000000000000000000 | 0.09302325581395348837 | 0.00000000000000000000
+(9 rows)
+\endcode
 
+Alternatively, we can retrieve all metrics at a given threshold value.
+
+\code
 user=# \x
 Expanded display is on.
-user=# SELECT * FROM out_table2;
--[ RECORD 1 ]---------------
-tp  | 400
-tn  | 800
-fp  | 800
-fn  | 1600
-m1  | 1
-m2  | 1
-tpr | 0.20000000000000000000
-tnr | 0.50000000000000000000
-ppv | 0.33333333333333333333
-npv | 0.33333333333333333333
-fpr | 0.50000000000000000000
-fdr | 0.66666666666666666667
-fnr | 0.80000000000000000000
-acc | 0.33333333333333333333
-f1  | 0.25000000000000000000
-auc | 0.35000000000000000000
--[ RECORD 2 ]---------------
-tp  | 900
-tn  | 0
-fp  | 900
-fn  | 1800
-m1  | 0
-m2  | 1
-tpr | 0.33333333333333333333
-tnr | 0.00000000000000000000
-ppv | 0.50000000000000000000
-npv | 0.00000000000000000000
-fpr | 1.00000000000000000000
-fdr | 0.50000000000000000000
-fnr | 0.66666666666666666667
-acc | 0.25000000000000000000
-f1  | 0.40000000000000000000
-auc | 0.16666666666666666667
--[ RECORD 3 ]---------------
-tp  | 144
-tn  | 1728
-fp  | 576
-fn  | 1152
-m1  | 1
-m2  | 2
-tpr | 0.11111111111111111111
-tnr | 0.75000000000000000000
-ppv | 0.20000000000000000000
-npv | 0.60000000000000000000
-fpr | 0.25000000000000000000
-fnr | 0.88888888888888888889
-acc | 0.52000000000000000000
-f1  | 0.14285714285714285714
-auc | 0.43055555555555555556
--[ RECORD 4 ]---------------
-tp  | 450
-tn  | 1350
-fp  | 450
-fn  | 1350
-m1  | 0
-m2  | 2
-tpr | 0.25000000000000000000
-tnr | 0.75000000000000000000
-ppv | 0.50000000000000000000
-npv | 0.50000000000000000000
-fpr | 0.25000000000000000000
-fdr | 0.50000000000000000000
-fnr | 0.75000000000000000000
-acc | 0.50000000000000000000
-f1  | 0.33333333333333333333
-auc | 0.50000000000000000000
+user=# SELECT * FROM out_table WHERE threshold=0.5;
+-[ RECORD 1 ]---------------------
+threshold | 0.50000000000000000000
+tp        | 31
+fp        | 17
+fn        | 12
+tn        | 40
+tpr       | 0.72093023255813953488
+tnr       | 0.70175438596491228070
+ppv       | 0.64583333333333333333
+npv       | 0.76923076923076923077
+fpr       | 0.29824561403508771930
+fdr       | 0.35416666666666666667
+fnr       | 0.27906976744186046512
+acc       | 0.71000000000000000000
+f1        | 0.68131868131868131868
 
-user=# \x
+michaeldb=# \x
 Expanded display is off.
 \endcode
 
+The same analysis can be performed under grouping, including multi-column
+grouping.
+
+@sa grp_mf_auc
+
  */
 
-
--- begin of __pm_mf_binary_classifier_agg definition
-
--- DROP TYPE IF EXISTS PDLTOOLS_SCHEMA.__PM_BINARY_CLASSIFIER_INTEGER CASCADE;
-
-CREATE TYPE PDLTOOLS_SCHEMA.__PM_BINARY_CLASSIFIER_INTEGER AS (
-    arg_tp BIGINT,
-    arg_tn BIGINT,
-    arg_fp BIGINT,
-    arg_fn BIGINT
-);
-
-CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__pm_mf_binary_classifier_transition(
-    oldval PDLTOOLS_SCHEMA.__PM_BINARY_CLASSIFIER_INTEGER,
-    newprediction ANYELEMENT,
-    newobserved ANYELEMENT,
-    truth_value ANYELEMENT)
-RETURNS PDLTOOLS_SCHEMA.__PM_BINARY_CLASSIFIER_INTEGER AS
-$$
-    SELECT CASE WHEN $2 IS NULL OR $3 IS NULL THEN $1
-                WHEN $2=$4 AND $3=$4 THEN
-                  ($1.arg_tp+1,$1.arg_tn,$1.arg_fp,$1.arg_fn)::PDLTOOLS_SCHEMA.__PM_BINARY_CLASSIFIER_INTEGER
-                WHEN $2<>$4 AND $3<>$4 THEN
-                  ($1.arg_tp,$1.arg_tn+1,$1.arg_fp,$1.arg_fn)::PDLTOOLS_SCHEMA.__PM_BINARY_CLASSIFIER_INTEGER
-                WHEN $2=$4 AND $3<>$4 THEN
-                  ($1.arg_tp,$1.arg_tn,$1.arg_fp+1,$1.arg_fn)::PDLTOOLS_SCHEMA.__PM_BINARY_CLASSIFIER_INTEGER
-                ELSE
-                  ($1.arg_tp,$1.arg_tn,$1.arg_fp,$1.arg_fn+1)::PDLTOOLS_SCHEMA.__PM_BINARY_CLASSIFIER_INTEGER
-           END
-$$
-LANGUAGE sql IMMUTABLE;
-
-CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__pm_mf_binary_classifier_combine(
-    old1 PDLTOOLS_SCHEMA.__PM_BINARY_CLASSIFIER_INTEGER,
-    old2 PDLTOOLS_SCHEMA.__PM_BINARY_CLASSIFIER_INTEGER)
-RETURNS PDLTOOLS_SCHEMA.__PM_BINARY_CLASSIFIER_INTEGER AS
-$$
-    SELECT ($1.arg_tp+$2.arg_tp,$1.arg_tn+$2.arg_tn,
-            $1.arg_fp+$2.arg_fp,$1.arg_fn+$2.arg_fn)
-            ::PDLTOOLS_SCHEMA.__PM_BINARY_CLASSIFIER_INTEGER
-$$
-LANGUAGE sql IMMUTABLE;
-
-CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__pm_mf_binary_classifier_final(
-    finalstate PDLTOOLS_SCHEMA.__PM_BINARY_CLASSIFIER_INTEGER)
-RETURNS BIGINT[] AS
-$$
-    SELECT array[$1.arg_tp,$1.arg_tn,$1.arg_fp,$1.arg_fn]
-$$
-LANGUAGE sql IMMUTABLE;
-
-/**
- * @internal
- * @brief __pm_mf_binary_classifier_agg
- *
- * @about
- * An aggregate used for calculating binary classification metrics.
- *
- * @par Syntax
- * <pre class="syntax">
- * AGGREGATE mf_binary_classifier(prediction INTEGER, observed INTEGER,
- *                                truth_value INTEGER);
- * </pre>
- *
- * @param prediction The column of predicted values.
- * @param observed The column of observed values.
- * @param truth_value Value to be used as 'positive'.
- *
- * @returns a bigint array: [TP,TN,FP,FN].
- *
- */
-
-CREATE AGGREGATE PDLTOOLS_SCHEMA.__pm_mf_binary_classifier_agg(
-                                        /*+ prediction */ ANYELEMENT,
-                                        /*+ observed */ ANYELEMENT,
-                                        /*+ truth_value */ ANYELEMENT) (
-    SFUNC=PDLTOOLS_SCHEMA.__pm_mf_binary_classifier_transition,
-    STYPE=PDLTOOLS_SCHEMA.__PM_BINARY_CLASSIFIER_INTEGER,
-    PREFUNC=PDLTOOLS_SCHEMA.__pm_mf_binary_classifier_combine,
-    FINALFUNC=PDLTOOLS_SCHEMA.__pm_mf_binary_classifier_final,
-    INITCOND='(0,0,0,0)'
-);
 
 CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.mf_binary_classifier(
                               in_table TEXT,
                               prediction_col TEXT, observed_col TEXT,
-                              truth_value TEXT,
                               out_table TEXT)
 RETURNS VOID
 VOLATILE
@@ -1728,23 +1594,32 @@ LANGUAGE PLPythonU
 AS
 $$
   params=dict(in_table=in_table,prediction_col=prediction_col,
-              observed_col=observed_col, truth_value=truth_value,
-              out_table=out_table)
+              observed_col=observed_col, out_table=out_table)
   plpy.execute("""
     CREATE TABLE {out_table} AS SELECT *,
-      tp*1.0/(tp+fn) AS tpr, tn*1.0/(fp+tn) AS tnr, tp*1.0/(tp+fp) AS ppv,
-      tn*1.0/(tn+fn) AS npv, fp*1.0/(fp+tn) AS fpr, fp*1.0/(fp+tp) AS fdr,
-      fn*1.0/(fn+tp) AS fnr,
-      (tp+tn)*1.0/(tp+tn+fp+fn) AS acc, 2.0*tp/(2*tp+fp+fn) AS f1,
-      ((0.5*tp/(tp+fn))+(0.5*tn/(fp+tn))) AS auc
+      tp*1.0/NULLIF(tp+fn,0) AS tpr,
+      tn*1.0/NULLIF(fp+tn,0) AS tnr,
+      tp*1.0/NULLIF(tp+fp,0) AS ppv,
+      tn*1.0/NULLIF(tn+fn,0) AS npv,
+      fp*1.0/NULLIF(fp+tn,0) AS fpr,
+      fp*1.0/NULLIF(fp+tp,0) AS fdr,
+      fn*1.0/NULLIF(fn+tp,0) AS fnr,
+      (tp+tn)*1.0/NULLIF(tp+tn+fp+fn,0) AS acc,
+      2.0*tp/NULLIF(2*tp+fp+fn,0) AS f1
     FROM ( 
-      SELECT truth_table[1] AS tp, truth_table[2] AS tn, truth_table[3] AS fp,
-        truth_table[4] AS fn FROM (
-        SELECT PDLTOOLS_SCHEMA.__pm_mf_binary_classifier_agg(
-          {prediction_col},{observed_col},{truth_value}) AS truth_table
-        FROM {in_table}
-      ) x
+      SELECT threshold,
+             sum(t) OVER (ORDER BY threshold DESC) AS tp,
+             sum(f) OVER (ORDER BY threshold DESC) AS fp,
+             sum(t) OVER () - sum(t) OVER (ORDER BY threshold DESC) AS fn,
+             sum(f) OVER () - sum(f) OVER (ORDER BY threshold DESC) AS tn
+        FROM (
+          SELECT {prediction_col} AS threshold,sum({observed_col}) AS t,
+                 count(*)-sum({observed_col}) AS f
+            FROM {in_table}
+          GROUP BY (threshold)
+        ) x
     ) y
+    ORDER BY threshold
     DISTRIBUTED RANDOMLY;
   """.format(**params))
 $$;
@@ -1752,7 +1627,6 @@ $$;
 CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.mf_binary_classifier(
                               in_table TEXT,
                               prediction_col TEXT, observed_col TEXT,
-                              truth_value TEXT,
                               out_table TEXT,
                               grouping_col TEXT)
 RETURNS VOID
@@ -1762,26 +1636,41 @@ LANGUAGE PLPythonU
 AS
 $$
   params=dict(in_table=in_table,prediction_col=prediction_col,
-              observed_col=observed_col, truth_value=truth_value,
+              observed_col=observed_col,
               out_table=out_table, grouping_col=grouping_col)
   plpy.execute("""
     CREATE TABLE {out_table} AS SELECT *,
-      tp*1.0/(tp+fn) AS tpr, tn*1.0/(fp+tn) AS tnr, tp*1.0/(tp+fp) AS ppv,
-      tn*1.0/(tn+fn) AS npv, fp*1.0/(fp+tn) AS fpr, fp*1.0/(fp+tp) AS fdr,
-      fn*1.0/(fn+tp) AS fnr,
-      (tp+tn)*1.0/(tp+tn+fp+fn) AS acc, 2.0*tp/(2*tp+fp+fn) AS f1,
-      ((0.5*tp/(tp+fn))+(0.5*tn/(fp+tn))) AS auc
+      tp*1.0/NULLIF(tp+fn,0) AS tpr,
+      tn*1.0/NULLIF(fp+tn,0) AS tnr,
+      tp*1.0/NULLIF(tp+fp,0) AS ppv,
+      tn*1.0/NULLIF(tn+fn,0) AS npv,
+      fp*1.0/NULLIF(fp+tn,0) AS fpr,
+      fp*1.0/NULLIF(fp+tp,0) AS fdr,
+      fn*1.0/NULLIF(fn+tp,0) AS fnr,
+      (tp+tn)*1.0/NULLIF(tp+tn+fp+fn,0) AS acc,
+      2.0*tp/NULLIF(2*tp+fp+fn,0) AS f1
     FROM ( 
-      SELECT truth_table[1] AS tp, truth_table[2] AS tn, truth_table[3] AS fp,
-        truth_table[4] AS fn, {grouping_col} FROM (
-        SELECT PDLTOOLS_SCHEMA.__pm_mf_binary_classifier_agg(
-          {prediction_col},{observed_col},{truth_value}) AS truth_table,
-          {grouping_col}
-        FROM {in_table}
-        GROUP BY {grouping_col}
-      ) x
+      SELECT {grouping_col},threshold,
+             sum(t) OVER (PARTITION BY {grouping_col}
+                          ORDER BY threshold DESC) AS tp,
+             sum(f) OVER (PARTITION BY {grouping_col}
+                          ORDER BY threshold DESC) AS fp,
+             sum(t) OVER (PARTITION BY {grouping_col})
+               - sum(t) OVER (PARTITION BY {grouping_col}
+                              ORDER BY threshold DESC) AS fn,
+             sum(f) OVER (PARTITION BY {grouping_col})
+               - sum(f) OVER (PARTITION BY {grouping_col}
+                              ORDER BY threshold DESC) AS tn
+        FROM (
+          SELECT {grouping_col},
+                 {prediction_col} AS threshold,
+                 sum({observed_col}) AS t,
+                 count(*)-sum({observed_col}) AS f
+            FROM {in_table}
+          GROUP BY ({grouping_col}, threshold)
+        ) x
     ) y
-    DISTRIBUTED RANDOMLY;
+    DISTRIBUTED BY ({grouping_col});
   """.format(**params))
 $$;
 
@@ -1810,15 +1699,17 @@ Syntax
 FUNCTION PDLTOOLS_SCHEMA.mf_binary_classifier(
                               in_table TEXT,
                               prediction_col TEXT, observed_col TEXT,
-                              truth_value TEXT,
                               out_table TEXT
                               [, grouping_col TEXT])
 RETURNS VOID
 
 in_table       - Name of the input table.
 prediction_col - Name of the column of predicted values.
-observed_col   - Name of the column of observed values.
-truth_value    - Value in table that indicates a positive result, as a string.
+                 (These are numeric values corresponding to
+                 likelihood/probability: a larger value corresponds to greater
+                 certainty that the observed value will be '1', lower value
+                 corresponds to a greater certainty that it will be '0'.)
+observed_col   - Name of the column of observed values. (A 0/1 column.)
 out_table      - Name of the output table.
 grouping_col   - Optional argument, indicating which column(s) to group by.
                     If grouping by multiple columns, these should be passed
@@ -1834,9 +1725,11 @@ true negative rate [=specificity] (TNR),
 positive predictive value [=precision] (PPV),
 negative predictive value (NPV), false positive rate [=fall-out] (FPR),
 false discovery rate (FDR), false negative rate [=miss rate] (FNR),
-accuracy (ACC), F1 score (F1) metrics and area under the ROC curve (AUC).
-
-These are given as columns in the output table. If grouping columns are
+accuracy (ACC) and F1 score (F1) metrics, each of which is calculated for
+every mapping of the prediction column values into 0/1 choices based on a
+threshold value. The maximum threshold value resulting in each such mapping is
+given in the output column 'threshold' in the output table. Each metric
+is detailed in its own column in the same table. If grouping columns are
 specified, they appear in the output as additional columns, with their
 original names.
 
@@ -1855,15 +1748,13 @@ The definitions of the various metrics are as follows.
 - fnr=fn/(fn+tp).
 - acc=(tp+tn)/(tp+tn+fp+fn).
 - f1=2*tp/(2*tp+fp+fn).
-- auc=(fpr+fnr)/2.
 
-Rows containing NULLs are ignored. The predicted and observed columns can be
-of any type. The "truth value" should be a constant of the same type, passed
-into the function as a string.
+Rows with NULL observations are ignored in the metric calculation. The
+ predicted value should not be NULL.
 
 Example
 =======
-Assume we have trained a model and used it to reach binary predictions on
+Assume we have trained a model and used it to perform binary classification on
 certain values of the independent parameters. (In the example, these
 values are taken to be from a "test_set", implying that they are
 distinct from those values on which the model was trained. However,
@@ -1872,131 +1763,676 @@ although the interpretation of the results will be different.)
 In parallel, for each set of values of the independent parameters
 we also have the ground truth, e.g. an observed value.
 
+The observed value is a 0/1 binary classification, and the predicted value
+is a number, corresponding to the probability/likelihood of a '1'. For example,
+such a value may be the resulto of logistic regression.
+
 We place the predicted and observed values into the "pred" and "obs"
 columns of the "test_set" table, respectively.
 
 For the example, we will create the following dummy test_set table:
 
-user=# CREATE TABLE test_set AS SELECT (x+y)%(m1+2*m2) AS pred,
-user-#                                  (x*y)%(m1+2*m2) AS obs,
-user-#                                   m1,m2
-user-# FROM generate_series(0,1) m1, generate_series(1,2) m2,
-user-#      generate_series(0,59) x, generate_series(0,59) y
+user=# CREATE TABLE test_set AS
+user-#   SELECT ((a*8)::integer)/8.0 pred,
+user-#          ((a*0.5+random()*0.5)>0.5)::integer obs
+user-#   FROM (select random() as a from generate_series(1,100)) x
 user-# DISTRIBUTED RANDOMLY;
-SELECT 14400
 
 In this toy example, "obs" takes the place of the observed parameter, and
 "pred" takes the place of its approximation by a model. We are interested
-in determining the quality of this approximation for predicting the value '0'.
+in determining the quality of this approximation at the various possible
+decision thresholds.
 
-user=# SELECT mf_binary_classifier('test_set','pred','obs','0','out_table');
+user=# SELECT mf_binary_classifier('test_set','pred','obs','out_table');
  mf_binary_classifier   
 ----------------------
 (1 row)
 
+Suppose, now, that we are interested in observing the True Positive Rate and
+the False Positive Rate. They can be retrieved as follows.
+
+user=# SELECT threshold, tpr, fpr FROM out_table ORDER BY threshold;
+       threshold        |          tpr           |          fpr           
+------------------------+------------------------+------------------------
+ 0.00000000000000000000 | 1.00000000000000000000 | 1.00000000000000000000
+ 0.12500000000000000000 | 1.00000000000000000000 | 0.91228070175438596491
+ 0.25000000000000000000 | 0.97674418604651162791 | 0.70175438596491228070
+ 0.37500000000000000000 | 0.83720930232558139535 | 0.42105263157894736842
+ 0.50000000000000000000 | 0.72093023255813953488 | 0.29824561403508771930
+ 0.62500000000000000000 | 0.60465116279069767442 | 0.15789473684210526316
+ 0.75000000000000000000 | 0.48837209302325581395 | 0.07017543859649122807
+ 0.87500000000000000000 | 0.30232558139534883721 | 0.00000000000000000000
+ 1.00000000000000000000 | 0.09302325581395348837 | 0.00000000000000000000
+(9 rows)
+
+Alternatively, we can retrieve all metrics at a given threshold value.
+
 user=# \x
 Expanded display is on.
-user=# SELECT * FROM out_table;
--[ RECORD 1 ]---------------
-tp  | 1894
-tn  | 3878
-fp  | 2726
-fn  | 5902
-tpr | 0.24294510005130836326
-tnr | 0.58721986674742580254
-ppv | 0.40995670995670995671
-npv | 0.39652351738241308793
-fpr | 0.41278013325257419746
-fdr | 0.59004329004329004329
-fnr | 0.75705489994869163674
-acc | 0.40083333333333333333
-f1  | 0.30509020618556701031
-auc | 0.41508248339936708290
+user=# SELECT * FROM out_table WHERE threshold=0.5;
+-[ RECORD 1 ]---------------------
+threshold | 0.50000000000000000000
+tp        | 31
+fp        | 17
+fn        | 12
+tn        | 40
+tpr       | 0.72093023255813953488
+tnr       | 0.70175438596491228070
+ppv       | 0.64583333333333333333
+npv       | 0.76923076923076923077
+fpr       | 0.29824561403508771930
+fdr       | 0.35416666666666666667
+fnr       | 0.27906976744186046512
+acc       | 0.71000000000000000000
+f1        | 0.68131868131868131868
 
-user=# \x
+michaeldb=# \x
 Expanded display is off.
 
-We now repeat the same analysis, but using "m1" and "m2" as grouping columns.
+The same analysis can be performed under grouping, including multi-column
+grouping.
+$ABC$::TEXT
+END;
+$$ LANGUAGE SQL;
 
-user=# SELECT mf_binary_classifier('test_set','pred','obs','0','out_table2',
-user-#                             'm1,m2');
- mf_binary_classifier   
-----------------------
+/**
+@addtogroup grp_mf_auc
+
+@brief Area under the ROC curve (in binary classification).
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#mf_auc_syntax">Syntax</a>
+<li class="level1"><a href="#mf_auc_linkage_usage">Usage</a>
+<li class="level1"><a href="#mf_auc_example">Example</a>
+</ul>
+</div>
+
+@about
+A function calculating the area under the ROC curve, for use in
+binary classification.
+
+@anchor mf_auc_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION mf_auc(
+                              in_table TEXT,
+                              prediction_col TEXT, observed_col TEXT)
+RETURNS DOUBLE PRECISION
+</pre>
+<pre class="syntax">
+FUNCTION mf_auc(
+                              in_table TEXT,
+                              prediction_col TEXT, observed_col TEXT,
+                              out_table TEXT,
+                              grouping_col TEXT)
+RETURNS VOID
+</pre>
+
+@param in_table Name of the input table.
+@param prediction_col Name of the column of predicted values.
+       (These are numeric values corresponding to
+       likelihood/probability: a larger value corresponds to greater
+       certainty that the observed value will be '1', lower value
+       corresponds to a greater certainty that it will be '0'.)
+@param observed_col Name of the column of observed values. (A 0/1 column.)
+@param out_table Name of the output table.
+@param grouping_col Argument indicating which column(s) to group by.
+                    If grouping by multiple columns, these should be passed
+                    as a comma-separated list.
+
+@anchor mf_auc_usage
+@usage
+A function calculating the area under the Receiver Operating Characteristic
+curve for binary classification (the AUC). Without grouping, this is a number
+and is returned immediately as the functon's return value. With grouping,
+the answer is different for each group, and is given in the table specified
+in \a 'output_table'. The grouping columns appear in the output as additional
+columns, with their original names.
+
+The ROC curve is the curve relating the classifier's TPR and FPR metrics.
+(See \ref grp_mf_binary_classifier for a definition of these metrics.)
+
+Rows with NULL observations are ignored in the calculation. The
+ predicted value should not be NULL.
+
+@anchor mf_auc_example
+@examp
+Assume we have trained a model and used it to perform binary classification on
+certain values of the independent parameters. (In the example, these
+values are taken to be from a "test_set", implying that they are
+distinct from those values on which the model was trained. However,
+in real usage the function may be used also on the training set,
+although the interpretation of the results will be different.)
+In parallel, for each set of values of the independent parameters
+we also have the ground truth, e.g. an observed value.
+
+The observed value is a 0/1 binary classification, and the predicted value
+is a number, corresponding to the probability/likelihood of a '1'. For example,
+such a value may be the resulto of logistic regression.
+
+We place the predicted and observed values into the "pred" and "obs"
+columns of the "test_set" table, respectively.
+
+For the example, we will create the following dummy test_set table:
+
+\code
+user=# CREATE TABLE test_set AS
+user-#   SELECT ((a*8)::integer)/8.0 pred,
+user-#          ((a*0.5+random()*0.5)>0.5)::integer obs,
+user-#          (random()>0.5)::integer m1,
+user-#          (random()>0.5)::integer m2
+user-#   FROM (select random() as a from generate_series(1,100)) x
+user-# DISTRIBUTED RANDOMLY;
+\endcode
+
+In this toy example, "obs" takes the place of the observed parameter, and
+"pred" takes the place of its approximation by a model. We are interested
+in determining the quality of this approximation.
+
+\code
+user=# SELECT mf_auc('test_set','pred','obs');
+     mf_auc     
+----------------
+ 0.814769481844
+(1 row)
+\endcode
+
+Suppose, now, that we are interested in observing this quality metric
+separately for each group defined by the values of \c 'm1' and \c 'm2'.
+
+\code
+user=# SELECT pdltools.mf_auc('test_set','pred','obs','out_table','m1, m2');
+ mf_auc 
+--------
+ 
 (1 row)
 
-user=# \x
-Expanded display is on.
-user=# SELECT * FROM out_table2;
--[ RECORD 1 ]---------------
-tp  | 400
-tn  | 800
-fp  | 800
-fn  | 1600
-m1  | 1
-m2  | 1
-tpr | 0.20000000000000000000
-tnr | 0.50000000000000000000
-ppv | 0.33333333333333333333
-npv | 0.33333333333333333333
-fpr | 0.50000000000000000000
-fdr | 0.66666666666666666667
-fnr | 0.80000000000000000000
-acc | 0.33333333333333333333
-f1  | 0.25000000000000000000
-auc | 0.35000000000000000000
--[ RECORD 2 ]---------------
-tp  | 900
-tn  | 0
-fp  | 900
-fn  | 1800
-m1  | 0
-m2  | 1
-tpr | 0.33333333333333333333
-tnr | 0.00000000000000000000
-ppv | 0.50000000000000000000
-npv | 0.00000000000000000000
-fpr | 1.00000000000000000000
-fdr | 0.50000000000000000000
-fnr | 0.66666666666666666667
-acc | 0.25000000000000000000
-f1  | 0.40000000000000000000
-auc | 0.16666666666666666667
--[ RECORD 3 ]---------------
-tp  | 144
-tn  | 1728
-fp  | 576
-fn  | 1152
-m1  | 1
-m2  | 2
-tpr | 0.11111111111111111111
-tnr | 0.75000000000000000000
-ppv | 0.20000000000000000000
-npv | 0.60000000000000000000
-fpr | 0.25000000000000000000
-fnr | 0.88888888888888888889
-acc | 0.52000000000000000000
-f1  | 0.14285714285714285714
-auc | 0.43055555555555555556
--[ RECORD 4 ]---------------
-tp  | 450
-tn  | 1350
-fp  | 450
-fn  | 1350
-m1  | 0
-m2  | 2
-tpr | 0.25000000000000000000
-tnr | 0.75000000000000000000
-ppv | 0.50000000000000000000
-npv | 0.50000000000000000000
-fpr | 0.25000000000000000000
-fdr | 0.50000000000000000000
-fnr | 0.75000000000000000000
-acc | 0.50000000000000000000
-f1  | 0.33333333333333333333
-auc | 0.50000000000000000000
+michaeldb=# SELECT * from out_table;
+ m1 | m2 |                     auc                     
+----+----+---------------------------------------------
+  0 |  1 | 0.70614035087719298245804824561403508771930
+  1 |  0 | 0.93000000000000000000000000000000000000000
+  0 |  0 | 0.87797619047619047619250000000000000000000
+  1 |  1 | 0.78968253968253968254051587301587301587305
+(4 rows)
+\endcode
 
-user=# \x
-Expanded display is off.
+@sa grp_mf_binary_classifier
+
+ */
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.mf_auc(
+                              in_table TEXT,
+                              prediction_col TEXT, observed_col TEXT)
+RETURNS DOUBLE PRECISION
+STABLE
+STRICT
+LANGUAGE PLPythonU
+AS
+$$
+  params=dict(in_table=in_table,prediction_col=prediction_col,
+              observed_col=observed_col)
+  return plpy.execute("""
+    SELECT sum((tpr+prev_tpr)*(fpr-prev_fpr)*0.5) AS auc
+    FROM (
+      SELECT tpr, fpr,
+             coalesce(lag(tpr) OVER (ORDER BY threshold DESC),0) AS prev_tpr,
+             coalesce(lag(fpr) OVER (ORDER BY threshold DESC),0) AS prev_fpr
+      FROM(
+        SELECT threshold,
+               sum(t) OVER (ORDER BY threshold DESC)
+                 *1.0/(sum(t) OVER ()) AS tpr,
+               sum(f) OVER (ORDER BY threshold DESC)
+                 *1.0/(sum(f) OVER ()) AS fpr
+        FROM (
+          SELECT {prediction_col} AS threshold,sum({observed_col}) AS t,
+                 count(*)-sum({observed_col}) AS f
+          FROM {in_table}
+          GROUP BY (threshold)
+        ) x
+      ) y
+    ) z;
+  """.format(**params))[0]['auc']
+$$;
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.mf_auc(
+                              in_table TEXT,
+                              prediction_col TEXT, observed_col TEXT,
+                              out_table TEXT, grouping_col TEXT)
+RETURNS VOID
+VOLATILE
+STRICT
+LANGUAGE PLPythonU
+AS
+$$
+  params=dict(in_table=in_table,prediction_col=prediction_col,
+              observed_col=observed_col,
+              out_table=out_table, grouping_col=grouping_col)
+  plpy.execute("""
+    CREATE TABLE {out_table} AS
+    SELECT {grouping_col}, sum((tpr+prev_tpr)*(fpr-prev_fpr)*0.5) AS auc
+    FROM (
+      SELECT {grouping_col}, tpr, fpr,
+             coalesce(lag(tpr) OVER (PARTITION BY {grouping_col}
+                                     ORDER BY threshold DESC),0) AS prev_tpr,
+             coalesce(lag(fpr) OVER (PARTITION BY {grouping_col}
+                                     ORDER BY threshold DESC),0) AS prev_fpr
+      FROM(
+        SELECT {grouping_col}, threshold,
+               sum(t) OVER (PARTITION BY {grouping_col}
+                            ORDER BY threshold DESC)
+                 *1.0/(sum(t) OVER (PARTITION BY {grouping_col})) AS tpr,
+               sum(f) OVER (PARTITION BY {grouping_col}
+                            ORDER BY threshold DESC)
+                 *1.0/(sum(f) OVER (PARTITION BY {grouping_col})) AS fpr
+        FROM (
+          SELECT {grouping_col},
+                 {prediction_col} AS threshold,sum({observed_col}) AS t,
+                 count(*)-sum({observed_col}) AS f
+          FROM {in_table}
+          GROUP BY ({grouping_col},threshold)
+        ) x
+      ) y
+    ) z
+    GROUP BY ({grouping_col})
+    DISTRIBUTED BY ({grouping_col});
+  """.format(**params))
+$$;
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.mf_auc()
+RETURNS TEXT AS $$
+SELECT $ABC$
+mf_auc: Area under the ROC curve (in binary classification).
+
+A function calculating the area under the ROC curve, for use in
+binary classification.
+
+For full usage instructions, run "PDLTOOLS_SCHEMA.mf_auc('usage')".
+$ABC$::TEXT;
+$$ LANGUAGE SQL;
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.mf_auc(TEXT)
+RETURNS TEXT AS $$
+SELECT CASE WHEN $1!='usage' THEN PDLTOOLS_SCHEMA.mf_auc() ELSE $ABC$
+mf_auc: Area under the ROC curve (in binary classification).
+
+A function calculating the area under the ROC curve, for use in
+binary classification.
+
+Syntax
+======
+FUNCTION PDLTOOLS_SCHEMA.mf_auc(
+                              in_table TEXT,
+                              prediction_col TEXT, observed_col TEXT)
+RETURNS DOUBLE PRECISION
+
+FUNCTION PDLTOOLS_SCHEMA.mf_auc(
+                              in_table TEXT,
+                              prediction_col TEXT, observed_col TEXT,
+                              out_table TEXT,
+                              grouping_col TEXT)
+RETURNS VOID
+
+in_table       - Name of the input table.
+prediction_col - Name of the column of predicted values.
+                 (These are numeric values corresponding to
+                 likelihood/probability: a larger value corresponds to greater
+                 certainty that the observed value will be '1', lower value
+                 corresponds to a greater certainty that it will be '0'.)
+observed_col   - Name of the column of observed values. (A 0/1 column.)
+out_table      - Name of the output table.
+grouping_col   - Optional argument, indicating which column(s) to group by.
+                    If grouping by multiple columns, these should be passed
+                    as a comma-separated list.
+
+Usage
+=====
+A function calculating the area under the Receiver Operating Characteristic
+curve for binary classification (the AUC). Without grouping, this is a number
+and is returned immediately as the functon's return value. With grouping,
+the answer is different for each group, and is given in the table specified
+in 'output_table'. The grouping columns appear in the output as additional
+columns, with their original names.
+
+The ROC curve is the curve relating the classifier's TPR and FPR metrics.
+(See "mf_binary_classifier()" for a definition of these metrics.)
+
+Rows with NULL observations are ignored in the calculation. The
+ predicted value should not be NULL.
+
+Example
+=======
+Assume we have trained a model and used it to perform binary classification on
+certain values of the independent parameters. (In the example, these
+values are taken to be from a "test_set", implying that they are
+distinct from those values on which the model was trained. However,
+in real usage the function may be used also on the training set,
+although the interpretation of the results will be different.)
+In parallel, for each set of values of the independent parameters
+we also have the ground truth, e.g. an observed value.
+
+The observed value is a 0/1 binary classification, and the predicted value
+is a number, corresponding to the probability/likelihood of a '1'. For example,
+such a value may be the resulto of logistic regression.
+
+We place the predicted and observed values into the "pred" and "obs"
+columns of the "test_set" table, respectively.
+
+For the example, we will create the following dummy test_set table:
+
+user=# CREATE TABLE test_set AS
+user-#   SELECT ((a*8)::integer)/8.0 pred,
+user-#          ((a*0.5+random()*0.5)>0.5)::integer obs,
+user-#          (random()>0.5)::integer m1,
+user-#          (random()>0.5)::integer m2
+user-#   FROM (select random() as a from generate_series(1,100)) x
+user-# DISTRIBUTED RANDOMLY;
+
+In this toy example, "obs" takes the place of the observed parameter, and
+"pred" takes the place of its approximation by a model. We are interested
+in determining the quality of this approximation.
+
+user=# SELECT mf_auc('test_set','pred','obs');
+     mf_auc     
+----------------
+ 0.814769481844
+(1 row)
+
+Suppose, now, that we are interested in observing this quality metric
+separately for each group defined by the values of 'm1' and 'm2'.
+
+user=# SELECT pdltools.mf_auc('test_set','pred','obs','out_table','m1, m2');
+ mf_auc 
+--------
+ 
+(1 row)
+
+michaeldb=# SELECT * from out_table;
+ m1 | m2 |                     auc                     
+----+----+---------------------------------------------
+  0 |  1 | 0.70614035087719298245804824561403508771930
+  1 |  0 | 0.93000000000000000000000000000000000000000
+  0 |  0 | 0.87797619047619047619250000000000000000000
+  1 |  1 | 0.78968253968253968254051587301587301587305
+(4 rows)
+
+See also: mf_binary_classifier
+
+$ABC$::TEXT
+END;
+$$ LANGUAGE SQL;
+
+/**
+@addtogroup grp_mf_confusion_matrix
+
+@brief Confusion matrix for a multi-class classifier.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#mf_confusion_matrix_syntax">Syntax</a>
+<li class="level1"><a href="#mf_confusion_matrix_linkage_usage">Usage</a>
+<li class="level1"><a href="#mf_confusion_matrix_example">Example</a>
+</ul>
+</div>
+
+@about
+A function calculating the confusion matrix, for use in
+multi-class classification.
+
+@anchor mf_confusion_matrix_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION mf_confusion_matrix(
+                              in_table TEXT,
+                              prediction_col TEXT, observed_col TEXT,
+                              out_table TEXT)
+RETURNS VOID
+</pre>
+
+@param in_table Name of the input table.
+@param prediction_col Name of the column of predicted values.
+@param observed_col Name of the column of observed values.
+@param out_table Name of the output table.
+
+@anchor mf_confusion_matrix_usage
+@usage
+In multi-class classification, observations and predictions are taken from
+some finite set. Elements of this set may be encoded in any form, e.g. as
+numbers or strings. Each element is known as a 'class'.
+A confusion matrix, which is the output of this function, details for each
+\c 'x' and \c 'y', how many times in the data given in \a 'in_table', a
+prediction of \c 'x' corresponded to an observed actual value of \c 'y'.
+The function can perform this regardless of the type of data in the
+prediction and observed columns, but this type should be the same in both.
+
+The output is a table with two columns:
+ - \a 'class' - The observed class.
+ - \a 'confusion_arr' - an array of integers, each integer corresponding to
+                        the number of times a particular predicted value
+                        corresponded to the observed class. The array is
+                        ordered by the predicted value.
+
+The \a 'confusion_arr' rows, when ordered by the observed class, form a
+square matrix whose diagonal corresponds to 'correct' classifications. The
+matrix includes rows (and columns) for each class represented in
+\a 'in_table', whether it was seen as an observed or as a predicted class.
+
+@anchor mf_confusion_matrix_example
+@examp
+Assume we have trained a model and used it to perform multi-class
+classification on certain values of the independent parameters.
+(In the example, these values are taken to be from a "test_set", implying
+that they are distinct from those values on which the model was trained.
+However, in real usage the function may be used also on the training set,
+although the interpretation of the results will be different.)
+In parallel, for each set of values of the independent parameters
+we also have the ground truth, e.g. an observed value.
+
+In the example, the classes are the numbers 0 through 5. However, to
+demonstrate how the UDF functions when there is incomplete overlap between
+predicted and observed values, we will only use 1 through 5 for predictions
+and only use 0 through 4 for observed values.
+
+We place the predicted and observed values into the "pred" and "obs"
+columns of the "test_set" table, respectively.
+
+For the example, we will create the following dummy test_set table:
+
+\code
+user=$ CREATE TABLE test_set AS
+user-$   SELECT (x+y)%5+1 AS pred,
+user-$          (x*y)%5 AS obs
+user-$    FROM generate_series(1,5) x,
+user-$         generate_series(1,5) y
+user-$ DISTRIBUTED RANDOMLY;
+\endcode
+
+The confusion matrix is generated as follows.
+
+\code
+user=# SELECT mf_confusion_matrix('test_set','pred','obs','out_table');
+ mf_confusion_matrix 
+---------------------
+ 
+(1 row)
+
+michaeldb=# SELECT * FROM out_table ORDER BY class;
+ class | confusion_arr 
+-------+---------------
+     0 | {0,1,2,2,2,2}
+     1 | {0,2,0,1,1,0}
+     2 | {0,0,0,2,2,0}
+     3 | {0,0,2,0,0,2}
+     4 | {0,2,1,0,0,1}
+     5 | {0,0,0,0,0,0}
+(6 rows)
+\endcode
+
+As can be seen, the generated matrix contains rows and columns for all values
+between 0 and 5, even though some were never seen as observed classes and
+others were never seen as predicted classes.
+
+ */
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.mf_confusion_matrix(
+                              in_table TEXT,
+                              prediction_col TEXT, observed_col TEXT,
+                              out_table TEXT)
+RETURNS VOID
+VOLATILE
+STRICT
+LANGUAGE PLPythonU
+AS
+$$
+  params=dict(in_table=in_table,prediction_col=prediction_col,
+              observed_col=observed_col,out_table=out_table)
+  plpy.execute("""
+    CREATE TABLE {out_table} AS
+      SELECT class,
+             array_agg(cnt ORDER BY pred) AS confusion_arr
+      FROM (
+        SELECT class,
+               pred,
+               sum(cnt) AS cnt
+        FROM (
+          SELECT {observed_col} AS class,
+                 {prediction_col} AS pred,
+                 count(*) AS cnt
+          FROM {in_table}
+          GROUP BY (class, pred) 
+          UNION
+          SELECT a, b, 0
+          FROM (
+            SELECT {observed_col} AS a
+            FROM {in_table}
+            GROUP BY (a)
+            UNION
+            SELECT {prediction_col}
+            FROM {in_table}
+            GROUP BY ({prediction_col})
+          ) r,
+          ( SELECT {observed_col} AS b
+            FROM {in_table}
+            GROUP BY (b)
+            UNION
+            SELECT {prediction_col}
+            FROM {in_table}
+            GROUP BY ({prediction_col})
+          ) s
+        ) y
+        GROUP BY (class, pred) 
+      ) x
+      GROUP BY class
+    DISTRIBUTED BY (class);
+  """.format(**params))
+$$;
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.mf_confusion_matrix()
+RETURNS TEXT AS $$
+SELECT $ABC$
+mf_confusion_matrix: Confusion matrix for a multi-class classifier.
+
+A function calculating the confusion matrix, for use in
+multi-class classification.
+
+For full usage instructions, run "PDLTOOLS_SCHEMA.mf_confusion_matrix('usage')".
+$ABC$::TEXT;
+$$ LANGUAGE SQL;
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.mf_confusion_matrix(TEXT)
+RETURNS TEXT AS $$
+SELECT CASE WHEN $1!='usage' THEN PDLTOOLS_SCHEMA.mf_confusion_matrix() ELSE $ABC$
+mf_confusion_matrix: Confusion matrix for a multi-class classifier.
+
+A function calculating the confusion matrix, for use in
+multi-class classification.
+
+Syntax
+======
+FUNCTION PDLTOOLS_SCHEMA.mf_confusion_matrix(
+                              in_table TEXT,
+                              prediction_col TEXT, observed_col TEXT,
+                              out_table TEXT)
+RETURNS VOID
+
+in_table       - Name of the input table.
+prediction_col - Name of the column of predicted values.
+observed_col   - Name of the column of observed values.
+out_table      - Name of the output table.
+
+Usage
+=====
+In multi-class classification, observations and predictions are taken from
+some finite set. Elements of this set may be encoded in any form, e.g. as
+numbers or strings. Each element is known as a 'class'.
+A confusion matrix, which is the output of this function, details for each
+'x' and 'y', how many times in the data given in 'in_table', a
+prediction of 'x' corresponded to an observed actual value of 'y'.
+The function can perform this regardless of the type of data in the
+prediction and observed columns, but this type should be the same in both.
+
+The output is a table with two columns:
+ * 'class' - The observed class.
+ * 'confusion_arr' - an array of integers, each integer corresponding to
+                     the number of times a particular predicted value
+                     corresponded to the observed class. The array is
+                     ordered by the predicted value.
+
+The 'confusion_arr' rows, when ordered by the observed class, form a
+square matrix whose diagonal corresponds to 'correct' classifications. The
+matrix includes rows (and columns) for each class represented in
+'in_table', whether it was seen as an observed or as a predicted class.
+
+Example
+=======
+Assume we have trained a model and used it to perform multi-class
+classification on certain values of the independent parameters.
+(In the example, these values are taken to be from a "test_set", implying
+that they are distinct from those values on which the model was trained.
+However, in real usage the function may be used also on the training set,
+although the interpretation of the results will be different.)
+In parallel, for each set of values of the independent parameters
+we also have the ground truth, e.g. an observed value.
+
+In the example, the classes are the numbers 0 through 5. However, to
+demonstrate how the UDF functions when there is incomplete overlap between
+predicted and observed values, we will only use 1 through 5 for predictions
+and only use 0 through 4 for observed values.
+
+We place the predicted and observed values into the "pred" and "obs"
+columns of the "test_set" table, respectively.
+
+For the example, we will create the following dummy test_set table:
+
+user=$ CREATE TABLE test_set AS
+user-$   SELECT (x+y)%5+1 AS pred,
+user-$          (x*y)%5 AS obs
+user-$    FROM generate_series(1,5) x,
+user-$         generate_series(1,5) y
+user-$ DISTRIBUTED RANDOMLY;
+
+The confusion matrix is generated as follows.
+
+user=# SELECT mf_confusion_matrix('test_set','pred','obs','out_table');
+ mf_confusion_matrix 
+---------------------
+ 
+(1 row)
+
+michaeldb=# SELECT * FROM out_table ORDER BY class;
+ class | confusion_arr 
+-------+---------------
+     0 | {0,1,2,2,2,2}
+     1 | {0,2,0,1,1,0}
+     2 | {0,0,0,2,2,0}
+     3 | {0,0,2,0,0,2}
+     4 | {0,2,1,0,0,1}
+     5 | {0,0,0,0,0,0}
+(6 rows)
+
+As can be seen, the generated matrix contains rows and columns for all values
+between 0 and 5, even though some were never seen as observed classes and
+others were never seen as predicted classes.
+
 $ABC$::TEXT
 END;
 $$ LANGUAGE SQL;

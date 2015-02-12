@@ -164,6 +164,8 @@ values vs. ground-truth values.
         @defgroup grp_mf_r2 mf_r2
         @defgroup grp_mf_adjusted_r2 mf_adjusted_r2
         @defgroup grp_mf_binary_classifier mf_binary_classifier
+        @defgroup grp_mf_auc mf_auc
+        @defgroup grp_mf_confusion_matrix mf_confusion_matrix
     @}
 @}
 
