@@ -11,6 +11,8 @@ modules:
       depends: ['common']
 #    - name: session
 #      depends: ['common']
+#    - name: connected_components
+#      depends: ['common']
     - name: connected_components_hawq
       depends: ['common']
     - name: sugar
@@ -18,6 +20,8 @@ modules:
 #    - name: complex
 #      depends: ['common']
     - name: stemming
+      depends: ['common']
+    - name: balance_dataset
       depends: ['common']
 #    - name: sampling
 #      depends: ['common']

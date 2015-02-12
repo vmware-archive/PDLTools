@@ -13,8 +13,8 @@ modules:
       depends: ['common']
     - name: connected_components
       depends: ['common']
-#    - name: connected_components_hawq
-#      depends: ['common']
+    - name: connected_components_hawq
+      depends: ['common']
     - name: sugar
       depends: ['common']
     - name: complex
@@ -26,6 +26,8 @@ modules:
     - name: complete_linkage
       depends: ['common']
     - name: prediction_metrics
+      depends: ['common']
+    - name: balance_dataset
       depends: ['common']
 #    - name: plr_placeholder
 #      depends: ['common'] 

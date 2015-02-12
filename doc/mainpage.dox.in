@@ -167,6 +167,26 @@ values vs. ground-truth values.
         @defgroup grp_mf_auc mf_auc
         @defgroup grp_mf_confusion_matrix mf_confusion_matrix
     @}
+
+    @defgroup grp_balancing Balancing datasets
+    @{
+        @brief Balance a dataset for classification by re-sampling
+
+Given a table with varying number of records for each class
+label, this function will create an output table with each class label
+having approximately the same number of records. This is achieved by
+repeating each row of every under-represented class by a certain amount
+so that the expected number of rows from the underrepresented classes equals
+the total number of rows in the majority class.
+
+(Written by [Srivatsan Ramanujam](mailto:sramanujam@pivotal.io), 14 Nov 2014.)
+
+@sa Module source file: balance_dataset.sql_in
+@prereq
+PL/Python
+        @defgroup grp_balance_dataset balance_dataset
+    @}
+
 @}
 
 @defgroup grp_algorithms_module Algorithms

@@ -61,6 +61,8 @@ or relative.
 string. <code>key[i]</code> and <code>value[i]</code> hold the information for
 the <code>i</code>'th key-value pair in the query string.
 
+@warning It is preferable not to use user-defined types such as "uri_type" as column types, even though they are fully-functionable as such. The reason for this is that when the library is upgraded, the column types will not get upgraded with it.
+
 @sa grp_uri_array_type
  */
 
@@ -129,6 +131,8 @@ The storage format for \c uri_array_type is very similar to that of
 each URI. Key-value pairs are not extracted from the query.
 The original uri is kept in the variable \c "uri", in its original form.
 
+@warning It is preferable not to use user-defined types such as "uri_array_type" as column types, even though they are fully-functionable as such. The reason for this is that when the library is upgraded, the column types will not get upgraded with it.
+
 @sa grp_uri_type
  */
 
@@ -189,11 +193,23 @@ affected by the question of whether \c "normalize" is true or false.
 @anchor parse_uri_example
 @examp
 @verbatim
-user=# SELECT parse_uri('http://myself:password@www.Pivotal.io:80/%7ehello/to/you/index.html?who=I&whom=me#here',true,true);
-                                                       parse_uri                                                        
-------------------------------------------------------------------------------------------------------------------------
- (http,myself:password,www.pivotal.io,,,,80,"{~hello,to,you,index.html}",who=I&whom=me,here,f,"{who,whom}","{I,me}")
-(1 row)
+user=# \x
+Expanded display is on.
+user=# SELECT * FROM parse_uri('http://myself:password@www.Pivotal.io:80/%7ehello/to/you/index.html?who=I&whom=me#here',true,true);
+-[ RECORD 1 ]+---------------------------
+scheme       | http
+userinfo     | myself:password
+hosttext     | www.pivotal.io
+ipv4         | 
+ipv6         | 
+ipfuture     | 
+porttext     | 80
+path         | {~hello,to,you,index.html}
+query        | who=I&whom=me
+fragment     | here
+absolutepath | f
+key          | {who,whom}
+value        | {I,me}
 @endverbatim
 
 @sa grp_uri_type
@@ -251,11 +267,23 @@ the questio of whether "normalize" is true or false.
 
 Example
 =======
-SELECT PDLTOOLS_SCHEMA.parse_uri('http://myself:password@www.Pivotal.io:80/%7ehello/to/you/index.html?who=I&whom=me#here',true,true);
-                                                       parse_uri                                                        
-------------------------------------------------------------------------------------------------------------------------
- (http,myself:password,www.pivotal.io,,,,80,"{~hello,to,you,index.html}",who=I&whom=me,here,f,"{who,whom}","{I,me}")
-(1 row)
+user=# \x
+Expanded display is on.
+user=# SELECT * FROM PDLTOOLS_SCHEMA.parse_uri('http://myself:password@www.Pivotal.io:80/%7ehello/to/you/index.html?who=I&whom=me#here',true,true);
+-[ RECORD 1 ]+---------------------------
+scheme       | http
+userinfo     | myself:password
+hosttext     | www.pivotal.io
+ipv4         | 
+ipv6         | 
+ipfuture     | 
+porttext     | 80
+path         | {~hello,to,you,index.html}
+query        | who=I&whom=me
+fragment     | here
+absolutepath | f
+key          | {who,whom}
+value        | {I,me}
 
 See also: uri_type
 $__STRING__$ END;
@@ -300,11 +328,22 @@ exactly in the form that it was in the original text, regardless of whether
 @anchor extract_uri_example
 @examp
 @verbatim
-user=# SELECT extract_uri('First go to http://[0123:4567:89ab:cdef:0123:4567:89ab:cdef]/ then go to https://192.165.0.1/ and repeat.',true);
-                                                                                                                                                           extract_uri                                                                                                                                                           
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- ("{http,https}","{"""",""""}","{0123:4567:89ab:cdef:0123:4567:89ab:cdef,192.165.0.1}","{"""",300245000001}","{001043105147211253315357001043105147211253315357,""""}","{"""",""""}","{"""",""""}","{"""",""""}","{"""",""""}","{"""",""""}","{f,f}","{http://[0123:4567:89ab:cdef:0123:4567:89ab:cdef]/,https://192.165.0.1/}")
-(1 row)
+user=# \x
+Expanded display is on.
+user=# SELECT * FROM extract_uri('First go to http://[0123:4567:89ab:cdef:0123:4567:89ab:cdef]/ then go to https://192.165.0.1/ and repeat.',true);
+-[ RECORD 1 ]+-------------------------------------------------------------------------
+scheme       | {http,https}
+userinfo     | {"",""}
+hosttext     | {0123:4567:89ab:cdef:0123:4567:89ab:cdef,192.165.0.1}
+ipv4         | {"",300245000001}
+ipv6         | {001043105147211253315357001043105147211253315357,""}
+ipfuture     | {"",""}
+porttext     | {"",""}
+path         | {"",""}
+query        | {"",""}
+fragment     | {"",""}
+absolutepath | {f,f}
+uri          | {http://[0123:4567:89ab:cdef:0123:4567:89ab:cdef]/,https://192.165.0.1/}
 @endverbatim
 
 @sa grp_uri_array_type
@@ -360,11 +399,23 @@ exactly in the form that it was in the original text, regardless of whether
 
 Example
 =======
-SELECT PDLTOOLS_SCHEMA.extract_uri('First go to http://[0123:4567:89ab:cdef:0123:4567:89ab:cdef]/ then go to https://192.165.0.1/ and repeat.',true);
-                                                                                                                                                           extract_uri                                                                                                                                                           
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- ("{http,https}","{"""",""""}","{0123:4567:89ab:cdef:0123:4567:89ab:cdef,192.165.0.1}","{"""",300245000001}","{001043105147211253315357001043105147211253315357,""""}","{"""",""""}","{"""",""""}","{"""",""""}","{"""",""""}","{"""",""""}","{f,f}","{http://[0123:4567:89ab:cdef:0123:4567:89ab:cdef]/,https://192.165.0.1/}")
-(1 row)
+user=# \x
+Expanded display is on.
+user=# SELECT * FROM PDLTOOLS_SCHEMA.extract_uri('First go to http://[0123:4567:89ab:cdef:0123:4567:89ab:cdef]/ then go to https://192.165.0.1/ and repeat.',true);
+-[ RECORD 1 ]+-------------------------------------------------------------------------
+scheme       | {http,https}
+userinfo     | {"",""}
+hosttext     | {0123:4567:89ab:cdef:0123:4567:89ab:cdef,192.165.0.1}
+ipv4         | {"",300245000001}
+ipv6         | {001043105147211253315357001043105147211253315357,""}
+ipfuture     | {"",""}
+porttext     | {"",""}
+path         | {"",""}
+query        | {"",""}
+fragment     | {"",""}
+absolutepath | {f,f}
+uri          | {http://[0123:4567:89ab:cdef:0123:4567:89ab:cdef]/,https://192.165.0.1/}
+@endverbatim
 
 See also: uri_array_type
 $__STRING__$ END;
