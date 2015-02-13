@@ -7,6 +7,11 @@ Srivatsan Ramanujam
 <sramanujam@pivotal.io>
 28 Jan 2014
 
+Major rewrite by
+Michael Brand
+<mbrand@pivotal.io>
+13 Feb 2015
+
 Usage:
 ======
 python pdlpack.py [-s schema_name] -p platform [-S SUgAR_schema_name] [-M MADlib_schema_name] -c <username>@<hostname>:<port>/<databasename>
@@ -1765,9 +1770,10 @@ def _db_create_objects(schema, platform, sugar_schema, madlib_schema,
     for module in lib_objects:
       module_objects[module]={}
       for x in lib_objects[module]:
-        module_objects[module][x]=db_objects[x]
-        if x in defunct_objects:
-          del defunct_objects[x]
+        if x in db_objects:
+          module_objects[module][x]=db_objects[x]
+          if x in defunct_objects:
+            del defunct_objects[x]
 
     # Find their dependencies
 
@@ -1979,7 +1985,8 @@ def install(schema, platform, sugar_schema, madlib_schema):
                              dbrev,dbsugarrev, session)
       except SystemExit:
           raise
-      except:
+      except Exception, e:
+          print e
           _error("Object creation failed. Aborting installation", False)
           raise Exception
       
