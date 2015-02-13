@@ -1464,6 +1464,29 @@ def _find_deps(schema,sugar_schema,base_objects,dependence_graph):
           if old_len!=new_len:
             new_depender.add(depender)
 
+  # Workaround for the bug that in versions [1.2, 1.4) of the library the
+  # module "complex" mistakenly create "OPERATOR public.=(complex,complex)".
+  complex_oid=None
+  for x in dependence_graph:
+    if x[0]=='pg_type' and x[2]=='complex' and x[3]==schema:
+      complex_oid=x[1]
+  if complex_oid!=None:
+    rc= _raw_run_sql_query("""
+      SELECT o.oid
+      FROM pg_operator o,
+           pg_namespace n
+      WHERE o.oprname='='
+      AND o.oprnamespace=n.oid
+      AND n.nspname='public'
+      AND o.oprleft='{complex}'
+      AND o.oprright='{complex}';
+      """.format(complex=complex_oid),True)
+    if len(rc)>0:
+      complex_eq_oid=rc[0]['oid']
+      unwanted_keys = [x for x in recursive_depender if x[1]==complex_eq_oid]
+      for key in unwanted_keys:
+        del recursive_depender[key]
+
   # Consider only dependencies not in schema.
   # Disregard toast tables.
   unwanted_keys = [x for x in recursive_depender
