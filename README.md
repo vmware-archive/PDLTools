@@ -9,8 +9,9 @@ Pre-requisites
 
    The following are the pre-requisites for building the pdltools package.
        1. The cmake compiler (version >= 2.8)
-       2. Greenplum Database (GPDB 4.2 or higher)
-       3. rpmbuild package if you want to create rpm packages of the installer
+       2. g++, Flex, Bison, Doxygen ( `sydo yum install gcc-c++`, `sudo yum install flex`, `sudo yum install bison`, `sudo yum install doxygen`)
+       3. Greenplum Database (GPDB 4.2 or higher) and/or HAWQ (1.2.x and higher)
+       4. rpmbuild package if you want to create rpm packages of the installer (`sudo yum install rpm-build`)
 
 Building
 =========
