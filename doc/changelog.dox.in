@@ -4,7 +4,10 @@
 
 ## PDL Tools Revision History
 
-### PDL Tools 1.4 (packaged with SUgAR 1.0) -- Current version
+### PDL Tools 1.5 (packaged with SUgAR 1.0) -- Current version
+- Modifications in preparation to make PDLTools public. Removing module with pending IP (connected components).
+
+### PDL Tools 1.4 (packaged with SUgAR 1.0) 
 - Added module for prediction metrics (regression+binary+multi-class).
 - Added module to balance datasets for classification.
 - Added SUgAR "format_glob" (globbing with user-defined transformation).

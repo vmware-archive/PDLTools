@@ -51,11 +51,7 @@ accelerators as well.
 
 \ref grp_algorithms_module are machine learning algorithms. Most machine learning algorithms
 used by Pivotal data scientists are part of the free MADlib library.
-<B>PDL Tools</B> includes algorithms that are not part of MADlib. Some of them,
-such as <B>PDL Tools</B>'s \ref grp_ccomp algorithm, cannot become MADlib
-algorithms because they have Pivotal intellectual property associated with them.
-We cannot contribute our patent-pending algorithms to a free library such as
-MADlib, so we make them available through <B>PDL Tools</B>, instead. Another
+<B>PDL Tools</B> includes algorithms that are not part of MADlib. One 
 reason algorithms can get contributed to <B>PDL Tools</B> rather than MADlib is
 that <B>PDL Tools</B> works by the "release early, release often" methodology.
 PDL lab collateral which is contributed to <B>PDL Tools</B> is released
