@@ -137,8 +137,6 @@ pdlpack.py : INFO : > - uri_utils
 pdlpack.py : INFO : > - edit_distance
 pdlpack.py : INFO : > - anonymization
 pdlpack.py : INFO : > - session
-pdlpack.py : INFO : > - connected_components
-pdlpack.py : INFO : > - connected_components_hawq
 pdlpack.py : INFO : > - sugar
 pdlpack.py : INFO : > - complex
 pdlpack.py : INFO : > - stemming
@@ -205,10 +203,6 @@ illiseconds
 TEST CASE RESULT|Module: anonymization|test_anonymization.sql_in|PASS|Time: 1143
  milliseconds
 TEST CASE RESULT|Module: session|test_session.sql_in|PASS|Time: 463 milliseconds
-TEST CASE RESULT|Module: connected_components|test_connected_components.sql_in|P
-ASS|Time: 3656 milliseconds
-TEST CASE RESULT|Module: connected_components_hawq|test_connected_components_haw
-q.sql_in|PASS|Time: 3213 milliseconds
 TEST CASE RESULT|Module: sugar|test_sugar.sql_in|PASS|Time: 5146 milliseconds
 TEST CASE RESULT|Module: complex|test_complex_type.sql_in|PASS|Time: 461 millise
 conds

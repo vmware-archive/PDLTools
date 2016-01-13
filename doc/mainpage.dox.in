@@ -193,38 +193,6 @@ PL/Python
 @{
 A collection of machine-learning algorithms.
 
-    @defgroup grp_ccomp Connected Components
-    @{
-        @brief Implementation of (patent pending) connected components algorithm.
-
-Two implementations of (patent pending) connected components algorithm.
-Use \ref grp_connected_components for increased speed on GPDB, when PL/Perl is
-available. The variant \ref grp_connected_components_no_udfs was originally
-programmed for an old version of HAWQ that did not allow user-defined
-functions. It works in pure PL/pgSQL, without UDAs or sub-function calls.
-However, it requires roughly twice as many passes over the data.
-Today, its main advantage is
-in that it can work on a wide variety of vertex ID types, whereas
-\ref grp_connected_components can only run on \c INTEGER and \c BIGINT vertices.
-
-Having said this, timing measurements are inconclusive as to whether the
-"no udf" version really is substantially slower than the PL/Perl version, and
-some measurements seem to even imply the reverse.
-These measurements have not been investigated closely. In both implementations,
-all heavy lifting is done in SQL.
-
-(Written by [Michael Brand](mailto:mbrand@pivotal.io), 14 Nov 2012.)
-
-@sa Module source files: connected_components_perl.sql_in, connected_components_hawq.sql_in.
-
-@prereq
-PL/Perl (function \ref grp_connected_components only),
-PL/pgSQL (function \ref grp_connected_components_no_udfs only)
-
-        @defgroup grp_connected_components connected_components
-        @defgroup grp_connected_components_no_udfs connected_components_no_udfs
-    @}
-
     @defgroup grp_clink Complete Linkage
     @{
         @brief Implementation of complete-linkage agglomerative hierarchical clustering.

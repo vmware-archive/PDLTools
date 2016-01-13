@@ -9,26 +9,11 @@ modules:
       depends: ['common']
     - name: anonymization 
       depends: ['common']
-#    - name: session
-#      depends: ['common']
-#    - name: connected_components
-#      depends: ['common']
-    - name: connected_components_hawq
-      depends: ['common']
     - name: sugar
       depends: ['common']
-#    - name: complex
-#      depends: ['common']
     - name: stemming
       depends: ['common']
     - name: balance_dataset
       depends: ['common']
-#    - name: sampling
-#      depends: ['common']
-#    - name: complete_linkage
-#      depends: ['common']
     - name: prediction_metrics
       depends: ['common']
-#    - name: plr_placeholder
-#      depends: ['common'] 
-#  PL/R package disabled until PL/R will be part of Continuous Integration tool.
