@@ -9,13 +9,13 @@ Pre-requisites
 The following are the pre-requisites for building the pdltools package:
 
     1. The cmake compiler (version >= 2.8)
-    2. g++, Flex (>= 2.5.33), Bison (>=2.4), Doxygen (1.8.1 or higher, needed only for generating docs), Latex (needed only for generating PDF docs). On CentOS this would be:
+    2. g++, Flex (>= 2.5.33), Bison (>=2.4), Doxygen (1.8.7 recommended, needed only for generating docs), Latex (needed only for generating PDF docs). On CentOS this would be:
 
         sudo yum install gcc-c++
         sudo yum install flex
         sudo yum install bison 
-        sudo yum install doxygen (we recommended version 1.8.1 or higher, follow instructions https://www.stack.nl/~dimitri/doxygen/download.html to download and install the appropriate version from source).
-	sudo yum install texlive-latex
+        sudo yum install doxygen (we recommended version 1.8.7, follow instructions https://www.stack.nl/~dimitri/doxygen/download.html to download and install the appropriate version from source).
+        sudo yum install texlive-latex
 
     3. Greenplum Database (GPDB 4.2 or higher) and/or HAWQ (1.2.x and higher)
     4. rpmbuild package if you want to create rpm packages of the installer (`sudo yum install rpm-build`)
