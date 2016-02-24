@@ -2,6 +2,11 @@ PDL Tools
 =========
 
     PDL Tools is a library of reusable tools used and developed by the Pivotal Data Science and Data Engineering teams.
+    
+User Manual
+============
+
+    https://github.com/pivotalsoftware/PDLTools
 
 Pre-requisites
 ===============
