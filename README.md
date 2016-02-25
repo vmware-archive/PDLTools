@@ -6,7 +6,7 @@ PDL Tools
 Usage docs
 ============
 
-https://github.com/pivotalsoftware/PDLTools
+http://pivotalsoftware.github.io/PDLTools/
 
 Pre-requisites
 ===============
