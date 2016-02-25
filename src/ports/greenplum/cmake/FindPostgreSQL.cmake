@@ -70,10 +70,11 @@ get_filename_component(_CURRENT_FILE_NAME "${_FIND_PACKAGE_FILE}" NAME)
 string(REGEX REPLACE "Find([^.]+)\\..*" "\\1" PACKAGE_FIND_NAME
     "${_CURRENT_FILE_NAME}")
 string(TOUPPER ${PACKAGE_FIND_NAME} PKG_NAME)
-if("${PACKAGE_FIND_NAME}" MATCHES "^.*([0-9]+)_([0-9]+)$")
-    string(REGEX REPLACE "^.*([0-9]+)_([0-9]+)$" "\\1.\\2" PACKAGE_FIND_VERSION
+if("${PACKAGE_FIND_NAME}" MATCHES "^Find[a-zA-Z]+_.+$")
+    string(REGEX REPLACE "^Find[a-zA-Z]+_(.+)$" "\\1" PACKAGE_FIND_VERSION_UNDERSCORE
         "${PACKAGE_FIND_NAME}")
-endif("${PACKAGE_FIND_NAME}" MATCHES "^.*([0-9]+)_([0-9]+)$")
+    string(REPLACE "_" "." PACKAGE_FIND_VERSION "${PACKAGE_FIND_VERSION_UNDERSCORE}")
+endif()
 
 # If ${PKG_NAME}_PG_CONFIG is defined, then the search steps will be omitted.
 if(NOT DEFINED ${PKG_NAME}_PG_CONFIG)
@@ -83,18 +84,23 @@ if(NOT DEFINED ${PKG_NAME}_PG_CONFIG)
 endif(NOT DEFINED ${PKG_NAME}_PG_CONFIG)
 
 if(${PKG_NAME}_PG_CONFIG)
+    execute_process(COMMAND ${${PKG_NAME}_PG_CONFIG} --includedir-server
+        OUTPUT_VARIABLE ${PKG_NAME}_SERVER_INCLUDE_DIR
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
     execute_process(COMMAND ${${PKG_NAME}_PG_CONFIG} --includedir
         OUTPUT_VARIABLE ${PKG_NAME}_CLIENT_INCLUDE_DIR
         OUTPUT_STRIP_TRAILING_WHITESPACE
     )
 endif(${PKG_NAME}_PG_CONFIG)
 
-if(${PKG_NAME}_PG_CONFIG AND ${PKG_NAME}_CLIENT_INCLUDE_DIR)
+if(${PKG_NAME}_PG_CONFIG AND ${PKG_NAME}_SERVER_INCLUDE_DIR)
     set(${PKG_NAME}_VERSION_MAJOR 0)
     set(${PKG_NAME}_VERSION_MINOR 0)
     set(${PKG_NAME}_VERSION_PATCH 0)
     
-	set(CONFIG_FILE ${${PKG_NAME}_CLIENT_INCLUDE_DIR}/pg_config.h)
+    set(CONFIG_FILE ${${PKG_NAME}_SERVER_INCLUDE_DIR}/pg_config.h)
 
     if(EXISTS ${CONFIG_FILE})
         # Read and parse postgres version header file for version number
@@ -168,11 +174,6 @@ if(${PKG_NAME}_PG_CONFIG AND ${PKG_NAME}_CLIENT_INCLUDE_DIR)
             )
             set(${PKG_NAME}_EXECUTABLE "${${PKG_NAME}_EXECUTABLE}/postgres")
 
-            execute_process(COMMAND ${${PKG_NAME}_PG_CONFIG} --includedir-server
-                OUTPUT_VARIABLE ${PKG_NAME}_SERVER_INCLUDE_DIR
-                OUTPUT_STRIP_TRAILING_WHITESPACE
-            )
-
             execute_process(COMMAND ${${PKG_NAME}_PG_CONFIG} --libdir
                 OUTPUT_VARIABLE ${PKG_NAME}_LIB_DIR
                 OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -207,7 +208,7 @@ if(${PKG_NAME}_PG_CONFIG AND ${PKG_NAME}_CLIENT_INCLUDE_DIR)
 		  "was requested.")
 	  endif(${PACKAGE_FIND_VERSION})
     endif(_PACKAGE_NAME STREQUAL "${_NEEDED_PG_CONFIG_PACKAGE_NAME}")
-endif(${PKG_NAME}_PG_CONFIG AND ${PKG_NAME}_CLIENT_INCLUDE_DIR)
+endif(${PKG_NAME}_PG_CONFIG AND ${PKG_NAME}_SERVER_INCLUDE_DIR)
 
 # Checks 'REQUIRED', 'QUIET' and versions. Note that the first parameter is
 # passed in original casing.

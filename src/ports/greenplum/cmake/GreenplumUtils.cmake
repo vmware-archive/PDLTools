@@ -14,7 +14,11 @@ function(define_greenplum_features IN_VERSION OUT_FEATURES)
 endfunction(define_greenplum_features)
 
 function(add_gppkg GPDB_VERSION GPDB_VARIANT GPDB_VARIANT_SHORT)
+    string(TOLOWER ${GPDB_VERSION} GPDB_VERSION_LC)
+    string(REPLACE "." "_" VERSION_ "${GPDB_VERSION}")
+
     file(WRITE "${CMAKE_BINARY_DIR}/deploy/gppkg/Version_${IN_PORT_VERSION}.cmake" "
+
     file(MAKE_DIRECTORY
         \"\${CMAKE_CURRENT_BINARY_DIR}/${IN_PORT_VERSION}/BUILD\"
         \"\${CMAKE_CURRENT_BINARY_DIR}/${IN_PORT_VERSION}/SPECS\"
@@ -22,6 +26,7 @@ function(add_gppkg GPDB_VERSION GPDB_VARIANT GPDB_VARIANT_SHORT)
         \"\${CMAKE_CURRENT_BINARY_DIR}/${IN_PORT_VERSION}/gppkg\"
     )
     set(GPDB_VERSION \"${GPDB_VERSION}\")
+    set(GPDB_VERSION_LC \"${GPDB_VERSION_LC}\")
     set(GPDB_VARIANT \"${GPDB_VARIANT}\")
     set(GPDB_VARIANT_SHORT \"${GPDB_VARIANT_SHORT}\")
     string(TOLOWER \"${GPDB_VARIANT}\" PORT_NAME)

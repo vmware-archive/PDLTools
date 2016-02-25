@@ -1,8 +1,8 @@
 Pkgname: pdltools
 Architecture: @CPACK_RPM_PACKAGE_ARCHITECTURE@
-Version: @PDLTOOLS_GPPKG_VERSION@-@GPDB_VARIANT_SHORT@@GPDB_VERSION@
+Version: @PDLTOOLS_GPPKG_VERSION@-@GPDB_VARIANT_SHORT@@GPDB_VERSION_LC@
 OS: rhel5
-GPDBVersion: @GPDB_VERSION@
+GPDBVersion: @GPDB_VERSION_LC@
 Description: PDL Tools is a library of reusable tools used and developed by Pivotal Data Labs.
 PostInstall:
 - Master: "echo 'Please run the following command to deploy PDL Tools';

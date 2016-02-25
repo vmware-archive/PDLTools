@@ -609,11 +609,29 @@ def _get_dbver(platform):
                                      True)[0]['version']
         if(platform=='hawq'):
             match = re.search("HAWQ[a-zA-Z\s]*(\d+\.\d+)", versionStr)
-        else: 
-            match = re.search("Greenplum[a-zA-Z\s]*(\d+\.\d+)", versionStr)
+        else:
+	    match = re.search("Greenplum[a-zA-Z\s]*(\d+\.\d+)", versionStr) 
+	    if match and match.group(1) == '4.3':
+	        match_details = re.search("Greenplum[a-zA-Z\s]*(\d+\.\d+.\d+)", versionStr)
+                if __get_rev_num(match_details.group(1)) >= __get_rev_num('4.3.5'):
+	            return '4.3ORCA'
         return None if match is None else match.group(1)
     except:
         _error("Failed reading database version", True)
+
+def __get_rev_num(rev):
+    """
+    Convert version string into number for comparison
+        @param rev version text
+    """
+    try:
+        num = re.findall('[0-9]', rev)
+        if num:
+            return num
+        else:
+            return ['0']
+    except:
+        return ['0']
 
 def _make_dir(dir):
     """
