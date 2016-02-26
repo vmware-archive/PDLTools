@@ -1,0 +1,49 @@
+language: c
+sudo: true
+git:
+  submodules: false
+compiler:
+- gcc
+python:
+- '2.6'
+addons:
+  artifacts: true
+services:
+- postgresql
+install:
+- pip install --user setuptools
+- mkdir -p ${TRAVIS_BUILD_DIR}/tools
+- cd ${TRAVIS_BUILD_DIR}/tools
+- sudo add-apt-repository -y ppa:texlive-backports/ppa
+- sudo apt-get -y update
+- sudo apt-get -y install texlive-full
+- wget http://ftp.stack.nl/pub/users/dimitri/doxygen-1.8.7.linux.bin.tar.gz
+- tar -zxvf doxygen-1.8.7.linux.bin.tar.gz -C ${TRAVIS_BUILD_DIR}/tools
+- sudo apt-get install -y rpm
+before_script:
+- export PATH=${TRAVIS_BUILD_DIR}/tools/bin:${TRAVIS_BUILD_DIR}/tools/doxygen-1.8.7/bin:$PATH
+script:
+- cd ${TRAVIS_BUILD_DIR}
+- mkdir build
+- cd build
+- cmake ..
+- make
+- make package
+- make gppkg
+- make doc
+- cd ${TRAVIS_BUILD_DIR}/doc/user/latex
+- make pdf
+notifications:
+  email:
+    recipients:
+    - sramanujam@pivotal.io
+    on_success: change
+    on_failure: always
+deploy:
+  provider: releases
+  api_key:
+    secure: fYH3dUdIIjAydnbXyVzx6NwdWy7s0ZKiAdP5cBX4QK4bQK4JjHuBVCX8YRnH2lKdqgOeOHfRykvDWOaZyi0QOR62o4/j+5C/w5G883GW+7iN1UE+eWPw8jZU3ZMhRvGkFzvP9CHQfv0S+pRqK5lTF9bEn68vq+jcYG1dkqI+D1i17xt77Q1vbTN/oZfMwVMLaT5Cf4h2jdv9eRoTzx509peClrHo57O+vDRndVGhTDVQBgMHjoKUy86oNcVCp2JHYnvVrprKC6fhdyjr4SaCb6ZDinhGHK0q+UGL1IQw3BsQNHUGwftriT/uR2qBw352YdvpqXRW0jUg027Ov4dJUjcG/Eji4TE+9LbieAXLCEE5JPoxos47JU1nISReLmg2DUWbDGvh+TWiF25PiCL3xkmqAvqQydnIHw3ceS1HaiXC0lYp4uapXeawBGmaRLFCS7k8q50VaWLakwVodJtfhs/jkqO9ei4WV4kzf2MGbCXtXFKtgqo8qrcZCo1VhkaR+3AQsPIySO36otVteW2wXeykMVX+7ya6U5GC4BHWazh7yD6uAzVgkGu/yttuyTzeh5qrSmnM6blERrHjsAssf+Mtra7+mXW728mM8RMDwTMU+whlIUvnFxc16mBEV96cDm6MsmnQ1EByVRQoRxFWp/LOZ4mK+2aAyWkKlIrpLu0=
+  file: pdltools-1.5-Linux.rpm
+  on:
+    repo: pivotalsoftware/PDLTools
+    branch: travis
