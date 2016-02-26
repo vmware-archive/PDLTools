@@ -47,5 +47,5 @@ deploy:
   on:
     repo: pivotalsoftware/PDLTools
     tags: true
-    branch: travis
+    branch: master
   skip_cleanup: true

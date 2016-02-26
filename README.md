@@ -3,7 +3,7 @@ PDL Tools
 
     PDL Tools is a library of reusable tools used and developed by the Pivotal Data Science and Data Engineering teams.
     
-[![Build Status](https://travis-ci.org/pivotalsoftware/PDLTools.svg?branch=travis)](https://travis-ci.org/pivotalsoftware/PDLTools)
+[![Build Status](https://travis-ci.org/pivotalsoftware/PDLTools.svg?branch=master)](https://travis-ci.org/pivotalsoftware/PDLTools)
 
 Usage docs
 ============
