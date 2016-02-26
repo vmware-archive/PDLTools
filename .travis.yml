@@ -46,4 +46,6 @@ deploy:
   file: pdltools-1.5-Linux.rpm
   on:
     repo: pivotalsoftware/PDLTools
+    tags: true
     branch: travis
+  skip_cleanup: true
