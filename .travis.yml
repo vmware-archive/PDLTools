@@ -30,7 +30,7 @@ script:
 - make
 - make package
 - make gppkg
-#- make doc
+- make doc
 #- cd ${TRAVIS_BUILD_DIR}/doc/user/latex
 #- make pdf
 notifications:
