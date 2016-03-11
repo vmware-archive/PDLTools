@@ -21,7 +21,7 @@ The following are the pre-requisites for building the pdltools package:
         sudo yum install gcc-c++
         sudo yum install flex
         sudo yum install bison 
-        sudo yum install doxygen (we recommended version 1.8.7, follow instructions https://www.stack.nl/~dimitri/doxygen/download.html to download and install the appropriate binaries ex: [doxygen-1.8.7.linux.bin.tar.gz](http://ftp.stack.nl/pub/users/dimitri/doxygen-1.8.7.linux.bin.tar.gz)).
+        sudo yum install doxygen (we recommended version 1.8.7, follow instructions https://www.stack.nl/~dimitri/doxygen/download.html to download and install the appropriate binaries ex: http://ftp.stack.nl/pub/users/dimitri/doxygen-1.8.7.linux.bin.tar.gz).
         sudo yum install texlive-latex
 
     3. Greenplum Database (GPDB 4.2 or higher) and/or HAWQ (1.2.x and higher)
