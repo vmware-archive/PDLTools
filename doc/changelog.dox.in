@@ -6,6 +6,7 @@
 
 ### PDL Tools 1.5 (packaged with SUgAR 1.0) -- Current version
 - Modifications in preparation to make PDLTools public. Removing module with pending IP (connected components).
+- Add module one_vs_rest for multi-class classification
 
 ### PDL Tools 1.4 (packaged with SUgAR 1.0) 
 - Added module for prediction metrics (regression+binary+multi-class).

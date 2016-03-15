@@ -15,5 +15,7 @@ modules:
       depends: ['common']
     - name: balance_dataset
       depends: ['common']
+    - name: one_vs_rest
+      depends: ['common']
     - name: prediction_metrics
       depends: ['common']

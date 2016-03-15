@@ -114,7 +114,7 @@ platform is mandatory.
 
 @verbatim
 $ /usr/local/greenplum-db/pdltools/bin/pdlpack install -s pdltools -p greenplum -c gpadmin@localhost:5433/exampledb
-pdlpack.py : INFO : Detected greenplum version 4.3.
+pdlpack.py : INFO : Detected greenplum version 4.3ORCA.
 pdlpack.py : INFO : Installing PDL Tools.
 pdlpack.py : INFO : Schemas not found. Proceeding with fresh installation.
 pdlpack.py : INFO : Testing PL/Python environment...
@@ -144,7 +144,8 @@ pdlpack.py : INFO : > - sampling
 pdlpack.py : INFO : > - complete_linkage
 pdlpack.py : INFO : > - prediction_metrics
 pdlpack.py : INFO : > - balance_dataset
-pdlpack.py : INFO : PDL Tools @PDLTOOLS_VERSION_STRING@ installed successfully in PDLTOOLS schema.
+pdlpack.py : INFO : > - one_vs_rest
+pdlpack.py : INFO : PDL Tools 1.5 installed successfully in PDLTOOLS schema.
 pdlpack.py : INFO : SUgAR 1.0 installed successfully in SUGARLIB schema.
 pdlpack.py : INFO : Installation completed successfully.
 @endverbatim
@@ -195,26 +196,19 @@ in order to run the command as another user.
 
 @verbatim
 $ /usr/local/greenplum-db/pdltools/bin/pdlpack install-check -s pdltools -p greenplum -c gpadmin@localhost:5433/exampledb
-pdlpack.py : INFO : Detected greenplum version 4.3.
-TEST CASE RESULT|Module: uri_utils|test_uri_utils.sql_in|PASS|Time: 58 milliseco
-nds
-TEST CASE RESULT|Module: edit_distance|test_edit_distance.sql_in|PASS|Time: 42 m
-illiseconds
-TEST CASE RESULT|Module: anonymization|test_anonymization.sql_in|PASS|Time: 1143
- milliseconds
-TEST CASE RESULT|Module: session|test_session.sql_in|PASS|Time: 463 milliseconds
-TEST CASE RESULT|Module: sugar|test_sugar.sql_in|PASS|Time: 5146 milliseconds
-TEST CASE RESULT|Module: complex|test_complex_type.sql_in|PASS|Time: 461 millise
-conds
-TEST CASE RESULT|Module: stemming|test_porter_stemmer.sql_in|PASS|Time: 39 milli
-seconds
-TEST CASE RESULT|Module: sampling|test_sampling.sql_in|PASS|Time: 1186 milliseco
-TEST CASE RESULT|Module: complete_linkage|test_complete_linkage.sql_in|PASS|Time
-: 2313 milliseconds
-TEST CASE RESULT|Module: prediction_metrics|test_prediction_metrics.sql_in|PASS|
-Time: 1381 milliseconds
-TEST CASE RESULT|Module: balance_dataset|test_balance_dataset.sql_in|PASS|Time: 
-609 milliseconds
+pdlpack.py : INFO : Detected greenplum version 4.3ORCA.
+TEST CASE RESULT|Module: uri_utils|test_uri_utils.sql_in|PASS|Time: 25 milliseconds
+TEST CASE RESULT|Module: edit_distance|test_edit_distance.sql_in|PASS|Time: 27 milliseconds
+TEST CASE RESULT|Module: anonymization|test_anonymization.sql_in|PASS|Time: 1268 milliseconds
+TEST CASE RESULT|Module: session|test_session.sql_in|PASS|Time: 302 milliseconds
+TEST CASE RESULT|Module: sugar|test_sugar.sql_in|PASS|Time: 1785 milliseconds
+TEST CASE RESULT|Module: complex|test_complex_type.sql_in|PASS|Time: 252 milliseconds
+TEST CASE RESULT|Module: stemming|test_porter_stemmer.sql_in|PASS|Time: 22 milliseconds
+TEST CASE RESULT|Module: sampling|test_sampling.sql_in|PASS|Time: 486 milliseconds
+TEST CASE RESULT|Module: complete_linkage|test_complete_linkage.sql_in|PASS|Time: 704 milliseconds
+TEST CASE RESULT|Module: prediction_metrics|test_prediction_metrics.sql_in|PASS|Time: 1173 milliseconds
+TEST CASE RESULT|Module: balance_dataset|test_balance_dataset.sql_in|PASS|Time: 302 milliseconds
+TEST CASE RESULT|Module: one_vs_rest|test_one_vs_rest_data_prep.sql_in|PASS|Time: 290 milliseconds
 @endverbatim
 
 
