@@ -843,8 +843,8 @@ def _schema_writable(schema,session):
     return schema_writable
 
 def _cmp_versions(ver_a, ver_b):
-  a_list = [int(x) for x in ver_a.split('.')]
-  b_list = [int(x) for x in ver_b.split('.')]
+  a_list = ver_a.split('.')
+  b_list = ver_b.split('.')
   return cmp(a_list,b_list)
 
 def parseConnectionStr(connectionStr):
