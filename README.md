@@ -97,6 +97,11 @@ Post installation, you can run the unit tests in PDL Tools with the install-chec
 Parameters for `install-check` are the same as parameters for `install`.
 If any of the tests fail, you will see an error message displayed on your console.
 
+Contributing to PDLTools
+========================
+
+If you're interested in contributing to PDLTools, please refer to the instructions at [Guidelines for contributing to PDLTools](https://github.com/pivotalsoftware/PDLTools/blob/master/CONTRIBUTIONS.md)
+
 Legal
 ======
 Copyright (c) 2013-2016 Pivotal Software, Inc. All rights reserved.
