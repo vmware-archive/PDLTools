@@ -1,0 +1,185 @@
+/* ----------------------------------------------------------------------- *//**
+
+@file kl_div.sql_in
+
+@brief Implementation of the Kullback-Leibler Divergence.
+
+@author Srivatsan Ramanujam
+@date Mar 20, 2016
+
+/ *//* ----------------------------------------------------------------------- */
+
+
+/**
+@addtogroup grp_kl_divergence
+
+@brief implementation of Kullback-Leibler divergence of two distributions.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#kl_divergence_syntax">Syntax</a>
+<li class="level1"><a href="#kl_divergence_usage">Usage</a>
+<li class="level1"><a href="#kl_divergence_example">Example</a>
+</ul>
+</div>
+
+@about
+An implementation of the KL Divergence distance metric. Provided two probability distributions P
+and Q, this function will return the KL(P||Q). Note that this is not a distance metric as it is not
+symmetric. KL(P||Q) != KL(Q||P)
+
+@anchor kl_divergence_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION kl_divergence(p float8[], q float8[])
+RETURNS float8;
+</pre>
+
+@param p An array denoting a discrete probability distribution.
+@param q An array denoting a discrete probability distribution.
+@return A floating point value that's the KL divergence of the two distributions.
+
+@anchor kl_divergence_usage
+@usage
+The input arrays p and q have to be of equal length and they should be valid distributions i.e. the sum of their values should equal to one.
+The Kullback-Leibler divergence of two discrete distributions P, Q is defined as KL(P||Q) = sum_i(P(i)*log(P(i)/Q(i)).
+It should be noted that KL(P||Q) != KL(Q||P), for this reason, this metric is not considered a "distance metric".
+
+@anchor kl_divergence_example
+@examp
+
+@verbatim
+user=# select pdltools.kl_divergence(ARRAY[0.3,0.2,0.2,0.2,0.1], ARRAY[0.4,0.4,0.05,0.05,0.1]);
+ kl_divergence 
+---------------
+  0.3295836866
+(1 row)
+
+Time: 12.317 ms
+user=# select pdltools.kl_divergence(ARRAY[0.4,0.4,0.05,0.05,0.1], ARRAY[0.3,0.2,0.2,0.2,0.1]);
+ kl_divergence  
+----------------
+ 0.253702265093
+(1 row)
+
+Time: 1.385 ms
+user=# select pdltools.kl_divergence(ARRAY[0.3,0.2,0.2,0.2,0.1], ARRAY[0.3,0.2,0.2,0.2,0.1]);
+ kl_divergence 
+---------------
+             0
+(1 row)
+
+Time: 0.966 ms
+@endverbatim
+
+In this example, the function takes two arrays representing discrete probability distributions and returns a measure (divergence)
+of how difference these two distributions are. A value of 0 indicates the distributions are identical.
+
+@prereq
+PL/Python
+
+@sa grp_kl_divergence_int
+
+ * 
+ */
+create or replace function PDLTOOLS_SCHEMA.kl_divergence(p float8[], q float8[])
+returns float8
+as
+$$
+    from math import log
+    return sum([p_i*log(p_i/q_i) for p_i,q_i in zip(p,q)])
+$$ language plpythonu;
+
+
+/**
+@addtogroup grp_kl_divergence_int
+
+@brief implementation of Kullback-Leibler divergence of two distributions represented as count vectors.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#kl_divergence_syntax">Syntax</a>
+<li class="level1"><a href="#kl_divergence_usage">Usage</a>
+<li class="level1"><a href="#kl_divergence_example">Example</a>
+</ul>
+</div>
+
+@about
+An implementation of the KL Divergence distance metric. Provided two probability distributions P
+and Q as count vectors, this function will return the KL(P||Q). Note that this is not a distance metric as it is not
+symmetric. KL(P||Q) != KL(Q||P)
+
+@anchor kl_divergence_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION kl_divergence(p int[], q int[])
+RETURNS float8;
+</pre>
+
+@param p An array denoting a discrete probability distribution as counts of values
+@param q An array denoting a discrete probability distribution as counts of values.
+@return A floating point value that's the KL divergence of the two distributions.
+
+@anchor kl_divergence_usage
+@usage
+The input arrays p and q have to be of equal length and they should be valid distributions i.e. the sum of their values should equal to one.
+In cases where p and q are integer vectors denoting counts, they will be converted into probability distributions by normalizing over their sum.
+The Kullback-Leibler divergence of two discrete distributions P, Q is defined as KL(P||Q) = sum_i(P(i)*log(P(i)/Q(i)).
+It should be noted that KL(P||Q) != KL(Q||P), for this reason, this metric is not considered a "distance metric".
+
+@anchor kl_divergence_example
+@examp
+
+@verbatim
+user=# select pdltools.kl_divergence(ARRAY[3,2,2,2,1], ARRAY[1,1,2,3,3]);
+ kl_divergence 
+---------------
+ 0.277258872224
+(1 row)
+
+Time: 12.317 ms
+user=# select pdltools.kl_divergence(ARRAY[1,1,2,3,3],  ARRAY[3,2,2,2,1]);
+ kl_divergence  
+----------------
+ 0.27204727211
+(1 row)
+
+Time: 1.385 ms
+user=# select pdltools.kl_divergence(ARRAY[1,1,2,3,3], ARRAY[1,1,2,3,3]);
+ kl_divergence 
+---------------
+             0
+(1 row)
+
+Time: 0.966 ms
+@endverbatim
+
+In this example, the function takes two arrays representing discrete probability distributions and returns a measure (divergence)
+of how difference these two distributions are. A value of 0 indicates the distributions are identical.
+
+@prereq
+PL/Python
+
+@sa grp_kl_divergence
+ */
+create or replace function PDLTOOLS_SCHEMA.kl_divergence(p int[], q int[])
+returns float8
+as
+$$
+    from math import log
+    return sum([p_i*log(p_i/q_i) for p_i, q_i in zip(map(lambda x: x*1.0/sum(p),p), map(lambda x: x*1.0/sum(q),q))])
+$$ language plpythonu;
+
+create or replace function PDLTOOLS_SCHEMA.kl_divergence()
+returns text
+as
+$$
+    return 'An implementation of the Kullback-Leibler divergence between two distributions'
+$$language plpythonu;
+
+create or replace function PDLTOOLS_SCHEMA.kl_divergence(usage text)
+returns text
+as
+$$
+    return '''An implementation of the Kullback-Leibler divergence between two distributions. Refer to: http://pivotalsoftware.github.io/PDLTools/modules.html for more details'''
+$$language plpythonu;

@@ -1,0 +1,4 @@
+UDF: FUNCTION PDLTOOLS_SCHEMA.kl_divergence(pg_catalog._float8, pg_catalog._float8)
+UDF: FUNCTION PDLTOOLS_SCHEMA.kl_divergence(pg_catalog._int, pg_catalog._int)
+UDF: FUNCTION PDLTOOLS_SCHEMA.kl_divergence(pg_catalog.text)
+UDF: FUNCTION PDLTOOLS_SCHEMA.kl_divergence()

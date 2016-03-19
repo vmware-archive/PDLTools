@@ -1,0 +1,44 @@
+-- File: test_kl_div.sql_in
+-- Unit test for kl divergence.
+
+-------------------------------------------------------------------------------------------------
+
+--Test KL(P||Q)
+select 
+    assert(
+        (
+            select 
+	        kl_divergence(
+                    ARRAY[0.3,0.2,0.2,0.2,0.1], 
+                    ARRAY[0.4,0.4,0.05,0.05,0.1]
+                )::text
+        ),
+        '0.3295836866'
+    ); 
+
+-- test KL(Q||P)
+select 
+    assert(
+        (
+            select 
+	        kl_divergence(
+                    ARRAY[0.4,0.4,0.05,0.05,0.1], 
+                    ARRAY[0.3,0.2,0.2,0.2,0.1]
+                )::text
+        ),
+        '0.253702265093'
+    ); 
+
+-- Test KL(P||P)
+select 
+    assert(
+        (
+            select 
+	        kl_divergence(
+                    ARRAY[0.3,0.2,0.2,0.2,0.1], 
+                    ARRAY[0.3,0.2,0.2,0.2,0.1]
+                )::text
+        ),
+        '0'
+    ); 
+
