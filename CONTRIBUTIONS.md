@@ -16,3 +16,13 @@ The committers to PDLTools will see the following:
 ![Travis-CI success committer view](https://github.com/pivotalsoftware/PDLTools/blob/master/doc/imgs/pdltools_pull_request_travis_success.png)
 8. The committers to pivotalsoftware/PDLTools will then merge your contribution to the base fork and voila, you should be able to see your contribution on [PDLTools User Docs](http://pivotalsoftware.github.io/PDLTools/). When a release is eventually created off the main branch, the installers for that release will contain your module.
  
+Creating Releases
+=================
+If you're a `committer` on the basefork [pivotalsoftware/PDLTools](https://github.com/pivotalsoftware/PDLTools) and would like to create a new release of PDLTools, these instructions are for you.
+
+The [.travis.yml](https://github.com/pivotalsoftware/PDLTools/blob/master/.travis.yml) file is already setup to instruct Travis-CI to automatically upload the relevant artifacts that were generated (ex: a tarball of the source, rpms/gppkgs, HTML docs, PDF docs etc.) to a releases branch on the basefork on GitHub. The set of all available releases can be viewed at [PDLTools Releases](https://github.com/pivotalsoftware/PDLTools/releases). Currently (as of Mar-2016), Travis CI will only generate a tarball of the source. PDF doc generation, rpm generation & gppkg generation are TBD. While the generation of those artifacts is under construction, we encourage you to manually create them on your VM and attach them to the generated release.
+
+When you are ready to create a new release of PDLTools, do the following:
+1. Create a branch for your release: `git checkout -b 1.6`
+2. Update the relevant files like `$PDLTOOLS_HOME/src/config/Version.yml` and `$PDLTOOLS_HOME/doc/changelog.dox.in` to indicate the latest release, commit your changes and push the new branch to the basefork.
+3. Create a tag for the latest release. Travis-CI will use this to automatically upload the generated artifacts against this release: `git tag -a v1.6 -m '1.6 release'`, `git push origin —tags`.
