@@ -4,7 +4,10 @@
 
 ## PDL Tools Revision History
 
-### PDL Tools 1.5 (packaged with SUgAR 1.0) -- Current version
+### PDL Tools 1.5dev (packaged with SUgAR 1.0) -- Current version
+- Add module one_vs_rest for multi-class classification.
+
+### PDL Tools 1.5 (packaged with SUgAR 1.0)
 - Modifications in preparation to make PDLTools public. Removing module with pending IP (connected components).
 
 ### PDL Tools 1.4 (packaged with SUgAR 1.0) 

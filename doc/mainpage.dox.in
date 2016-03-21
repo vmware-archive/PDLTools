@@ -187,6 +187,20 @@ PL/Python
         @defgroup grp_balance_dataset balance_dataset
     @}
 
+	@defgroup grp_one_vs_rest_data_prep Data preparation for one-vs-rest multi-class classification
+	@{
+		@brief Prepare multi-class classification data to build one-vs-rest classifiers
+
+Given a table with multi-class labels (number of classes > 2), this function will replicate 
+the data for building one-vs-rest classifiers. 
+			
+(Written by [Gautam Muralidhar](mailto:gmuralidhar@pivotal.io), 14 Mar 2016.)
+
+@sa Module source file: one_vs_rest_data_prep.sql_in
+@prereq
+PL/Python
+	    @defgroup grp_one_vs_rest one_vs_rest
+	@}
 @}
 
 @defgroup grp_algorithms_module Algorithms
