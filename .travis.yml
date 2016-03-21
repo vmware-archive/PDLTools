@@ -46,7 +46,6 @@ deploy:
   file_glob: true
   file: 
       - "pdltools-*-Linux.rpm"
-      - "doc/user/html/*" 
   on:
     repo: pivotalsoftware/PDLTools
     tags: true
