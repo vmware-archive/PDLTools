@@ -145,7 +145,7 @@ pdlpack.py : INFO : > - complete_linkage
 pdlpack.py : INFO : > - prediction_metrics
 pdlpack.py : INFO : > - balance_dataset
 pdlpack.py : INFO : > - one_vs_rest
-pdlpack.py : INFO : PDL Tools 1.5 installed successfully in PDLTOOLS schema.
+PDL Tools @PDLTOOLS_VERSION_STRING@ installed successfully in PDLTOOLS schema.
 pdlpack.py : INFO : SUgAR 1.0 installed successfully in SUGARLIB schema.
 pdlpack.py : INFO : Installation completed successfully.
 @endverbatim
