@@ -27,3 +27,4 @@ When you are ready to create a new release of PDLTools, do the following:
 1. Create a branch for your release: `git checkout -b 1.6`
 2. Update the relevant files like `$PDLTOOLS_HOME/src/config/Version.yml` and `$PDLTOOLS_HOME/doc/changelog.dox.in` to indicate the latest release, commit your changes and push the new branch to the basefork.
 3. Create a tag for the latest release. Travis-CI will use this to automatically upload the generated artifacts against this release: `git tag -a v1.6 -m '1.6 release'`, `git push origin —tags`.
+4. You should be able to see your release automatically at [pivotalsoftware/PDLTools: releases](https://github.com/pivotalsoftware/PDLTools/releases). Feel free to edit it, annotate it, uploaded any other binaries which weren't generated automatically by Travis (ex: gppkg, PDF docs etc.) and let users know that the latest release is available for use.
