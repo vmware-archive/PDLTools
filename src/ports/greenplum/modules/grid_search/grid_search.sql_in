@@ -23,7 +23,7 @@
 </div>
 
 @about
-A function that run's MADlib's k-Means function with varying values for k and saves the model outputs into one table. See the <a href="http://madlib.incubator.apache.org/docs/v1.8/group__grp__kmeans.html">MADlib's documentation<a/> for more details. 
+A function that run's MADlib's k-Means function with varying values for k and saves the model outputs into one table. See the <A HREF="http://madlib.incubator.apache.org/docs/v1.8/group__grp__kmeans.html">"MADlib's documentation"</A> for more details. 
 
 @anchor gs_kmeanspp_syntax
 @par Syntax
