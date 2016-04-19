@@ -1,0 +1,487 @@
+/* ----------------------------------------------------------------------- *//**
+
+@file grid_search.sql_in
+
+@brief A set of grid search functions for various algorithms. 
+
+@author Written by Srivatsan Ramanujam, April Song, Joseph Greubel
+@date 07 Apr 2016
+
+ *//* ----------------------------------------------------------------------- */
+
+ /**
+@addtogroup grp_grid_search
+
+@brief A function for grid search over k-Means. 
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#gs_kmeanspp_syntax">Syntax</a>
+<li class="level1"><a href="#gs_kmeanspp_usage">Usage</a>
+<li class="level1"><a href="#gs_kmeanspp_example">Example</a>
+</ul>
+</div>
+
+@about
+A function that run's MADlib's k-Means function with varying values for k and saves the model outputs into one table. See the <a href="http://madlib.incubator.apache.org/docs/v1.8/group__grp__kmeans.html">MADlib's documentation<a/> for more details. 
+
+@anchor gs_kmeanspp_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION gs_kmeanspp( id_column text,
+                      mdl_output_tbl text,
+                      num_clusters_arr int[],
+                      rel_source text,
+                      expr_point text,
+                      fn_dist text,
+                      agg_centroid text,
+                      max_num_iterations integer,
+                      min_frac_reassigned double precision,
+                      seeding_sample_ratio double precision
+                    )
+returns text;
+</pre>
+
+@param id_column  ID column of the input table. 
+@param mdl_output_tbl Name of table to store model outputs. 
+@param num_clusters_arr Array of k values for to run clustering. 
+@param rel_source The name of the table containing the input data points.
+
+Data points and predefined centroids (if used) are expected to be stored row-wise, in a column of type SVEC (or any type convertible to SVEC, like FLOAT[] or INTEGER[]). Data points with non-finite values (NULL, NaN, infinity) in any component are skipped during analysis.
+
+@param expr_point The name of the column with point coordinates.
+@param fn_dist(optional)    The name of the function to use to calculate the distance from a data point to a centroid. Default: 'squared_dist_norm2'.
+
+The following distance functions can be used (computation of barycenter/mean in parentheses):
+
+dist_norm1: 1-norm/Manhattan (element-wise median [Note that MADlib does not provide a median aggregate function for support and performance reasons.])
+dist_norm2: 2-norm/Euclidean (element-wise mean)
+squared_dist_norm2: squared Euclidean distance (element-wise mean)
+dist_angle: angle (element-wise mean of normalized points)
+dist_tanimoto: tanimoto (element-wise mean of normalized points [5])
+user defined function with signature DOUBLE PRECISION[] x, DOUBLE PRECISION[] y -> DOUBLE PRECISION
+See the <a href="http://madlib.incubator.apache.org/docs/v1.8/group__grp__kmeans.html">MADlib's documentation<a/> for more details. 
+
+@param agg_centroid(optional)  The name of the aggregate function used to determine centroids. Default: 'avg'.
+
+The following aggregate functions can be used:
+
+avg: average (Default)
+normalized_avg: normalized average
+
+@returns Name of table in which MADlib's k-Means model outputs for each k are saved.
+
+@anchor gs_kmeanspp_usage
+@usage
+Given an array of k values, the function runs MADlib's k-Means clustering using kmeans++ for centroid seeding. Usage is identical to MADlib's function with the additional parameters of an id column and array of k values. 
+
+@anchor gs_kmeanspp_example
+@examp
+@verbatim
+-- create input table
+CREATE TABLE public.km_sample(pid int, points double precision[]);
+COPY km_sample (pid, points) FROM stdin DELIMITER '|';
+1 | {14.23, 1.71, 2.43, 15.6, 127, 2.8, 3.0600, 0.2800, 2.29, 5.64, 1.04, 3.92, 1065}
+2 | {13.2, 1.78, 2.14, 11.2, 1, 2.65, 2.76, 0.26, 1.28, 4.38, 1.05, 3.49, 1050}
+3 | {13.16, 2.36,  2.67, 18.6, 101, 2.8,  3.24, 0.3, 2.81, 5.6799, 1.03, 3.17, 1185}
+4 | {14.37, 1.95, 2.5, 16.8, 113, 3.85, 3.49, 0.24, 2.18, 7.8, 0.86, 3.45, 1480}
+5 | {13.24, 2.59, 2.87, 21, 118, 2.8, 2.69, 0.39, 1.82, 4.32, 1.04, 2.93, 735}
+6 | {14.2, 1.76, 2.45, 15.2, 112, 3.27, 3.39, 0.34, 1.97, 6.75, 1.05, 2.85, 1450}
+7 | {14.39, 1.87, 2.45, 14.6, 96, 2.5, 2.52, 0.3, 1.98, 5.25, 1.02, 3.58, 1290}
+8 | {14.06, 2.15, 2.61, 17.6, 121, 2.6, 2.51, 0.31, 1.25, 5.05, 1.06, 3.58, 1295}
+9 | {14.83, 1.64, 2.17, 14, 97, 2.8, 2.98, 0.29, 1.98, 5.2, 1.08, 2.85, 1045}
+10 | {13.86, 1.35, 2.27, 16, 98, 2.98, 3.15, 0.22, 1.8500, 7.2199, 1.01, 3.55, 1045}
+\.
+
+-- run kmeans++ using default values for seeding_sample_ratio
+select
+    PDLTOOLS_SCHEMA.gs_kmeanspp(
+        'pid'
+        ,'asong.kmeans_output'
+        ,ARRAY[2,3,4]
+        ,'km_sample'
+        ,'points'
+        ,'madlib.squared_dist_norm2'
+        ,'madlib.avg'
+        ,20
+        ,0.001
+        );
+
+                     gs_kmeanspp                     
+-----------------------------------------------------
+ Model parameters written to asong.kmeans_output table
+(1 row)
+
+-- run kmeans++ using default values for max_num_iterations, min_frac_reassigned, seeding_sample_ratio
+select
+    PDLTOOLS_SCHEMA.gs_kmeanspp(
+        'pid'
+        ,'asong.kmeans_output2'
+        ,ARRAY[2,3,4]
+        ,'km_sample'
+        ,'points'
+        ,'madlib.squared_dist_norm2'
+        ,'madlib.avg'
+        );
+
+                     gs_kmeanspp                     
+-----------------------------------------------------
+ Model parameters written to asong.kmeans_output2 table
+(1 row)
+@endverbatim
+
+@sa grp_edit_distance_unsafe
+
+ */
+
+ ------------------------------------------------------------------------
+ -- base kmeans function
+drop function if exists PDLTOOLS_SCHEMA.grid_search_kmeans_all(
+    text, 
+    text, 
+    int[],
+    text, 
+    text, 
+    text, 
+    text,
+    text, 
+    integer,
+    double precision,
+    double precision
+) cascade;
+create or replace function PDLTOOLS_SCHEMA.grid_search_kmeans_all(
+    id_column text,
+    mdl_output_tbl text,
+    num_clusters_arr int[],
+    kmeans_func text,
+
+    rel_source text,
+    expr_point text,
+    fn_dist text,
+    agg_centroid text,
+    max_num_iterations integer,
+    min_frac_reassigned double precision,
+    seeding_sample_ratio double precision
+)
+returns void
+as
+$$
+    import plpy
+    
+    #1) Prepare a table to hold model results
+    try:
+        sql = '''
+        --Prepare results table
+        create table {mdl_output_tbl} 
+        (
+            num_clusters int,
+            centroids double precision[],
+            objective_fn double precision,
+            frac_reassigned double precision,
+            num_iterations int,
+            simple_silhouette double precision
+        ) distributed randomly;
+        '''.format(mdl_output_tbl = mdl_output_tbl)
+        results = plpy.execute(sql)
+    except:
+        plpy.error("The output table already exists")
+
+    #3) Run MADlib K-Means with supplied arguments for each value in the num_clusters_arr array
+
+
+    for num_clusters in num_clusters_arr:
+        sql = '''
+            insert into {{mdl_output_tbl}}
+            with mdl
+            as
+            (
+                select 
+                    {{num_clusters}} as num_clusters,
+                       *
+                from 
+                    {kmeans_func}
+            )
+            select 
+                mdl.*,
+                scoef.simple_silhouette
+            from
+            (
+                select 
+                    num_clusters,
+                    --Refer: http://en.wikipedia.org/wiki/Silhouette_(clustering)
+                    avg(
+                        CASE  WHEN distances[2] = 0 THEN 0
+                          ELSE (distances[2] - distances[1]) / distances[2]
+                        END
+                    ) as simple_silhouette
+                from
+                (
+                    select 
+                        ds.{{id_column}}, 
+                        mdl.num_clusters,
+                        ( 
+                            madlib.closest_columns(
+                                 mdl.centroids, 
+                                 ds.{{expr_point}}, 
+                                 2,
+                                 '{{fn_dist}}'
+                            )
+                        ).distances
+                    from 
+                        {{rel_source}} ds, mdl
+                )q
+                group by 
+                    num_clusters
+            ) scoef, mdl
+            where scoef.num_clusters = mdl.num_clusters
+        '''.format(
+            kmeans_func = kmeans_func  
+        )
+
+        sql = sql.format(
+            rel_source = rel_source,
+            expr_point = expr_point,
+            num_clusters = num_clusters,
+            fn_dist = fn_dist,
+            agg_centroid = agg_centroid,
+            mdl_output_tbl = mdl_output_tbl,
+            id_column = id_column,
+            max_num_iterations = max_num_iterations,
+            min_frac_reassigned = min_frac_reassigned,
+            seeding_sample_ratio = seeding_sample_ratio)
+
+        plpy.execute(sql)
+    
+$$ language plpythonu;
+
+
+-- 1) UDF to iterate over K
+--PL/Python Driver Function to run K-Means while varying the number of clusters
+drop function if exists PDLTOOLS_SCHEMA.gs_kmeanspp(
+    text, 
+    text, 
+    int[],
+    text, 
+    text, 
+    text, 
+    text,
+    integer,
+    double precision,
+    double precision
+) cascade;
+create or replace function PDLTOOLS_SCHEMA.gs_kmeanspp(
+    id_column text,
+    mdl_output_tbl text,
+    num_clusters_arr int[],
+
+    rel_source text,
+    expr_point text,
+    fn_dist text, -- optional, default: 'squared_dist_norm2'
+    agg_centroid text, -- optional, default: 'avg'
+    max_num_iterations integer, -- optional, default: 20
+    min_frac_reassigned double precision, -- optional, default: 0.001
+    seeding_sample_ratio double precision -- optional, default: 1.0
+)
+returns text
+as
+$$
+    import plpy
+
+    #1) Create kmeanspp function call
+    kmeanspp_func = '''
+        madlib.kmeanspp(
+             ''{rel_source}'', 
+             ''{expr_point}'', 
+             {num_clusters}, 
+             ''{fn_dist}'', 
+             ''{agg_centroid}'', 
+             {max_num_iterations}, 
+             {min_frac_reassigned},
+             {seeding_sample_ratio}
+         )
+    '''
+    
+    #2) Prepare a table to hold model results
+    sql = '''
+    select 
+        PDLTOOLS_SCHEMA.grid_search_kmeans_all(
+            '{id_column}',
+            '{mdl_output_tbl}',
+            array{num_clusters_arr},
+            '{kmeans_func}',
+            '{rel_source}',
+            '{expr_point}',
+            '{fn_dist}',
+            '{agg_centroid}',
+            {max_num_iterations},
+            {min_frac_reassigned},
+            {seeding_sample_ratio}
+        );
+    '''.format(
+            id_column=id_column,
+            mdl_output_tbl=mdl_output_tbl,
+            num_clusters_arr=num_clusters_arr,
+            kmeans_func=kmeanspp_func,
+            rel_source=rel_source,
+            expr_point=expr_point,
+            fn_dist=fn_dist,
+            agg_centroid=agg_centroid,
+            max_num_iterations=max_num_iterations,
+            min_frac_reassigned=min_frac_reassigned,
+            seeding_sample_ratio=seeding_sample_ratio,
+        )
+
+    plpy.execute(sql)
+    return 'Model parameters written to {mdl_output_tbl} table'.format(mdl_output_tbl = mdl_output_tbl) 
+$$ language plpythonu;
+
+-- everything but seeding_sample_ratio given
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.gs_kmeanspp(
+    id_column text,
+    mdl_output_tbl text,
+    num_clusters_arr int[],
+    rel_source text,
+    expr_point text,
+    fn_dist text /*+ DEFAULT 'squared_dist_norm2' */,
+    agg_centroid text /*+ DEFAULT 'avg' */,
+    max_num_iterations integer /*+ DEFAULT 20 */,
+    min_frac_reassigned double precision /*+ DEFAULT 0.001 */
+) returns text AS 
+$$
+    declare 
+        ret text;
+    begin
+        select PDLTOOLS_SCHEMA.gs_kmeanspp(
+                id_column,
+                mdl_output_tbl,
+                num_clusters_arr,
+                rel_source,
+                expr_point,
+                fn_dist,
+                agg_centroid,
+                max_num_iterations,
+                min_frac_reassigned,
+                1.0::double precision
+            ) into ret;
+        return ret;
+    end;
+
+$$ language plpgsql;
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.gs_kmeanspp(
+    id_column text,
+    mdl_output_tbl text,
+    num_clusters_arr int[],
+    rel_source text,
+    expr_point text,
+    fn_dist text /*+ DEFAULT 'squared_dist_norm2' */,
+    agg_centroid text /*+ DEFAULT 'avg' */,
+    max_num_iterations integer /*+ DEFAULT 20 */
+) returns text AS 
+$$
+    declare 
+        ret text;
+    begin
+        select PDLTOOLS_SCHEMA.gs_kmeanspp(
+                id_column,
+                mdl_output_tbl,
+                num_clusters_arr,
+                rel_source,
+                expr_point,
+                fn_dist,
+                agg_centroid,
+                max_num_iterations,
+                0.001::double precision,
+                1.0::double precision
+            ) into ret;
+        return ret;
+    end;
+
+$$ language plpgsql;
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.gs_kmeanspp(
+    id_column text,
+    mdl_output_tbl text,
+    num_clusters_arr int[],
+    rel_source text,
+    expr_point text,
+    fn_dist text /*+ DEFAULT 'squared_dist_norm2' */,
+    agg_centroid text /*+ DEFAULT 'avg' */
+) returns text AS 
+$$
+    declare 
+        ret text;
+    begin
+        select PDLTOOLS_SCHEMA.gs_kmeanspp(
+                id_column,
+                mdl_output_tbl,
+                num_clusters_arr,
+                rel_source,
+                expr_point,
+                fn_dist,
+                agg_centroid,
+                20::integer,
+                0.001::double precision,
+                1.0::double precision
+            ) into ret;
+        return ret;
+    end;
+
+$$ language plpgsql;
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.gs_kmeanspp(
+    id_column text,
+    mdl_output_tbl text,
+    num_clusters_arr int[],
+    rel_source text,
+    expr_point text,
+    fn_dist text /*+ DEFAULT 'squared_dist_norm2' */
+) returns text AS 
+$$
+    declare 
+        ret text;
+    begin
+        select PDLTOOLS_SCHEMA.gs_kmeanspp(
+                id_column,
+                mdl_output_tbl,
+                num_clusters_arr,
+                rel_source,
+                expr_point,
+                fn_dist,
+                'madlib.avg',
+                20::integer,
+                0.001::double precision,
+                1.0::double precision
+            ) into ret;
+        return ret;
+    end;
+
+$$ language plpgsql;
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.gs_kmeanspp(
+    id_column text,
+    mdl_output_tbl text,
+    num_clusters_arr int[],
+    rel_source text,
+    expr_point text
+) returns text AS 
+$$
+    declare 
+        ret text;
+    begin
+        select PDLTOOLS_SCHEMA.gs_kmeanspp(
+                id_column,
+                mdl_output_tbl,
+                num_clusters_arr,
+                rel_source,
+                expr_point,
+                'madlib.squared_dist_norm2',
+                'madlib.avg',
+                20::integer,
+                0.001::double precision,
+                1.0::double precision
+            ) into ret;
+        return ret;
+    end;
+
+$$ language plpgsql;
