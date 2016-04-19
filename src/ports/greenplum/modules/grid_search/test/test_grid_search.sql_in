@@ -1,4 +1,4 @@
 ------------------------------------------------------------------------------------------------
--- File: test_one_vs_rest_data_prep.sql_in
--- Unit test for one_vs_rest_data_prep module
+-- File: test_grid_search.sql_in
+-- Unit test for grid_search module
 -------------------------------------------------------------------------------------------------
