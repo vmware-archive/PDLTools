@@ -202,7 +202,7 @@ PL/Python
 	    @defgroup grp_one_vs_rest one_vs_rest
 	@}
 
-    @defgroup grp_grid_search Data preparation for one-vs-rest multi-class classification
+    @defgroup grp_grid_search Grid Search
     @{
         @brief A set of grid search functions for various algorithms. 
 
