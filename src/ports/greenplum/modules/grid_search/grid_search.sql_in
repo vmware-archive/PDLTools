@@ -50,17 +50,7 @@ returns text;
 Data points and predefined centroids (if used) are expected to be stored row-wise, in a column of type SVEC (or any type convertible to SVEC, like FLOAT[] or INTEGER[]). Data points with non-finite values (NULL, NaN, infinity) in any component are skipped during analysis.
 
 @param expr_point The name of the column with point coordinates.
-@param fn_dist(optional)    The name of the function to use to calculate the distance from a data point to a centroid. Default: 'squared_dist_norm2'.
-
-The following distance functions can be used (computation of barycenter/mean in parentheses):
-
-dist_norm1: 1-norm/Manhattan (element-wise median [Note that MADlib does not provide a median aggregate function for support and performance reasons.])
-dist_norm2: 2-norm/Euclidean (element-wise mean)
-squared_dist_norm2: squared Euclidean distance (element-wise mean)
-dist_angle: angle (element-wise mean of normalized points)
-dist_tanimoto: tanimoto (element-wise mean of normalized points [5])
-user defined function with signature DOUBLE PRECISION[] x, DOUBLE PRECISION[] y -> DOUBLE PRECISION
-See the <a href="http://madlib.incubator.apache.org/docs/v1.8/group__grp__kmeans.html">MADlib's documentation<a/> for more details. 
+@param fn_dist(optional)    The name of the function to use to calculate the distance from a data point to a centroid. Default: 'squared_dist_norm2'. <br>The following distance functions can be used (computation of barycenter/mean in parentheses): <br>dist_norm1: 1-norm/Manhattan (element-wise median [Note that MADlib does not provide a median aggregate function for support and performance reasons.]) <br>dist_norm2: 2-norm/Euclidean (element-wise mean) <br>squared_dist_norm2: squared Euclidean distance (element-wise mean) <br>dist_angle: angle (element-wise mean of normalized points)<br> dist_tanimoto: tanimoto (element-wise mean of normalized points [5]) <br>user defined function with signature DOUBLE PRECISION[] x, DOUBLE PRECISION[] y -> DOUBLE PRECISION <br>See the <a href="http://madlib.incubator.apache.org/docs/v1.8/group__grp__kmeans.html">MADlib's documentation</a> for more details. 
 
 @param agg_centroid(optional)  The name of the aggregate function used to determine centroids. Default: 'avg'.
 
