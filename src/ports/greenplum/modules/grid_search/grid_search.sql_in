@@ -44,20 +44,22 @@ returns text;
 
 @param id_column  ID column of the input table. 
 @param mdl_output_tbl Name of table to store model outputs. 
-@param num_clusters_arr Array of k values for to run clustering. 
-@param rel_source The name of the table containing the input data points.
-
-Data points and predefined centroids (if used) are expected to be stored row-wise, in a column of type SVEC (or any type convertible to SVEC, like FLOAT[] or INTEGER[]). Data points with non-finite values (NULL, NaN, infinity) in any component are skipped during analysis.
-
+@param num_clusters_arr Array of k values for which to run clustering. 
+@param rel_source The name of the table containing the input data points.<br>Data points and predefined centroids (if used) are expected to be stored row-wise,in a column of type <tt>\ref grp_svec "SVEC"</tt> (or any type convertible to<tt>\ref grp_svec "SVEC"</tt>, like <tt>FLOAT[]</tt> or <tt>INTEGER[]</tt>).Data points with non-finite values (NULL, NaN, infinity) in any component are skipped during analysis.
 @param expr_point The name of the column with point coordinates.
-@param fn_dist(optional)    The name of the function to use to calculate the distance from a data point to a centroid. Default: 'squared_dist_norm2'. <br>The following distance functions can be used (computation of barycenter/mean in parentheses): <br>dist_norm1: 1-norm/Manhattan (element-wise median [Note that MADlib does not provide a median aggregate function for support and performance reasons.]) <br>dist_norm2: 2-norm/Euclidean (element-wise mean) <br>squared_dist_norm2: squared Euclidean distance (element-wise mean) <br>dist_angle: angle (element-wise mean of normalized points)<br> dist_tanimoto: tanimoto (element-wise mean of normalized points [5]) <br>user defined function with signature DOUBLE PRECISION[] x, DOUBLE PRECISION[] y -> DOUBLE PRECISION <br>See the <a href="http://madlib.incubator.apache.org/docs/v1.8/group__grp__kmeans.html">MADlib's documentation</a> for more details. 
-
-@param agg_centroid(optional)  The name of the aggregate function used to determine centroids. Default: 'avg'.
-
-The following aggregate functions can be used:
-
-avg: average (Default)
-normalized_avg: normalized average
+@param fn_dist(optional)    The name of the function to use to calculate the distance from a data point to a centroid. Default: 'squared_dist_norm2'. <br><br>The following distance functions can be used (computation of barycenter/mean in parentheses):
+<ul>
+<li><b>\ref dist_norm1</b>:  1-norm/Manhattan (element-wise median
+[Note that MADlib does not provide a median aggregate function for support and
+performance reasons.])</li>
+<li><b>\ref dist_norm2</b>: 2-norm/Euclidean (element-wise mean)</li>
+<li><b>\ref squared_dist_norm2</b>: squared Euclidean distance (element-wise mean)</li>
+<li><b>\ref dist_angle</b>: angle (element-wise mean of normalized points)</li>
+<li><b>\ref dist_tanimoto</b>: tanimoto (element-wise mean of normalized points <a href="#kmeans-lit-5">[5]</a>)</li>
+<li><b>user defined function</b> with signature <tt>DOUBLE PRECISION[] x, DOUBLE PRECISION[] y -> DOUBLE PRECISION</tt></li></ul><br><br>See the <a href="http://madlib.incubator.apache.org/docs/v1.8/group__grp__kmeans.html">MADlib's documentation</a> for more details. 
+@param agg_centroid(optional)  The name of the aggregate function used to determine centroids. Default: 'avg'.<br><br>The following aggregate functions can be used:<ul>
+ <li><b>\ref avg</b>: average (Default)</li>
+ <li><b>\ref normalized_avg</b>: normalized average</li></ul>
 
 @returns Name of table in which MADlib's k-Means model outputs for each k are saved.
 
