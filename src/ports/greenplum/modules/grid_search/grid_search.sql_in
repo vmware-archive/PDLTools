@@ -28,7 +28,7 @@ A function that run's MADlib's k-Means function with varying values for k and sa
 @anchor kmeans_syntax
 @par Syntax
 The k-means algorithm can be invoked in four ways, depending on the source of the initial set of centroids:<ul>
-<li>Use the kmeans++ centroid seeding method.</li></ul><br>
+<li>Use the kmeans++ centroid seeding method.<br>
 <pre class="syntax">
 FUNCTION gs_kmeanspp( id_column text,
                       mdl_output_tbl text,
@@ -43,6 +43,7 @@ FUNCTION gs_kmeanspp( id_column text,
                     )
 returns text;
 </pre>
+</li></ul>
 
 @param id_column  ID column of the input table. 
 @param mdl_output_tbl Name of table to store model outputs. 
