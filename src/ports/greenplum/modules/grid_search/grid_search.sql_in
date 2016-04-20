@@ -16,16 +16,16 @@
 
 <div class="toc"><b>Contents</b>
 <ul>
-<li class="level1"><a href="#gs_kmeans_syntax">Syntax</a>
-<li class="level1"><a href="#gs_kmeans_usage">Usage</a>
-<li class="level1"><a href="#gs_kmeans_example">Example</a>
+<li class="level1"><a href="#kmeans_syntax">Syntax</a>
+<li class="level1"><a href="#kmeans_usage">Usage</a>
+<li class="level1"><a href="#kmeans_example">Example</a>
 </ul>
 </div>
 
 @about
 A function that run's MADlib's k-Means function with varying values for k and saves the model outputs into one table. See the <A HREF="http://madlib.incubator.apache.org/docs/v1.8/group__grp__kmeans.html">"MADlib's documentation"</A> for more details. 
 
-@anchor gs_kmeans_syntax
+@anchor kmeans_syntax
 @par Syntax
 The k-means algorithm can be invoked in four ways, depending on the source of the initial set of centroids:<li>Use the kmeans++ centroid seeding method.</li>
 <pre class="syntax">
@@ -64,11 +64,11 @@ performance reasons.])</li>
 
 @returns Name of table in which MADlib's k-Means model outputs for each k are saved.
 
-@anchor gs_kmeanspp_usage
+@anchor kmeanspp_usage
 @usage
 Given an array of k values, the function runs MADlib's k-Means clustering using kmeans++ for centroid seeding. Usage is identical to MADlib's function with the additional parameters of an id column and array of k values. 
 
-@anchor gs_kmeanspp_example
+@anchor kmeanspp_example
 @examp
 @verbatim
 -- create input table
