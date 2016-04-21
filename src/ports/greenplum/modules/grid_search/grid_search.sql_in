@@ -479,11 +479,204 @@ $$
 
 $$ language plpgsql;
 
+/*=============================================================================
+* kmeans random
+=============================================================================*/
+drop function if exists PDLTOOLS_SCHEMA.gs_kmeans_random(
+    text, 
+    text, 
+    int[],
+    text, 
+    text, 
+    text, 
+    text,
+    integer,
+    double precision
+) cascade;
+create or replace function PDLTOOLS_SCHEMA.gs_kmeans_random(
+    id_column text,
+    mdl_output_tbl text,
+    num_clusters_arr int[],
 
-/**
-@addtogroup grp_gs_kmeans_random
+    rel_source text,
+    expr_point text,
+    fn_dist text, -- optional, default: 'squared_dist_norm2'
+    agg_centroid text, -- optional, default: 'avg'
+    max_num_iterations integer, -- optional, default: 20
+    min_frac_reassigned double precision -- optional, default: 0.001
+)
+returns text
+as
+$$
+    import plpy
 
-@brief 
+    #1) Create kmeanspp function call
+    kmeanspp_func = '''
+        madlib.kmeans_random(
+             ''{rel_source}'', 
+             ''{expr_point}'', 
+             {num_clusters}, 
+             ''{fn_dist}'', 
+             ''{agg_centroid}'', 
+             {max_num_iterations}
+         )
+    '''
+    
+    #2) Prepare a table to hold model results
+    sql = '''
+    select 
+        PDLTOOLS_SCHEMA.grid_search_kmeans_all(
+            '{id_column}',
+            '{mdl_output_tbl}',
+            array{num_clusters_arr},
+            '{kmeans_func}',
+            '{rel_source}',
+            '{expr_point}',
+            '{fn_dist}',
+            '{agg_centroid}',
+            {max_num_iterations},
+            {min_frac_reassigned},
+            {seeding_sample_ratio},
+            '{rel_initial_centroids}',
+            '{expr_centroid}',
+            '{initial_centroids}'
+        );
+    '''.format(
+            id_column=id_column,
+            mdl_output_tbl=mdl_output_tbl,
+            num_clusters_arr=num_clusters_arr,
+            kmeans_func=kmeanspp_func,
+            rel_source=rel_source,
+            expr_point=expr_point,
+            fn_dist=fn_dist,
+            agg_centroid=agg_centroid,
+            max_num_iterations=max_num_iterations,
+            min_frac_reassigned=min_frac_reassigned,
+            seeding_sample_ratio='NULL',
+            rel_initial_centroids='NULL',
+            expr_centroid='NULL',
+            initial_centroids='NULL')
+
+    plpy.execute(sql)
+    return 'Model parameters written to {mdl_output_tbl} table'.format(mdl_output_tbl = mdl_output_tbl) 
+$$ language plpythonu;
 
 
-*/
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.gs_kmeans_random(
+    id_column text,
+    mdl_output_tbl text,
+    num_clusters_arr int[],
+    rel_source text,
+    expr_point text,
+    fn_dist text /*+ DEFAULT 'squared_dist_norm2' */,
+    agg_centroid text /*+ DEFAULT 'avg' */,
+    max_num_iterations integer /*+ DEFAULT 20 */
+) returns text AS 
+$$
+    declare 
+        ret text;
+    begin
+        select PDLTOOLS_SCHEMA.gs_kmeans_random(
+                id_column,
+                mdl_output_tbl,
+                num_clusters_arr,
+                rel_source,
+                expr_point,
+                fn_dist,
+                agg_centroid,
+                max_num_iterations,
+                0.001::double precision
+            ) into ret;
+        return ret;
+    end;
+
+$$ language plpgsql;
+
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.gs_kmeans_random(
+    id_column text,
+    mdl_output_tbl text,
+    num_clusters_arr int[],
+    rel_source text,
+    expr_point text,
+    fn_dist text /*+ DEFAULT 'squared_dist_norm2' */,
+    agg_centroid text /*+ DEFAULT 'avg' */
+) returns text AS 
+$$
+    declare 
+        ret text;
+    begin
+        select PDLTOOLS_SCHEMA.gs_kmeans_random(
+                id_column,
+                mdl_output_tbl,
+                num_clusters_arr,
+                rel_source,
+                expr_point,
+                fn_dist,
+                agg_centroid,
+                20::integer,
+                0.001::double precision
+            ) into ret;
+        return ret;
+    end;
+
+$$ language plpgsql;
+
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.gs_kmeans_random(
+    id_column text,
+    mdl_output_tbl text,
+    num_clusters_arr int[],
+    rel_source text,
+    expr_point text,
+    fn_dist text /*+ DEFAULT 'squared_dist_norm2' */
+) returns text AS 
+$$
+    declare 
+        ret text;
+    begin
+        select PDLTOOLS_SCHEMA.gs_kmeans_random(
+                id_column,
+                mdl_output_tbl,
+                num_clusters_arr,
+                rel_source,
+                expr_point,
+                fn_dist,
+                'madlib.avg',
+                20::integer,
+                0.001::double precision
+            ) into ret;
+        return ret;
+    end;
+
+$$ language plpgsql;
+
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.gs_kmeans_random(
+    id_column text,
+    mdl_output_tbl text,
+    num_clusters_arr int[],
+    rel_source text,
+    expr_point text
+) returns text AS 
+$$
+    declare 
+        ret text;
+    begin
+        select PDLTOOLS_SCHEMA.gs_kmeans_random(
+                id_column,
+                mdl_output_tbl,
+                num_clusters_arr,
+                rel_source,
+                expr_point,
+                'madlib.squared_dist_norm2',
+                'madlib.avg',
+                20::integer,
+                0.001::double precision
+            ) into ret;
+        return ret;
+    end;
+
+$$ language plpgsql;
+
+

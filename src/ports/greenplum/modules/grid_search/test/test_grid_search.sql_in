@@ -2,6 +2,7 @@
 -- File: test_grid_search.sql_in
 -- Unit test for grid_search module
 -------------------------------------------------------------------------------------------------
+-- set up test data
 CREATE TABLE public.km_sample(pid int, points double precision[]);
 
 COPY km_sample (pid, points) FROM stdin DELIMITER '|';
@@ -17,9 +18,15 @@ COPY km_sample (pid, points) FROM stdin DELIMITER '|';
 10 | {13.86, 1.35, 2.27, 16, 98, 2.98, 3.15, 0.22, 1.8500, 7.2199, 1.01, 3.55, 1045}
 \.
 
+-- set k values to try 
 \set input_k_values array[1,2,3]
 
 
+/*=================================================================
+*   test grid search for kmeans++ seeding
+==================================================================*/
+
+-- case 1: all parameters given
 drop table if exists test_output;
 
 select assert(
@@ -52,12 +59,105 @@ from (
     from test_output
 ) t1;
 
+-- case 2: all parameters but seeding_sample_ratio, min_frax_reassigned, and max_num_iterations given
+drop table if exists test_output;
+
+select assert(
+    select
+    PDLTOOLS_SCHEMA.gs_kmeanspp(
+        'pid'
+        ,'asong.test_output'
+        ,ARRAY[1,2,3]
+        ,'km_sample'
+        ,'points'
+        ,'madlib.squared_dist_norm2'
+        ),
+    'Model parameters written to test_output table'
+);
+
+-- k values in resulting table should be equal to input_k_values
+select assert(k_values, :input_k_values)
+from (
+    select array_agg(num_clusters order by num_clusters) as k_values
+    from test_output
+) t1;
+
+-- number of rows in resulting table should be equal to length of input k array
+select assert(rowcnt,array_upper(:input_k_values,1))
+from (
+    select count(*) as rowcnt 
+    from test_output
+) t1;
 
 
+/*=================================================================
+*   test grid search for kmeans random seeding
+==================================================================*/
+-- set k values to try 
+\set input_k_values array[3,4,5]
 
+-- case 1: all parameters given
+drop table if exists test_output;
 
+select assert(
+    PDLTOOLS_SCHEMA.gs_kmeans_random(
+        'pid'
+        ,'test_output'
+        ,:input_k_values
+        ,'km_sample'
+        ,'points'
+        ,'madlib.squared_dist_norm2'
+        ,'madlib.avg'
+        ,30
+        ,0.001
+        ,1.0
+    ),
+    'Model parameters written to test_output table'
+);
 
+-- k values in resulting table should be equal to input_k_values
+select assert(k_values, :input_k_values)
+from (
+    select array_agg(num_clusters order by num_clusters) as k_values
+    from test_output
+) t1;
 
+-- number of rows in resulting table should be equal to length of input k array
+select assert(rowcnt,array_upper(:input_k_values,1))
+from (
+    select count(*) as rowcnt 
+    from test_output
+) t1;
+
+-- case 2: all parameters but seeding_sample_ratio, min_frax_reassigned, and max_num_iterations given
+drop table if exists test_output;
+
+select assert(
+    select
+    PDLTOOLS_SCHEMA.gs_kmeans_random(
+        'pid'
+        ,'asong.test_output'
+        ,ARRAY[1,2,3]
+        ,'km_sample'
+        ,'points'
+        ,'madlib.squared_dist_norm2'
+        ),
+    'Model parameters written to test_output table'
+);
+
+-- k values in resulting table should be equal to input_k_values
+select assert(k_values, :input_k_values)
+from (
+    select array_agg(num_clusters order by num_clusters) as k_values
+    from test_output
+) t1;
+
+-- number of rows in resulting table should be equal to length of input k array
+select assert(rowcnt,array_upper(:input_k_values,1))
+from (
+    select count(*) as rowcnt 
+    from test_output
+) t1;
 
 
 
