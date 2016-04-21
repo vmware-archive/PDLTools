@@ -137,7 +137,7 @@ select assert(
     PDLTOOLS_SCHEMA.gs_kmeans_random(
         'pid'
         ,'test_output'
-        ,ARRAY[1,2,3]
+        ,:input_k_values
         ,'km_sample'
         ,'points'
         ,'madlib.squared_dist_norm2'
