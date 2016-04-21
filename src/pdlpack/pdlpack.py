@@ -296,7 +296,7 @@ def _raw_run_sql_query(sql, show_error):
 
   if err:
       if show_error:
-    _error("SQL command failed: \nSQL: %s \n%s" % (sql, err), False)
+          _error("SQL command failed: \nSQL: %s \n%s" % (sql, err), False)
       raise Exception
 
   # Convert the delimited output into a dictionary
