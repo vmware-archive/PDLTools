@@ -130,7 +130,7 @@ class session_manager:
         _error("Command not found: %s" % sqlcmd, True)
 
     runcmd = [sqlcmd, '-a',
-            '-v', 'ON_ERROR_STOP=1',
+              '-v', 'ON_ERROR_STOP=1',
               '-h', con_args['host'].split(':')[0],
               '-d', con_args['database'],
               '-U', con_args['user'],
@@ -202,7 +202,7 @@ def checkPythonVersion():
     # Check python version
     if sys.version_info[:2] < py_min_ver:
         print "ERROR: python version too old (%s). You need %s or greater." \
-            % ('.'.join(str(i) for i in sys.version_info[:3]), '.'.join(str(i) for i in py_min_ver))
+              % ('.'.join(str(i) for i in sys.version_info[:3]), '.'.join(str(i) for i in py_min_ver))
         exit(1)
 
 def init():
@@ -261,60 +261,60 @@ def unescape(string):
         return re.sub(r'\\(?P<char>[/@:\\])', '\g<char>', string)
 
 def _raw_run_sql_query(sql, show_error):
-      """
-      Runs a SQL query on the target platform DB
-      using the default command-line utility.
-      Very limited:
-        - no text output with "new line" characters allowed
-           @param sql query text to execute
-           @param show_error displays the SQL error msg
-      """
-      sqlcmd = 'psql'
-      delimiter = '|'
+        """
+        Runs a SQL query on the target platform DB
+        using the default command-line utility.
+        Very limited:
+          - no text output with "new line" characters allowed
+             @param sql query text to execute
+             @param show_error displays the SQL error msg
+        """
+        sqlcmd = 'psql'
+        delimiter = '|'
 
-      # Test the DB cmd line utility
-      std, err = subprocess.Popen(['which', sqlcmd], stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE).communicate()
+        # Test the DB cmd line utility
+        std, err = subprocess.Popen(['which', sqlcmd], stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE).communicate()
 
-      if std == '':
-          _error("Command not found: %s" % sqlcmd, True)
+        if std == '':
+            _error("Command not found: %s" % sqlcmd, True)
 
-      # Run the query
-      global con_args
-      runcmd = [sqlcmd,
-              '-h', con_args['host'].split(':')[0],
-              '-d', con_args['database'],
-              '-U', con_args['user'],
-              '-F', delimiter,
+        # Run the query
+        global con_args
+        runcmd = [sqlcmd,
+                  '-h', con_args['host'].split(':')[0],
+                  '-d', con_args['database'],
+                  '-U', con_args['user'],
+                  '-F', delimiter,
                   '-x',
-              '-Ac', "set CLIENT_MIN_MESSAGES=error; " + sql]
-      runenv = os.environ
-      runenv["PGPASSWORD"] = con_args['password']
-      runenv["PGOPTIONS"] = '-c search_path=public'
-      std, err = subprocess.Popen(runcmd, env=runenv, stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE).communicate()
+                  '-Ac', "set CLIENT_MIN_MESSAGES=error; " + sql]
+        runenv = os.environ
+        runenv["PGPASSWORD"] = con_args['password']
+        runenv["PGOPTIONS"] = '-c search_path=public'
+        std, err = subprocess.Popen(runcmd, env=runenv, stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE).communicate()
 
-      if err:
-          if show_error:
-            _error("SQL command failed: \nSQL: %s \n%s" % (sql, err), False)
-          raise Exception
+        if err:
+            if show_error:
+                _error("SQL command failed: \nSQL: %s \n%s" % (sql, err), False)
+            raise Exception
 
-      # Convert the delimited output into a dictionary
-      results = []  # list of rows
-      row = {}
-      for line in std.splitlines():
-            if len(line)==0:
-                  if len(row)!=0:
-                        results.append(row)
-                        row={}
-            else:
-                  val = line.split(delimiter,1)
-                  if len(val)==2:
-                        row[val[0]] = val[1]
+        # Convert the delimited output into a dictionary
+        results = []  # list of rows
+        row = {}
+        for line in std.splitlines():
+                if len(line)==0:
+                        if len(row)!=0:
+                                results.append(row)
+                                row={}
+                else:
+                        val = line.split(delimiter,1)
+                        if len(val)==2:
+                                row[val[0]] = val[1]
 
-      if len(row)!=0:
-            results.append(row)
-      return results
+        if len(row)!=0:
+                results.append(row)
+        return results
 
 def _raw_run_sql_file(schema, platform, sugar_schema, madlib_schema, dsdir_mod_py, module,
                    sqlfile, tmpfile, logfile, pre_sql):
@@ -379,7 +379,7 @@ def _raw_run_sql_file(schema, platform, sugar_schema, madlib_schema, dsdir_mod_p
         _error("Command not found: %s" % sqlcmd, True)
 
     runcmd = [sqlcmd, '-a',
-            '-v', 'ON_ERROR_STOP=1',
+              '-v', 'ON_ERROR_STOP=1',
               '-h', con_args['host'].split(':')[0],
               '-d', con_args['database'],
               '-U', con_args['user'],
@@ -610,11 +610,11 @@ def _get_dbver(platform):
         if(platform=='hawq'):
             match = re.search("HAWQ[a-zA-Z\s]*(\d+\.\d+)", versionStr)
         else:
-          match = re.search("Greenplum[a-zA-Z\s]*(\d+\.\d+)", versionStr) 
-          if match and match.group(1) == '4.3':
-              match_details = re.search("Greenplum[a-zA-Z\s]*(\d+\.\d+.\d+)", versionStr)
+            match = re.search("Greenplum[a-zA-Z\s]*(\d+\.\d+)", versionStr) 
+            if match and match.group(1) == '4.3':
+                match_details = re.search("Greenplum[a-zA-Z\s]*(\d+\.\d+.\d+)", versionStr)
                 if __get_rev_num(match_details.group(1)) >= __get_rev_num('4.3.5'):
-                  return '4.3ORCA'
+                    return '4.3ORCA'
         return None if match is None else match.group(1)
     except:
         _error("Failed reading database version", True)
@@ -908,12 +908,12 @@ SELECT
         udo_results[i]['righttype']='NONE'
     udt_results=_raw_run_sql_query("""
 SELECT
-            t.typname AS typname,
+                t.typname AS typname,
                 CASE WHEN t.typtype='b' THEN 'BASE'
-            WHEN t.typtype='d' THEN 'DOMAIN'
-            WHEN t.typtype='e' THEN 'ENUM'
-            WHEN t.typtype='r' THEN 'RANGE'
-            ELSE 'UNRECOGNIZED' END AS kind,
+                WHEN t.typtype='d' THEN 'DOMAIN'
+                WHEN t.typtype='e' THEN 'ENUM'
+                WHEN t.typtype='r' THEN 'RANGE'
+                ELSE 'UNRECOGNIZED' END AS kind,
                 t.oid AS objid
             FROM
                 pg_namespace AS nsp,
@@ -921,7 +921,7 @@ SELECT
             WHERE
                 nsp.nspname = '{schema}'
                 AND t.typnamespace = nsp.oid
-            AND t.typtype NOT IN ('c','p');
+                AND t.typtype NOT IN ('c','p');
           """.format(schema=schema), True)
     for i in range(len(udt_results)):
       if udt_results[i]['kind'] in ['BASE', 'ENUM', 'RANGE']:
@@ -1270,117 +1270,117 @@ def main():
         _info("Command not recognized.", True)
 
 def install_check(schema, platform, sugar_schema, madlib_schema, args):
-      '''
-      Run install checks
-      '''
-      global con_args, portspecs
+        '''
+        Run install checks
+        '''
+        global con_args, portspecs
         session=session_manager(schema,platform,sugar_schema,madlib_schema)
-      # 0) First check if PDL Tools schema exists, if not we'll exit (install-check should only be called post installation of pdltools)
-      pdltools_schema_exists = _raw_run_sql_query("select schema_name from information_schema.schemata where schema_name='{pdltools_schema}';".format(pdltools_schema=schema), False)
-      if(not pdltools_schema_exists):
-          _info("{pdltools_schema} schema does not exist. Please run install-check after installing PDL Tools. Install-check stopped.".format(pdltools_schema=schema), True)
+        # 0) First check if PDL Tools schema exists, if not we'll exit (install-check should only be called post installation of pdltools)
+        pdltools_schema_exists = _raw_run_sql_query("select schema_name from information_schema.schemata where schema_name='{pdltools_schema}';".format(pdltools_schema=schema), False)
+        if(not pdltools_schema_exists):
+            _info("{pdltools_schema} schema does not exist. Please run install-check after installing PDL Tools. Install-check stopped.".format(pdltools_schema=schema), True)
             return
-      # Now check if SUgARlib schema exists.
-      sugar_schema_exists = _raw_run_sql_query("select schema_name from information_schema.schemata where schema_name='{sugarlib_schema}';".format(sugarlib_schema=sugar_schema), False)
-      if(not sugar_schema_exists):
-          _info("{sugarlib_schema} schema does not exist. Please run install-check after installing PDL Tools. Install-check stopped.".format(sugarlib_schema=sugar_schema), True)
+        # Now check if SUgARlib schema exists.
+        sugar_schema_exists = _raw_run_sql_query("select schema_name from information_schema.schemata where schema_name='{sugarlib_schema}';".format(sugarlib_schema=sugar_schema), False)
+        if(not sugar_schema_exists):
+            _info("{sugarlib_schema} schema does not exist. Please run install-check after installing PDL Tools. Install-check stopped.".format(sugarlib_schema=sugar_schema), True)
             return
 
-      # Create install-check user
-      test_user = 'pdltools_installcheck'
-      try:
-          session.exec_query("DROP USER IF EXISTS %s;" % (test_user), False)
-      except:
-          session.exec_query("DROP OWNED BY %s CASCADE;" % (test_user), True)
-          session.exec_query("DROP USER IF EXISTS %s;" % (test_user), True)
-      session.exec_query("CREATE USER %s;" % (test_user), True)
-      session.exec_query("GRANT ALL ON SCHEMA %s TO %s;" %(schema, test_user), True)
-      session.exec_query("GRANT ALL ON SCHEMA %s TO %s;" %(sugar_schema, test_user), True)
+        # Create install-check user
+        test_user = 'pdltools_installcheck'
+        try:
+            session.exec_query("DROP USER IF EXISTS %s;" % (test_user), False)
+        except:
+            session.exec_query("DROP OWNED BY %s CASCADE;" % (test_user), True)
+            session.exec_query("DROP USER IF EXISTS %s;" % (test_user), True)
+        session.exec_query("CREATE USER %s;" % (test_user), True)
+        session.exec_query("GRANT ALL ON SCHEMA %s TO %s;" %(schema, test_user), True)
+        session.exec_query("GRANT ALL ON SCHEMA %s TO %s;" %(sugar_schema, test_user), True)
 
-      # 2) Run test SQLs
-      _info("> Running test scripts for:", verbose)
+        # 2) Run test SQLs
+        _info("> Running test scripts for:", verbose)
 
-      caseset = (set([test.strip() for test in args.testcase.split(',')])
-               if args.testcase != "" else set())
+        caseset = (set([test.strip() for test in args.testcase.split(',')])
+                   if args.testcase != "" else set())
 
-      # Loop through all modules
-      for moduleinfo in portspecs['modules']:
+        # Loop through all modules
+        for moduleinfo in portspecs['modules']:
 
-          # Get module name
-          module = moduleinfo['name']
+            # Get module name
+            module = moduleinfo['name']
 
-          # Skip if doesn't meet specified modules
-          if len(caseset) > 0 and module not in caseset:
-            continue
+            # Skip if doesn't meet specified modules
+            if len(caseset) > 0 and module not in caseset:
+                continue
 
-          _info("> - %s" % module, verbose)
+            _info("> - %s" % module, verbose)
 
-          # Find the Python module dir (platform specific or generic)
-          if os.path.isdir(pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/" + dbver + "/modules/" + module):
-            dsdir_mod_py = pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/" + dbver + "/modules"
-          else:
-            dsdir_mod_py = pdltoolsdir + "/modules"
+            # Find the Python module dir (platform specific or generic)
+            if os.path.isdir(pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/" + dbver + "/modules/" + module):
+                dsdir_mod_py = pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/" + dbver + "/modules"
+            else:
+                dsdir_mod_py = pdltoolsdir + "/modules"
 
-          # Find the SQL module dir (platform specific or generic)
-          if os.path.isdir(pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/modules/" + module):
-            dsdir_mod_sql = pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/modules"
-          else:
-            dsdir_mod_sql = pdltoolsdir + "/modules"
+            # Find the SQL module dir (platform specific or generic)
+            if os.path.isdir(pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/modules/" + module):
+                dsdir_mod_sql = pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/modules"
+            else:
+                dsdir_mod_sql = pdltoolsdir + "/modules"
 
-          # Prepare test schema
-          test_schema = "pdltools_installcheck_%s" % (module)
-          session.exec_query("DROP SCHEMA IF EXISTS %s CASCADE; CREATE SCHEMA %s;"
-                      % (test_schema, test_schema), True)
-          session.exec_query("GRANT ALL ON SCHEMA %s TO %s;"
-                      % (test_schema, test_user), True)
+            # Prepare test schema
+            test_schema = "pdltools_installcheck_%s" % (module)
+            session.exec_query("DROP SCHEMA IF EXISTS %s CASCADE; CREATE SCHEMA %s;"
+                            % (test_schema, test_schema), True)
+            session.exec_query("GRANT ALL ON SCHEMA %s TO %s;"
+                            % (test_schema, test_user), True)
 
-          # Switch to test user and prepare the search_path
-          pre_sql = '-- Switch to test user:\n' \
-                  'SET ROLE %s;\n' \
-                  '-- Set SEARCH_PATH for install-check:\n' \
-                  'SET search_path=%s,%s,%s;\n' \
-                  % (test_user, test_schema, schema, sugar_schema)
+            # Switch to test user and prepare the search_path
+            pre_sql = '-- Switch to test user:\n' \
+                      'SET ROLE %s;\n' \
+                      '-- Set SEARCH_PATH for install-check:\n' \
+                      'SET search_path=%s,%s,%s;\n' \
+                      % (test_user, test_schema, schema, sugar_schema)
             session.set_pre_sql(pre_sql)
 
-          # Loop through all test SQL files for this module
-          sql_files = dsdir_mod_sql + '/' + module + '/test/*.sql_in'
-          for sqlfile in sorted(glob.glob(sql_files), reverse=True):
-            # If there is no problem with the SQL file
-            milliseconds = 0
+            # Loop through all test SQL files for this module
+            sql_files = dsdir_mod_sql + '/' + module + '/test/*.sql_in'
+            for sqlfile in sorted(glob.glob(sql_files), reverse=True):
+                # If there is no problem with the SQL file
+                milliseconds = 0
 
-            # Run the SQL
-            run_start = datetime.datetime.now()
-            retval = session.exec_file(dsdir_mod_py, module,
-                              sqlfile, module+'/test')
-            # Runtime evaluation
-            run_end = datetime.datetime.now()
-            milliseconds = round((run_end - run_start).seconds * 1000 +
-                             (run_end - run_start).microseconds / 1000)
+                # Run the SQL
+                run_start = datetime.datetime.now()
+                retval = session.exec_file(dsdir_mod_py, module,
+                                        sqlfile, module+'/test')
+                # Runtime evaluation
+                run_end = datetime.datetime.now()
+                milliseconds = round((run_end - run_start).seconds * 1000 +
+                                     (run_end - run_start).microseconds / 1000)
 
-            # Check the exit status
-            if retval != 0:
-                result = 'FAIL'
-                keeplogs = True
-            # Since every single statement in the test file gets logged,
-            # an empty log file indicates an empty or a failed test
-            elif os.path.isfile(session.logname()) and \
+                # Check the exit status
+                if retval != 0:
+                    result = 'FAIL'
+                    keeplogs = True
+                # Since every single statement in the test file gets logged,
+                # an empty log file indicates an empty or a failed test
+                elif os.path.isfile(session.logname()) and \
                      os.path.getsize(session.logname()) > 0:
-                result = 'PASS'
-            # Otherwise
-            else:
-                result = 'ERROR'
+                    result = 'PASS'
+                # Otherwise
+                else:
+                    result = 'ERROR'
 
-            # Spit the line
-            print "TEST CASE RESULT|Module: " + module + \
-                "|" + os.path.basename(sqlfile) + "|" + result + \
-                "|Time: %d milliseconds" % (milliseconds)
+                # Spit the line
+                print "TEST CASE RESULT|Module: " + module + \
+                    "|" + os.path.basename(sqlfile) + "|" + result + \
+                    "|Time: %d milliseconds" % (milliseconds)
 
-          # Cleanup test schema for the module
-          session.exec_query("DROP SCHEMA IF EXISTS %s CASCADE;" % (test_schema), True)
+            # Cleanup test schema for the module
+            session.exec_query("DROP SCHEMA IF EXISTS %s CASCADE;" % (test_schema), True)
 
-      # Drop install-check user
-      session.exec_query("DROP OWNED BY %s CASCADE;" % (test_user), True)
-      session.exec_query("DROP USER %s;" % (test_user), True)
+        # Drop install-check user
+        session.exec_query("DROP OWNED BY %s CASCADE;" % (test_user), True)
+        session.exec_query("DROP USER %s;" % (test_user), True)
 
 def _dep_graph(schema,sugar_schema,session):
   # Build dependence graph
@@ -1646,10 +1646,10 @@ def list_lib(schema, platform, sugar_schema):
       print "MODULE("+module+"): "+o
 
 def list_db(schema, sugar_schema):
-      '''
-      List library objects installed in schemas.
-      '''
-      session=session_manager(schema,'',sugar_schema,'')
+        '''
+        List library objects installed in schemas.
+        '''
+        session=session_manager(schema,'',sugar_schema,'')
         _info("Objects in PDL Tools schema:", True)
         _list_schema_objects(schema, session)
         _info("\nObjects in SUgAR library schema:", True)
