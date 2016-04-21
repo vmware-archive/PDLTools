@@ -63,7 +63,6 @@ from (
 drop table if exists test_output;
 
 select assert(
-    select
     PDLTOOLS_SCHEMA.gs_kmeanspp(
         'pid'
         ,'test_output'
@@ -132,7 +131,6 @@ from (
 drop table if exists test_output;
 
 select assert(
-    select
     PDLTOOLS_SCHEMA.gs_kmeans_random(
         'pid'
         ,'test_output'
