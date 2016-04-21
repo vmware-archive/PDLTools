@@ -140,7 +140,10 @@ drop function if exists PDLTOOLS_SCHEMA.grid_search_kmeans_all(
     text, 
     integer,
     double precision,
-    double precision
+    double precision,
+    text,
+    text,
+    text
 ) cascade;
 create or replace function PDLTOOLS_SCHEMA.grid_search_kmeans_all(
     id_column text,
@@ -154,7 +157,10 @@ create or replace function PDLTOOLS_SCHEMA.grid_search_kmeans_all(
     agg_centroid text,
     max_num_iterations integer,
     min_frac_reassigned double precision,
-    seeding_sample_ratio double precision
+    seeding_sample_ratio double precision,
+    rel_initial_centroids text,
+    expr_centroid text,
+    initial_centroids text
 )
 returns void
 as
@@ -228,8 +234,7 @@ $$
             ) scoef, mdl
             where scoef.num_clusters = mdl.num_clusters
         '''.format(
-            kmeans_func = kmeans_func  
-        )
+            kmeans_func = kmeans_func)
 
         sql = sql.format(
             rel_source = rel_source,
@@ -241,7 +246,11 @@ $$
             id_column = id_column,
             max_num_iterations = max_num_iterations,
             min_frac_reassigned = min_frac_reassigned,
-            seeding_sample_ratio = seeding_sample_ratio)
+            seeding_sample_ratio = seeding_sample_ratio,
+            rel_initial_centroids=rel_initial_centroids,
+            expr_centroid=expr_centroid,
+            initial_centroids=initial_centroids
+            )
 
         plpy.execute(sql)
     
