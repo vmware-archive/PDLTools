@@ -66,7 +66,7 @@ select assert(
     select
     PDLTOOLS_SCHEMA.gs_kmeanspp(
         'pid'
-        ,'asong.test_output'
+        ,'test_output'
         ,ARRAY[1,2,3]
         ,'km_sample'
         ,'points'
@@ -136,7 +136,7 @@ select assert(
     select
     PDLTOOLS_SCHEMA.gs_kmeans_random(
         'pid'
-        ,'asong.test_output'
+        ,'test_output'
         ,ARRAY[1,2,3]
         ,'km_sample'
         ,'points'

@@ -218,8 +218,6 @@ PL/Python, PL/pgSQL
 @}
 
 
-
-
 @defgroup grp_algorithms_module Algorithms
 @{
 A collection of machine-learning algorithms.
