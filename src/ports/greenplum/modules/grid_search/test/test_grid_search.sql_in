@@ -3,9 +3,9 @@
 -- Unit test for grid_search module
 -------------------------------------------------------------------------------------------------
 -- set up test data
-CREATE TABLE public.km_sample(pid int, points double precision[]);
+CREATE TEMP TABLE test_grid_search(pid int, points double precision[]);
 
-COPY km_sample (pid, points) FROM stdin DELIMITER '|';
+COPY test_grid_search (pid, points) FROM stdin DELIMITER '|';
 1 | {14.23, 1.71, 2.43, 15.6, 127, 2.8, 3.0600, 0.2800, 2.29, 5.64, 1.04, 3.92, 1065}
 2 | {13.2, 1.78, 2.14, 11.2, 1, 2.65, 2.76, 0.26, 1.28, 4.38, 1.05, 3.49, 1050}
 3 | {13.16, 2.36,  2.67, 18.6, 101, 2.8,  3.24, 0.3, 2.81, 5.6799, 1.03, 3.17, 1185}
@@ -34,7 +34,7 @@ select assert(
         'pid'
         ,'test_output'
         ,:input_k_values
-        ,'km_sample'
+        ,'test_grid_search'
         ,'points'
         ,'madlib.squared_dist_norm2'
         ,'madlib.avg'
@@ -68,7 +68,7 @@ select assert(
         'pid'
         ,'test_output'
         ,ARRAY[1,2,3]
-        ,'km_sample'
+        ,'test_grid_search'
         ,'points'
         ,'madlib.squared_dist_norm2'
         ),
@@ -104,13 +104,12 @@ select assert(
         'pid'
         ,'test_output'
         ,:input_k_values
-        ,'km_sample'
+        ,'test_grid_search'
         ,'points'
         ,'madlib.squared_dist_norm2'
         ,'madlib.avg'
         ,30
         ,0.001
-        ,1.0
     ),
     'Model parameters written to test_output table'
 );
@@ -138,7 +137,7 @@ select assert(
         'pid'
         ,'test_output'
         ,:input_k_values
-        ,'km_sample'
+        ,'test_grid_search'
         ,'points'
         ,'madlib.squared_dist_norm2'
         ),
