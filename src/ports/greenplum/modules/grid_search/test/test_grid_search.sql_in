@@ -46,7 +46,7 @@ select assert(
 );
 
 -- k values in resulting table should be equal to input_k_values
-select assert(k_values, :input_k_values)
+select assert(array_to_string(k_values,','), array_to_string(:input_k_values,','))
 from (
     select array_agg(num_clusters order by num_clusters) as k_values
     from test_output
@@ -145,7 +145,7 @@ select assert(
 );
 
 -- k values in resulting table should be equal to input_k_values
-select assert(k_values, :input_k_values)
+select assert(array_to_string(k_values,','), array_to_string(:input_k_values,','))
 from (
     select array_agg(num_clusters order by num_clusters) as k_values
     from test_output
