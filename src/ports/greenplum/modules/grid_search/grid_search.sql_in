@@ -317,7 +317,10 @@ $$
             '{agg_centroid}',
             {max_num_iterations},
             {min_frac_reassigned},
-            {seeding_sample_ratio}
+            {seeding_sample_ratio},
+            '{rel_initial_centroids}',
+            '{expr_centroid}',
+            '{initial_centroids}'
         );
     '''.format(
             id_column=id_column,
@@ -331,6 +334,9 @@ $$
             max_num_iterations=max_num_iterations,
             min_frac_reassigned=min_frac_reassigned,
             seeding_sample_ratio=seeding_sample_ratio,
+            rel_initial_centroids='NULL',
+            expr_centroid='NULL',
+            initial_centroids='NULL'
         )
 
     plpy.execute(sql)
