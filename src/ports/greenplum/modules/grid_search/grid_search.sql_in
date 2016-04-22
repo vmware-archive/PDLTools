@@ -112,10 +112,7 @@ COPY km_sample (pid, points) FROM stdin DELIMITER '|';
 10 | {13.86, 1.35, 2.27, 16, 98, 2.98, 3.15, 0.22, 1.8500, 7.2199, 1.01, 3.55, 1045}
 \.
 
-/*===========================================================================
-*   run kmeans++ without specifying seeding_sample_ratio
-*============================================================================*/
--- run k-means++ grid search
+-- run kmeans++ using default values for seeding_sample_ratio
 select
     gs_kmeanspp(
         'pid'
@@ -159,11 +156,8 @@ num_iterations    | 2
 simple_silhouette | 0.941390939063272
 
 
-/*===========================================================================
-*   run kmeans++ using without specifying max_num_iterations, 
-*   min_frac_reassigned, seeding_sample_ratio
-*============================================================================*/
--- run k-means++ grid search
+
+-- run kmeans++ using without specifying max_num_iterations, min_frac_reassigned, seeding_sample_ratio
 select
     gs_kmeanspp(
         'pid'
@@ -204,11 +198,7 @@ frac_reassigned   | 0
 num_iterations    | 2
 simple_silhouette | 0.941390939063272
 
-
-/*===========================================================================
-*   run kmeans with random centroid seeding 
-*============================================================================*/
--- run k-means++ grid search
+-- run kmeans with random centroid seeding
 select 
     gs_kmeans_random(
         'pid'
@@ -251,12 +241,7 @@ frac_reassigned   | 0
 num_iterations    | 3
 simple_silhouette | 0.941390939063272
 
-
-/*===========================================================================
-*   run kmeans with random seeding using without specifying fn_dist, 
-*   agg_centroid,max_num_iterations, min_frac_reassigned 
-*============================================================================*/
--- run k-means++ grid search
+-- run kmeans++ using without specifying fn_dist, agg_centroid,max_num_iterations, min_frac_reassigned
 select
     gs_kmeans_random(
         'pid'
@@ -353,7 +338,7 @@ $$
     except:
         plpy.error("The output table already exists")
 
-    #2) Run MADlib K-Means with supplied arguments for each value in the num_clusters_arr array
+    #3) Run MADlib K-Means with supplied arguments for each value in the num_clusters_arr array
 
 
     for num_clusters in num_clusters_arr:
@@ -422,7 +407,7 @@ $$
 $$ language plpythonu;
 
 
---UDF to iterate over K for kmeans++ centroid seeding
+-- 1) UDF to iterate over K
 --PL/Python Driver Function to run K-Means while varying the number of clusters
 drop function if exists PDLTOOLS_SCHEMA.gs_kmeanspp(
     text, 
@@ -502,7 +487,7 @@ $$
     return 'Model parameters written to {mdl_output_tbl} table'.format(mdl_output_tbl = mdl_output_tbl) 
 $$ language plpythonu;
 
-
+-- everything but seeding_sample_ratio given
 CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.gs_kmeanspp(
     id_column text,
     mdl_output_tbl text,
@@ -656,7 +641,6 @@ $$ language plpgsql;
 /*=============================================================================
 * kmeans random
 =============================================================================*/
---UDF to iterate over K for kmeans with random centroid seeding
 drop function if exists PDLTOOLS_SCHEMA.gs_kmeans_random(
     text, 
     text, 
