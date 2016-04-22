@@ -158,10 +158,11 @@ objective_fn      | 84710.6365876808
 frac_reassigned   | 0
 num_iterations    | 2
 simple_silhouette | 0.941390939063272
+@endverbatim
 
-
-
--- run kmeans++ using without specifying max_num_iterations, min_frac_reassigned, seeding_sample_ratio
+Run kmeans++ using without specifying max_num_iterations, min_frac_reassigned, seeding_sample_ratio
+@verbatim
+-- run kmeans++ 
 select
     gs_kmeanspp(
         'pid'
@@ -203,7 +204,8 @@ num_iterations    | 2
 simple_silhouette | 0.941390939063272
 
 @endverbatim
-
+Run kmeans with random centroid seeding
+@verbatim
 -- run kmeans with random centroid seeding
 select 
     gs_kmeans_random(
@@ -246,8 +248,11 @@ objective_fn      | 98593.7722890813
 frac_reassigned   | 0
 num_iterations    | 3
 simple_silhouette | 0.941390939063272
+@endverbatim
 
--- run kmeans++ using without specifying fn_dist, agg_centroid,max_num_iterations, min_frac_reassigned
+Run kmeans with random centroid seeding using without specifying fn_dist, agg_centroid,max_num_iterations, min_frac_reassigned
+@verbatim
+-- run kmeans with random centroid seeding
 select
     gs_kmeans_random(
         'pid'
@@ -285,9 +290,6 @@ objective_fn      | 91298.207926408
 frac_reassigned   | 0
 num_iterations    | 2
 simple_silhouette | 0.877815152206439
-
-
-
 @endverbatim
 
  */
