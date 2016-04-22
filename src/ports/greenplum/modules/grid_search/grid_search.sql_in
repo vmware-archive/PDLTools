@@ -90,11 +90,11 @@ performance reasons.])</li>
 
 @returns Name of table in which MADlib's k-Means model outputs for each k are saved.
 
-@anchor kmeanspp_usage
+@anchor kmeans_usage
 @usage
 Given an array of k values, the function runs MADlib's k-Means clustering using kmeans++ for centroid seeding. Usage is identical to MADlib's function with the additional parameters of an id column and array of k values. 
 
-@anchor kmeanspp_example
+@anchor kmeans_example
 @examp
 Create sample data.
 @verbatim
