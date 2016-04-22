@@ -23,7 +23,7 @@
 </div>
 
 @about
-A function that run's MADlib's k-Means function with varying values for k and saves the model outputs into one table. See the <A HREF="http://madlib.incubator.apache.org/docs/v1.8/group__grp__kmeans.html">"MADlib's documentation"</A> for more details. 
+A function that run's MADlib's k-Means function with varying values for k and saves the model outputs into one table. See the <A HREF="http://madlib.incubator.apache.org/docs/v1.8/group__grp__kmeans.html">MADlib's documentation</A> for more details. 
 
 @anchor kmeans_syntax
 @par Syntax
@@ -92,7 +92,7 @@ performance reasons.])</li>
 
 @anchor kmeans_usage
 @usage
-Given an array of k values, the function runs MADlib's k-Means clustering using kmeans++ for centroid seeding. Usage is identical to MADlib's function with the additional parameters of an id column and array of k values. 
+Given an array of k values, the function runs MADlib's k-Means clustering with random or kmeans++ centroid seeding. Usage is identical to MADlib's function with the additional parameters of an id column and array of k values. 
 
 @anchor kmeans_example
 @examp
