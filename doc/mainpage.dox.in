@@ -212,7 +212,7 @@ A set of grid search functions for various algorithms.
 
 @sa Module source file: grid_search.sql_in
 @prereq
-PL/Python, PL/pgSQL
+PL/Python, PL/pgSQL, MADlib 1.8+
         @defgroup grp_kmeans k-Means
     @}
 @}
