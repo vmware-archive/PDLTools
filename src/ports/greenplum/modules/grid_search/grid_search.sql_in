@@ -96,6 +96,7 @@ Given an array of k values, the function runs MADlib's k-Means clustering using 
 
 @anchor kmeanspp_example
 @examp
+Create sample data.
 @verbatim
 -- create input table
 CREATE TABLE km_sample(pid int, points double precision[]);
@@ -111,8 +112,11 @@ COPY km_sample (pid, points) FROM stdin DELIMITER '|';
 9 | {14.83, 1.64, 2.17, 14, 97, 2.8, 2.98, 0.29, 1.98, 5.2, 1.08, 2.85, 1045}
 10 | {13.86, 1.35, 2.27, 16, 98, 2.98, 3.15, 0.22, 1.8500, 7.2199, 1.01, 3.55, 1045}
 \.
+@endverbatim
 
--- run kmeans++ using default values for seeding_sample_ratio
+Run kmeans++ using without specifying seeding_sample_ratio
+@verbatim
+-- run kmeans++
 select
     gs_kmeanspp(
         'pid'
@@ -197,6 +201,8 @@ objective_fn      | 17884.5257406808
 frac_reassigned   | 0
 num_iterations    | 2
 simple_silhouette | 0.941390939063272
+
+@endverbatim
 
 -- run kmeans with random centroid seeding
 select 
