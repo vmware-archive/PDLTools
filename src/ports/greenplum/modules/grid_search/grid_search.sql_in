@@ -299,10 +299,7 @@ drop function if exists PDLTOOLS_SCHEMA.grid_search_kmeans_all(
     text, 
     integer,
     double precision,
-    double precision,
-    text,
-    text,
-    text
+    double precision
 ) cascade;
 create or replace function PDLTOOLS_SCHEMA.grid_search_kmeans_all(
     id_column text,
@@ -316,10 +313,7 @@ create or replace function PDLTOOLS_SCHEMA.grid_search_kmeans_all(
     agg_centroid text,
     max_num_iterations integer,
     min_frac_reassigned double precision,
-    seeding_sample_ratio double precision,
-    rel_initial_centroids text,
-    expr_centroid text,
-    initial_centroids text
+    seeding_sample_ratio double precision
 )
 returns void
 as
@@ -405,10 +399,7 @@ $$
             id_column = id_column,
             max_num_iterations = max_num_iterations,
             min_frac_reassigned = min_frac_reassigned,
-            seeding_sample_ratio = seeding_sample_ratio,
-            rel_initial_centroids=rel_initial_centroids,
-            expr_centroid=expr_centroid,
-            initial_centroids=initial_centroids
+            seeding_sample_ratio = seeding_sample_ratio
             )
 
         plpy.execute(sql)
@@ -476,10 +467,7 @@ $$
             '{agg_centroid}',
             {max_num_iterations},
             {min_frac_reassigned},
-            {seeding_sample_ratio},
-            '{rel_initial_centroids}',
-            '{expr_centroid}',
-            '{initial_centroids}'
+            {seeding_sample_ratio}
         );
     '''.format(
             id_column=id_column,
@@ -492,10 +480,7 @@ $$
             agg_centroid=agg_centroid,
             max_num_iterations=max_num_iterations,
             min_frac_reassigned=min_frac_reassigned,
-            seeding_sample_ratio=seeding_sample_ratio,
-            rel_initial_centroids='NULL',
-            expr_centroid='NULL',
-            initial_centroids='NULL'
+            seeding_sample_ratio=seeding_sample_ratio
         )
 
     plpy.execute(sql)
@@ -710,10 +695,7 @@ $$
             '{agg_centroid}',
             {max_num_iterations},
             {min_frac_reassigned},
-            {seeding_sample_ratio},
-            '{rel_initial_centroids}',
-            '{expr_centroid}',
-            '{initial_centroids}'
+            {seeding_sample_ratio}
         );
     '''.format(
             id_column=id_column,
@@ -726,10 +708,8 @@ $$
             agg_centroid=agg_centroid,
             max_num_iterations=max_num_iterations,
             min_frac_reassigned=min_frac_reassigned,
-            seeding_sample_ratio='NULL',
-            rel_initial_centroids='NULL',
-            expr_centroid='NULL',
-            initial_centroids='NULL')
+            seeding_sample_ratio='NULL'
+        )
 
     plpy.execute(sql)
     return 'Model parameters written to {mdl_output_tbl} table'.format(mdl_output_tbl = mdl_output_tbl) 
