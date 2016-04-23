@@ -3,11 +3,11 @@
 ###
 modules:
     - name: common
-    - name: uri_utils 
+    - name: uri_utils
       depends: ['common']
-    - name: edit_distance 
+    - name: edit_distance
       depends: ['common']
-    - name: anonymization 
+    - name: anonymization
       depends: ['common']
     - name: sugar
       depends: ['common']
@@ -18,4 +18,6 @@ modules:
     - name: one_vs_rest
       depends: ['common']
     - name: prediction_metrics
+      depends: ['common']
+    - name: generic_utilities
       depends: ['common']

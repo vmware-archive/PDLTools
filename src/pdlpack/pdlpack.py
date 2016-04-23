@@ -190,7 +190,7 @@ class session_manager:
             self.module_re.sub(module,l.rstrip('\n'))))
       self.session_content.append(";\n")
       return 0
-      
+
   def __del__(self):
     if self.name!=None:
       self.rollback()
@@ -496,7 +496,7 @@ def _plr_check(plr_min_ver):
         _error("PL/R version too old: {cur_ver}. You need {min_ver} or greater".format(
                                 cur_ver=plr_cur_ver,
                                 min_ver=plr_min_ver
-                                ), 
+                                ),
                                 False
                 )
         raise Exception
@@ -610,7 +610,7 @@ def _get_dbver(platform):
         if(platform=='hawq'):
             match = re.search("HAWQ[a-zA-Z\s]*(\d+\.\d+)", versionStr)
         else:
-	    match = re.search("Greenplum[a-zA-Z\s]*(\d+\.\d+)", versionStr) 
+	    match = re.search("Greenplum[a-zA-Z\s]*(\d+\.\d+)", versionStr)
 	    if match and match.group(1) == '4.3':
 	        match_details = re.search("Greenplum[a-zA-Z\s]*(\d+\.\d+.\d+)", versionStr)
                 if __get_rev_num(match_details.group(1)) >= __get_rev_num('4.3.5'):
@@ -796,7 +796,7 @@ def _db_clean_create_objects(schema, platform, sugar_schema, madlib_schema,
         # Get the module name
         module = moduleinfo['name']
         _info("> - %s" % module, True)
-        rel_path=_db_install_module(module, platform, session) 
+        rel_path=_db_install_module(module, platform, session)
         if output and rel_path:
           monitor.post_install_printout(rel_path,session)
 
@@ -1130,7 +1130,7 @@ def main():
             + "  clean-install : Clean installation, output which objects\n"
             + "                    belong to which  sub-module"
     )
-    
+
     parser.add_argument(
         '-c', '--conn', metavar='CONNSTR', nargs=1, dest='connstr', default=None,
         help= "Connection string of the following syntax:\n"
@@ -1295,6 +1295,7 @@ def install_check(schema, platform, sugar_schema, madlib_schema, args):
 	    session.exec_query("DROP USER IF EXISTS %s;" % (test_user), True)
 	session.exec_query("CREATE USER %s;" % (test_user), True)
 	session.exec_query("GRANT ALL ON SCHEMA %s TO %s;" %(schema, test_user), True)
+	session.exec_query("GRANT SELECT ON SCHEMA %s TO %s;" %(madlib_schema, test_user), True)
 	session.exec_query("GRANT ALL ON SCHEMA %s TO %s;" %(sugar_schema, test_user), True)
 
 	# 2) Run test SQLs
@@ -1604,7 +1605,7 @@ def _find_lib_objects(schema, platform, sugar_schema):
     for moduleinfo in portspecs['modules']:
       # Get the module name
       module = moduleinfo['name']
-  
+
       # Find the SQL module dir (platform specific or generic)
       if os.path.isdir(pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/modules/" + module):
         dsdir_mod_sql = pdltoolsdir + "/ports/{platform}".format(platform=platform) + "/modules/" + module + "/"
@@ -1690,18 +1691,18 @@ def clean_install(schema, platform, sugar_schema, madlib_schema, output=True, se
             if not _schema_writable(sugar_schema,session):
               _error("SUgAR schema not writable. Aborting installation.", False)
               raise Exception
-    
+
             # Granting Usage on Schemas
             _db_grant_usage(schema, session)
             _db_grant_usage(sugar_schema, session)
-        
+
             # Create pdltools objects
             try:
                 _db_clean_create_objects(schema, platform, sugar_schema, madlib_schema,output,session)
             except:
                 _error("Object creation failed. Aborting installation.", False)
                 raise
-        
+
             _info("PDL Tools %s installed successfully in %s schema." % (rev, schema.upper()), True)
             _info("SUgAR %s installed successfully in %s schema." % (sugar_rev, sugar_schema.upper()), True)
             _info("Installation completed successfully.",True)
@@ -1711,7 +1712,7 @@ def clean_install(schema, platform, sugar_schema, madlib_schema, output=True, se
             _drop_schema(schema, session)
             _drop_schema(sugar_schema, session)
             raise Exception
-    
+
     except:
         _error("PDL Tools installation failed. Installation aborted.", True)
 
@@ -1828,7 +1829,7 @@ def _db_create_objects(schema, platform, sugar_schema, madlib_schema,
     module_status={}
     module_deps={}
     upgrade_issues=0
-    
+
     for moduleinfo in portspecs['modules']:
         # Get the module name
         module = moduleinfo['name']
@@ -1919,9 +1920,9 @@ def _db_create_objects(schema, platform, sugar_schema, madlib_schema,
       _info("[Plan:] Dropping old objects.", True)
       for obj in defunct_objects:
         _safe_drop(obj, session, db_objects, dependence_graph)
-  
+
       _info("[Plan:] Creating objects for modules:", True)
-  
+
       for module in module_status:
         _info("> - %s" % module, True)
         session.exec_query("-- Begin of module installation: "+module, True)
@@ -1931,7 +1932,7 @@ def _db_create_objects(schema, platform, sugar_schema, madlib_schema,
           for object in module_objects[module]:
             _safe_drop(object, session, db_objects, dependence_graph)
           _info("[Plan:] Installing new module objects.", verbose)
-          _db_install_module(module, platform, session) 
+          _db_install_module(module, platform, session)
         else:
           _info("[Plan:] Module already up to date.", verbose)
 
@@ -1967,17 +1968,17 @@ def install(schema, platform, sugar_schema, madlib_schema):
         _info("Schema "+sugar_schema+" exists but schema "+schema+" does not exist.", True)
         _error("Library not properly installed and cannot be upgraded. Use 'reinstall' instead.",False)
         raise Exception
- 
+
       # Get DB version
       dbrev = _get_installed_ver(schema, session)
       dbsugarrev = _get_installed_ver(sugar_schema, session)
       if dbsugarrev == None:
           try:
               rc = _raw_run_sql_query("""
-                         select count(*) AS cnt 
-                         from pg_catalog.pg_proc p, pg_catalog.pg_namespace ns 
-                         where ns.nspname='%s' and 
-                               pronamespace=ns.oid and 
+                         select count(*) AS cnt
+                         from pg_catalog.pg_proc p, pg_catalog.pg_namespace ns
+                         where ns.nspname='%s' and
+                               pronamespace=ns.oid and
                                p.proname='sugar_version';
                         """ % sugar_schema.lower(),
                         False
@@ -2015,11 +2016,11 @@ def install(schema, platform, sugar_schema, madlib_schema):
       if not _schema_writable(sugar_schema, session):
         _error("SUgAR schema not writable. Aborting installation.", False)
         raise Exception
-  
+
       # Granting Usage on Schemas
       _db_grant_usage(schema, session)
       _db_grant_usage(sugar_schema, session)
-      
+
       # Create pdltools objects
       try:
           _db_create_objects(schema, platform, sugar_schema, madlib_schema,
@@ -2030,7 +2031,7 @@ def install(schema, platform, sugar_schema, madlib_schema):
           print e
           _error("Object creation failed. Aborting installation", False)
           raise Exception
-      
+
       _info("PDL Tools %s installed successfully in %s schema." % (rev, schema.upper()), True)
       _info("SUgAR %s installed successfully in %s schema." % (sugar_rev, sugar_schema.upper()), True)
       _info("Installation completed successfully.",True)

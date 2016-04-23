@@ -1,0 +1,102 @@
+-- File: generic_utilities.sql_in
+-- Unit tests for generic utilities module
+
+-------------------------------------------------------------------------------------------------
+
+-- create test tables
+-- test table #1
+CREATE TABLE PDLTOOLS_SCHEMA.multitbl_summary_test1 (
+  col1 float
+ ,col2 float
+ ,col3 float
+);
+INSERT INTO PDLTOOLS_SCHEMA.multitbl_summary_test1 (
+  SELECT random()
+        ,random()
+        ,random()
+  FROM generate_series(1,100)
+);
+
+-- test table #2
+CREATE TABLE PDLTOOLS_SCHEMA.multitbl_summary_test2 (
+  col1 float
+ ,col2 float
+ ,col3 float
+);
+INSERT INTO PDLTOOLS_SCHEMA.multitbl_summary_test2 (
+  SELECT random()
+        ,random()
+        ,random()
+  FROM generate_series(1,100)
+);
+
+-- Create summary table "sum_output"
+DROP TABLE IF EXISTS PDLTOOLS_SCHEMA.sum_output;
+SELECT PDLTOOLS_SCHEMA.multitbl_summary(
+  array[
+    'PDLTOOLS_SCHEMA.multitbl_summary_test1'
+   ,'PDLTOOLS_SCHEMA.multitbl_summary_test2'
+   ,'PDLTOOLS_SCHEMA.multitbl_summary_missing'
+  ]
+ ,'PDLTOOLS_SCHEMA.sum_output'
+ ,TRUE
+ ,TRUE
+ ,NULL
+ ,10
+ ,TRUE
+);
+
+-- test that 2 tables were profiled
+SELECT assert(
+         (
+           SELECT count(distinct table_schema||table_name)
+           FROM PDLTOOLS_SCHEMA.sum_output
+         )::integer,
+         2::integer
+       );
+
+-- test that 6 columns were profiled
+SELECT assert(
+         (
+           SELECT count(distinct table_schema||table_name||target_column)
+           FROM PDLTOOLS_SCHEMA.sum_output
+         )::integer,
+         6::integer
+       );
+
+-- clean up to test again with defaults approach
+DROP TABLE IF EXISTS PDLTOOLS_SCHEMA.sum_output;
+
+-- Create summary table "sum_output" (using defaults)
+DROP TABLE IF EXISTS PDLTOOLS_SCHEMA.sum_output;
+SELECT PDLTOOLS_SCHEMA.multitbl_summary(
+  array[
+    'PDLTOOLS_SCHEMA.multitbl_summary_test1'
+   ,'PDLTOOLS_SCHEMA.multitbl_summary_test2'
+   ,'PDLTOOLS_SCHEMA.multitbl_summary_missing'
+  ]
+ ,'PDLTOOLS_SCHEMA.sum_output'
+);
+
+-- test that 2 tables were profiled
+SELECT assert(
+         (
+           SELECT count(distinct table_schema||table_name)
+           FROM PDLTOOLS_SCHEMA.sum_output
+         )::integer,
+         2::integer
+       );
+
+-- test that 6 columns were profiled
+SELECT assert(
+         (
+           SELECT count(distinct table_schema||table_name||target_column)
+           FROM PDLTOOLS_SCHEMA.sum_output
+         )::integer,
+         6::integer
+       );
+
+-- clean up
+DROP TABLE IF EXISTS PDLTOOLS_SCHEMA.multitbl_summary_test1;
+DROP TABLE IF EXISTS PDLTOOLS_SCHEMA.multitbl_summary_test2;
+DROP TABLE IF EXISTS PDLTOOLS_SCHEMA.sum_output;
