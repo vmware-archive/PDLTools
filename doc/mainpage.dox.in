@@ -201,7 +201,22 @@ the data for building one-vs-rest classifiers.
 PL/Python
 	    @defgroup grp_one_vs_rest one_vs_rest
 	@}
+
+    @defgroup grp_grid_search Grid Search
+    @{
+        @brief A set of grid search functions for various algorithms. 
+
+A set of grid search functions for various algorithms. 
+            
+(Written by [April Song](mailto:asong@pivotal.io), 19 April 2016.)
+
+@sa Module source file: grid_search.sql_in
+@prereq
+PL/Python, PL/pgSQL, MADlib 1.8+
+        @defgroup grp_kmeans k-Means
+    @}
 @}
+
 
 @defgroup grp_algorithms_module Algorithms
 @{
