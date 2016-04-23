@@ -1295,7 +1295,7 @@ def install_check(schema, platform, sugar_schema, madlib_schema, args):
 	    session.exec_query("DROP USER IF EXISTS %s;" % (test_user), True)
 	session.exec_query("CREATE USER %s;" % (test_user), True)
 	session.exec_query("GRANT ALL ON SCHEMA %s TO %s;" %(schema, test_user), True)
-	session.exec_query("GRANT ALL ON SCHEMA %s TO %s;" %(madlib_schema, test_user), True)
+	session.exec_query("GRANT SELECT ON SCHEMA %s TO %s;" %(madlib_schema, test_user), True)
 	session.exec_query("GRANT ALL ON SCHEMA %s TO %s;" %(sugar_schema, test_user), True)
 
 	# 2) Run test SQLs
