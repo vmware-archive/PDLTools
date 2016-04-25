@@ -3,11 +3,11 @@
 ###
 modules:
     - name: common
-    - name: uri_utils 
+    - name: uri_utils
       depends: ['common']
-    - name: edit_distance 
+    - name: edit_distance
       depends: ['common']
-    - name: anonymization 
+    - name: anonymization
       depends: ['common']
     - name: session
       depends: ['common']
@@ -29,6 +29,8 @@ modules:
       depends: ['common']
     - name: grid_search
       depends: ['common']
+    - name: generic_utilities
+      depends: ['common']
 #    - name: plr_placeholder
-#      depends: ['common'] 
+#      depends: ['common']
 #  PL/R package disabled until PL/R will be part of Continuous Integration tool.
