@@ -6,11 +6,12 @@
 
 ### PDL Tools 1.5dev (packaged with SUgAR 1.0) -- Current version
 - Add module one_vs_rest for multi-class classification.
-- Add module grid_search for grid searching functions. 
+- Add module grid_search for grid searching functions.
+- Add module generic_utilities.
 ### PDL Tools 1.5 (packaged with SUgAR 1.0)
 - Modifications in preparation to make PDLTools public. Removing module with pending IP (connected components).
 
-### PDL Tools 1.4 (packaged with SUgAR 1.0) 
+### PDL Tools 1.4 (packaged with SUgAR 1.0)
 - Added module for prediction metrics (regression+binary+multi-class).
 - Added module to balance datasets for classification.
 - Added SUgAR "format_glob" (globbing with user-defined transformation).
