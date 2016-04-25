@@ -27,6 +27,8 @@ modules:
       depends: ['common']
     - name: one_vs_rest
       depends: ['common']
+    - name: grid_search
+      depends: ['common']
 #    - name: plr_placeholder
 #      depends: ['common'] 
 #  PL/R package disabled until PL/R will be part of Continuous Integration tool.

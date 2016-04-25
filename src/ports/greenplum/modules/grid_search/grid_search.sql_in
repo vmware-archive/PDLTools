@@ -1,0 +1,844 @@
+/* ----------------------------------------------------------------------- *//**
+
+@file grid_search.sql_in
+
+@brief A set of grid search functions for various algorithms. 
+
+@author Written by Srivatsan Ramanujam, April Song, Joseph Greubel
+@date 07 Apr 2016
+
+ *//* ----------------------------------------------------------------------- */
+
+ /**
+@addtogroup grp_kmeans
+
+@brief A function for grid search over k-Means.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#kmeans_syntax">Syntax</a>
+<li class="level1"><a href="#kmeans_usage">Usage</a>
+<li class="level1"><a href="#kmeans_example">Example</a>
+</ul>
+</div>
+
+@about
+A function that run's MADlib's k-Means function with varying values for k and saves the model outputs into one table. See the <A HREF="http://madlib.incubator.apache.org/docs/v1.8/group__grp__kmeans.html">MADlib's documentation</A> for more details. 
+
+@anchor kmeans_syntax
+@par Syntax
+The k-means algorithm can be invoked in two ways, depending on the source of the initial set of centroids:<ul>
+
+<li>Use the kmeans random centroid seeding method.<br>
+<pre class="syntax">
+FUNCTION gs_kmeans_random( id_column text,
+                      mdl_output_tbl text,
+                      num_clusters_arr int[],
+                      rel_source text,
+                      expr_point text,
+                      fn_dist text,
+                      agg_centroid text,
+                      max_num_iterations integer,
+                      min_frac_reassigned double precision
+                    )
+returns text;
+</pre>
+</li>
+
+<li>Use the kmeans++ centroid seeding method.<br>
+<pre class="syntax">
+FUNCTION gs_kmeanspp( id_column text,
+                      mdl_output_tbl text,
+                      num_clusters_arr int[],
+                      rel_source text,
+                      expr_point text,
+                      fn_dist text,
+                      agg_centroid text,
+                      max_num_iterations integer,
+                      min_frac_reassigned double precision,
+                      seeding_sample_ratio double precision
+                    )
+returns text;
+</pre>
+</li>
+
+
+</ul>
+
+@param id_column  ID column of the input table. 
+@param mdl_output_tbl Name of table to store model outputs. 
+@param num_clusters_arr Array of k values for which to run clustering. 
+@param rel_source The name of the table containing the input data points.<br>Data points and predefined centroids (if used) are expected to be stored row-wise, in a column of type <tt>"SVEC"</tt> (or any type convertible to <tt>"SVEC"</tt>, like <tt>FLOAT[]</tt> or <tt>INTEGER[]</tt>). Data points with non-finite values (NULL, NaN, infinity) in any component are skipped during analysis.
+@param expr_point The name of the column with point coordinates.
+@param fn_dist(optional)    The name of the function to use to calculate the distance from a data point to a centroid. Default: 'squared_dist_norm2'. <br><br>The following distance functions can be used (computation of barycenter/mean in parentheses):
+<ul>
+<li><b>dist_norm1</b>:  1-norm/Manhattan (element-wise median
+[Note that MADlib does not provide a median aggregate function for support and
+performance reasons.])</li>
+<li><b>dist_norm2</b>: 2-norm/Euclidean (element-wise mean)</li>
+<li><b>squared_dist_norm2</b>: squared Euclidean distance (element-wise mean)</li>
+<li><b>dist_angle</b>: angle (element-wise mean of normalized points)</li>
+<li><b>dist_tanimoto</b>: tanimoto (element-wise mean of normalized points)</li>
+<li><b>user defined function</b> with signature <tt>DOUBLE PRECISION[] x, DOUBLE PRECISION[] y -> DOUBLE PRECISION</tt></li></ul><br>See the <a href="http://madlib.incubator.apache.org/docs/v1.8/group__grp__kmeans.html">MADlib's documentation</a> for more details. 
+@param agg_centroid (optional)  The name of the aggregate function used to determine centroids. Default: 'avg'.<br><br>The following aggregate functions can be used:<ul>
+ <li><b>avg</b>: average (Default)</li>
+ <li><b>normalized_avg</b>: normalized average</li></ul>
+@param max_num_iterations (optional)  The maximum number of iterations to perform. Default: 20.
+@param min_frac_reassigned (optional)  The minimum fraction of centroids reassigned to continue iterating. When fewer than this fraction of centroids are reassigned in an iteration, the calculation completes. Default: 0.001.
+@param seeding_sample_ratio (optional)  The proportion of subsample of original dataset to use for kmeans++ centroid seeding method. Kmeans++ scans through the data sequentially 'k' times and can be too slow for big datasets. When 'seeding_sample_ratio' is greater than 0 (thresholded to be maximum value of 1.0), the seeding is run on an uniform random subsample of the data. Note: the final K-means algorithm is run on the complete dataset. This parameter only builds a subsample for the seeding and is only available for kmeans++. Default: 1.0.  
+
+
+@returns Name of table in which MADlib's k-Means model outputs for each k are saved.
+
+@anchor kmeans_usage
+@usage
+Given an array of k values, the function runs MADlib's k-Means clustering with random or kmeans++ centroid seeding. Usage is identical to MADlib's function with the additional parameters of an id column and array of k values. 
+
+@anchor kmeans_example
+@examp
+Create sample data.
+@verbatim
+-- create input table
+CREATE TABLE km_sample(pid int, points double precision[]);
+COPY km_sample (pid, points) FROM stdin DELIMITER '|';
+1 | {14.23, 1.71, 2.43, 15.6, 127, 2.8, 3.0600, 0.2800, 2.29, 5.64, 1.04, 3.92, 1065}
+2 | {13.2, 1.78, 2.14, 11.2, 1, 2.65, 2.76, 0.26, 1.28, 4.38, 1.05, 3.49, 1050}
+3 | {13.16, 2.36,  2.67, 18.6, 101, 2.8,  3.24, 0.3, 2.81, 5.6799, 1.03, 3.17, 1185}
+4 | {14.37, 1.95, 2.5, 16.8, 113, 3.85, 3.49, 0.24, 2.18, 7.8, 0.86, 3.45, 1480}
+5 | {13.24, 2.59, 2.87, 21, 118, 2.8, 2.69, 0.39, 1.82, 4.32, 1.04, 2.93, 735}
+6 | {14.2, 1.76, 2.45, 15.2, 112, 3.27, 3.39, 0.34, 1.97, 6.75, 1.05, 2.85, 1450}
+7 | {14.39, 1.87, 2.45, 14.6, 96, 2.5, 2.52, 0.3, 1.98, 5.25, 1.02, 3.58, 1290}
+8 | {14.06, 2.15, 2.61, 17.6, 121, 2.6, 2.51, 0.31, 1.25, 5.05, 1.06, 3.58, 1295}
+9 | {14.83, 1.64, 2.17, 14, 97, 2.8, 2.98, 0.29, 1.98, 5.2, 1.08, 2.85, 1045}
+10 | {13.86, 1.35, 2.27, 16, 98, 2.98, 3.15, 0.22, 1.8500, 7.2199, 1.01, 3.55, 1045}
+\.
+@endverbatim
+
+Run kmeans++ using without specifying seeding_sample_ratio
+@verbatim
+-- run kmeans++
+select
+    gs_kmeanspp(
+        'pid'
+        ,'kmeans_output'
+        ,ARRAY[2,3,4]
+        ,'km_sample'
+        ,'points'
+        ,'madlib.squared_dist_norm2'
+        ,'madlib.avg'
+        ,20
+        ,0.001
+        );
+
+                     gs_kmeanspp                     
+-----------------------------------------------------
+ Model parameters written to asong.kmeans_output table
+(1 row)
+
+-- view model results
+select * from kmeans_output order by simple_silhouette;
+-[ RECORD 1 ]-----+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+num_clusters      | 2
+centroids         | {{14.036,2.018,2.536,16.56,108.6,3.004,3.03,0.298,2.038,6.10598,1.004,3.326,1340},{13.872,1.814,2.376,15.56,88.2,2.806,2.928,0.288,1.844,5.35198,1.044,3.702,988}}
+objective_fn      | 151188.184071616
+frac_reassigned   | 0
+num_iterations    | 2
+simple_silhouette | 0.868171470276621
+-[ RECORD 2 ]-----+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+num_clusters      | 3
+centroids         | {{14.285,1.855,2.475,16,112.5,3.56,3.44,0.29,2.075,7.275,0.955,3.15,1465},{13.872,1.814,2.376,15.56,88.2,2.806,2.928,0.288,1.844,5.35198,1.044,3.702,988},{13.87,2.12666666666667,2.57666666666667,16.9333333333333,106,2.63333333333333,2.75666666666667,0.303333333333333,2.01333333333333,5.32663333333333,1.03666666666667,3.44333333333333,1256.66666666667}}
+objective_fn      | 99046.5355890814
+frac_reassigned   | 0
+num_iterations    | 2
+simple_silhouette | 0.914699786660885
+-[ RECORD 3 ]-----+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+num_clusters      | 4
+centroids         | {{14.04,1.8225,2.435,16.65,110,2.845,2.97,0.295,1.985,5.594975,1.0425,3.755,972.5},{14.285,1.855,2.475,16,112.5,3.56,3.44,0.29,2.075,7.275,0.955,3.15,1465},{13.87,2.12666666666667,2.57666666666667,16.9333333333333,106,2.63333333333333,2.75666666666667,0.303333333333333,2.01333333333333,5.32663333333333,1.03666666666667,3.44333333333333,1256.66666666667},{13.2,1.78,2.14,11.2,1,2.65,2.76,0.26,1.28,4.38,1.05,3.49,1050}}
+objective_fn      | 84710.6365876808
+frac_reassigned   | 0
+num_iterations    | 2
+simple_silhouette | 0.941390939063272
+@endverbatim
+
+Run kmeans++ using without specifying max_num_iterations, min_frac_reassigned, seeding_sample_ratio
+@verbatim
+-- run kmeans++ 
+select
+    gs_kmeanspp(
+        'pid'
+        ,'kmeans_output2'
+        ,ARRAY[2,3,4]
+        ,'km_sample'
+        ,'points'
+        ,'madlib.squared_dist_norm2'
+        ,'madlib.avg'
+        );
+
+                     gs_kmeanspp                     
+-----------------------------------------------------
+ Model parameters written to kmeans_output2 table
+(1 row)
+
+-- view model results
+select * from kmeans_output2 order by simple_silhouette;
+-[ RECORD 1 ]-----+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+num_clusters      | 3
+centroids         | {{14.255,1.9325,2.5025,16.05,110.5,3.055,2.9775,0.2975,1.845,6.2125,0.9975,3.365,1378.75},{13.24,2.59,2.87,21,118,2.8,2.69,0.39,1.82,4.32,1.04,2.93,735},{13.856,1.768,2.336,15.08,84.8,2.806,3.038,0.27,2.042,5.62396,1.042,3.75,1078}}
+objective_fn      | 54572.469119612
+frac_reassigned   | 0
+num_iterations    | 4
+simple_silhouette | 0.797509804656949
+-[ RECORD 2 ]-----+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+num_clusters      | 2
+centroids         | {{14.255,1.9325,2.5025,16.05,110.5,3.055,2.9775,0.2975,1.845,6.2125,0.9975,3.365,1378.75},{13.7533333333333,1.905,2.425,16.0666666666667,90.3333333333333,2.805,2.98,0.29,2.005,5.40663333333333,1.04166666666667,3.61333333333333,1020.83333333333}}
+objective_fn      | 153564.289316013
+frac_reassigned   | 0
+num_iterations    | 2
+simple_silhouette | 0.872084325515476
+-[ RECORD 3 ]-----+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+num_clusters      | 4
+centroids         | {{14.285,1.855,2.475,16,112.5,3.56,3.44,0.29,2.075,7.275,0.955,3.15,1465},{13.24,2.59,2.87,21,118,2.8,2.69,0.39,1.82,4.32,1.04,2.93,735},{14.03,1.62,2.2525,14.2,80.75,2.8075,2.9875,0.2625,1.85,5.609975,1.045,3.895,1051.25},{13.87,2.12666666666667,2.57666666666667,16.9333333333333,106,2.63333333333333,2.75666666666667,0.303333333333333,2.01333333333333,5.32663333333333,1.03666666666667,3.44333333333333,1256.66666666667}}
+objective_fn      | 17884.5257406808
+frac_reassigned   | 0
+num_iterations    | 2
+simple_silhouette | 0.941390939063272
+
+@endverbatim
+Run kmeans with random centroid seeding
+@verbatim
+-- run kmeans with random centroid seeding
+select 
+    gs_kmeans_random(
+        'pid'
+        ,'kmeans_output3'
+        ,ARRAY[2,3,4]
+        ,'km_sample'
+        ,'points'
+        ,'madlib.squared_dist_norm2'
+        ,'madlib.avg'
+        ,30
+        ,0.001
+    );
+
+                     gs_kmeans_random                     
+-----------------------------------------------------
+ Model parameters written to kmeans_output3 table
+(1 row)
+
+-- view model results
+select * from kmeans_output3 order by simple_silhouette;
+-[ RECORD 1 ]-----+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+num_clusters      | 2
+centroids         | {{13.872,1.814,2.376,15.56,88.2,2.806,2.928,0.288,1.844,5.35198,1.044,3.702,988},{14.036,2.018,2.536,16.56,108.6,3.004,3.03,0.298,2.038,6.10598,1.004,3.326,1340}}
+objective_fn      | 151188.184071616
+frac_reassigned   | 0
+num_iterations    | 2
+simple_silhouette | 0.861734476983939
+-[ RECORD 2 ]-----+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+num_clusters      | 3
+centroids         | {{14.04,1.8225,2.435,16.65,110,2.845,2.97,0.295,1.985,5.594975,1.0425,3.755,972.5},{13.2,1.78,2.14,11.2,1,2.65,2.76,0.26,1.28,4.38,1.05,3.49,1050},{14.036,2.018,2.536,16.56,108.6,3.004,3.03,0.298,2.038,6.10598,1.004,3.326,1340}}
+objective_fn      | 136852.285070215
+frac_reassigned   | 0
+num_iterations    | 2
+simple_silhouette | 0.914699786660885
+-[ RECORD 3 ]-----+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+num_clusters      | 4
+centroids         | {{13.87,2.12666666666667,2.57666666666667,16.9333333333333,106,2.63333333333333,2.75666666666667,0.303333333333333,2.01333333333333,5.32663333333333,1.03666666666667,3.44333333333333,1256.66666666667},{13.872,1.814,2.376,15.56,88.2,2.806,2.928,0.288,1.844,5.35198,1.044,3.702,988},{14.37,1.95,2.5,16.8,113,3.85,3.49,0.24,2.18,7.8,0.86,3.45,1480},{14.2,1.76,2.45,15.2,112,3.27,3.39,0.34,1.97,6.75,1.05,2.85,1450}}
+objective_fn      | 98593.7722890813
+frac_reassigned   | 0
+num_iterations    | 3
+simple_silhouette | 0.941390939063272
+@endverbatim
+
+Run kmeans with random centroid seeding using without specifying fn_dist, agg_centroid,max_num_iterations, min_frac_reassigned
+@verbatim
+-- run kmeans with random centroid seeding
+select
+    gs_kmeans_random(
+        'pid'
+        ,'kmeans_output4'
+        ,ARRAY[2,3,4]
+        ,'km_sample'
+        ,'points'
+    );
+
+                     gs_kmeans_random                     
+-----------------------------------------------------
+ Model parameters written to kmeans_output4 table
+(1 row)
+
+-- view model results
+select * from kmeans_output4 order by simple_silhouette;
+-[ RECORD 1 ]-----+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+num_clusters      | 3
+centroids         | {{13.87,2.12666666666667,2.57666666666667,16.9333333333333,106,2.63333333333333,2.75666666666667,0.303333333333333,2.01333333333333,5.32663333333333,1.03666666666667,3.44333333333333,1256.66666666667},{13.872,1.814,2.376,15.56,88.2,2.806,2.928,0.288,1.844,5.35198,1.044,3.702,988},{14.285,1.855,2.475,16,112.5,3.56,3.44,0.29,2.075,7.275,0.955,3.15,1465}}
+objective_fn      | 99046.5355890813
+frac_reassigned   | 0
+num_iterations    | 4
+simple_silhouette | 0.797509804656949
+-[ RECORD 2 ]-----+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+num_clusters      | 2
+centroids         | {{14.255,1.9325,2.5025,16.05,110.5,3.055,2.9775,0.2975,1.845,6.2125,0.9975,3.365,1378.75},{13.7533333333333,1.905,2.425,16.0666666666667,90.3333333333333,2.805,2.98,0.29,2.005,5.40663333333333,1.04166666666667,3.61333333333333,1020.83333333333}}
+objective_fn      | 153564.289316013
+frac_reassigned   | 0
+num_iterations    | 2
+simple_silhouette | 0.868171470276621
+-[ RECORD 3 ]-----+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+num_clusters      | 4
+centroids         | {{13.16,2.36,2.67,18.6,101,2.8,3.24,0.3,2.81,5.6799,1.03,3.17,1185},{14.285,1.855,2.475,16,112.5,3.56,3.44,0.29,2.075,7.275,0.955,3.15,1465},{14.225,2.01,2.53,16.1,108.5,2.55,2.515,0.305,1.615,5.15,1.04,3.58,1292.5},{13.872,1.814,2.376,15.56,88.2,2.806,2.928,0.288,1.844,5.35198,1.044,3.702,988}}
+objective_fn      | 91298.207926408
+frac_reassigned   | 0
+num_iterations    | 2
+simple_silhouette | 0.877815152206439
+@endverbatim
+
+ */
+
+ ------------------------------------------------------------------------
+ -- base kmeans function
+drop function if exists PDLTOOLS_SCHEMA.grid_search_kmeans_all(
+    text, 
+    text, 
+    int[],
+    text, 
+    text, 
+    text, 
+    text,
+    text, 
+    integer,
+    double precision,
+    double precision
+) cascade;
+create or replace function PDLTOOLS_SCHEMA.grid_search_kmeans_all(
+    id_column text,
+    mdl_output_tbl text,
+    num_clusters_arr int[],
+    kmeans_func text,
+
+    rel_source text,
+    expr_point text,
+    fn_dist text,
+    agg_centroid text,
+    max_num_iterations integer,
+    min_frac_reassigned double precision,
+    seeding_sample_ratio double precision
+)
+returns void
+as
+$$
+    import plpy
+    
+    #1) Prepare a table to hold model results
+    try:
+        sql = '''
+        --Prepare results table
+        create table {mdl_output_tbl} 
+        (
+            num_clusters int,
+            centroids double precision[],
+            objective_fn double precision,
+            frac_reassigned double precision,
+            num_iterations int,
+            simple_silhouette double precision
+        ) distributed randomly;
+        '''.format(mdl_output_tbl = mdl_output_tbl)
+        results = plpy.execute(sql)
+    except:
+        plpy.error("The output table already exists")
+
+    #3) Run MADlib K-Means with supplied arguments for each value in the num_clusters_arr array
+
+
+    for num_clusters in num_clusters_arr:
+        sql = '''
+            insert into {{mdl_output_tbl}}
+            with mdl
+            as
+            (
+                select 
+                    {{num_clusters}} as num_clusters,
+                       *
+                from 
+                    {kmeans_func}
+            )
+            select 
+                mdl.*,
+                scoef.simple_silhouette
+            from
+            (
+                select 
+                    num_clusters,
+                    --Refer: http://en.wikipedia.org/wiki/Silhouette_(clustering)
+                    avg(
+                        CASE  WHEN distances[2] = 0 THEN 0
+                          ELSE (distances[2] - distances[1]) / distances[2]
+                        END
+                    ) as simple_silhouette
+                from
+                (
+                    select 
+                        ds.{{id_column}}, 
+                        mdl.num_clusters,
+                        ( 
+                            madlib.closest_columns(
+                                 mdl.centroids, 
+                                 ds.{{expr_point}}, 
+                                 2,
+                                 '{{fn_dist}}'
+                            )
+                        ).distances
+                    from 
+                        {{rel_source}} ds, mdl
+                )q
+                group by 
+                    num_clusters
+            ) scoef, mdl
+            where scoef.num_clusters = mdl.num_clusters
+        '''.format(
+            kmeans_func = kmeans_func)
+
+        sql = sql.format(
+            rel_source = rel_source,
+            expr_point = expr_point,
+            num_clusters = num_clusters,
+            fn_dist = fn_dist,
+            agg_centroid = agg_centroid,
+            mdl_output_tbl = mdl_output_tbl,
+            id_column = id_column,
+            max_num_iterations = max_num_iterations,
+            min_frac_reassigned = min_frac_reassigned,
+            seeding_sample_ratio = seeding_sample_ratio
+            )
+
+        plpy.execute(sql)
+    
+$$ language plpythonu;
+
+
+-- 1) UDF to iterate over K
+--PL/Python Driver Function to run K-Means while varying the number of clusters
+drop function if exists PDLTOOLS_SCHEMA.gs_kmeanspp(
+    text, 
+    text, 
+    int[],
+    text, 
+    text, 
+    text, 
+    text,
+    integer,
+    double precision,
+    double precision
+) cascade;
+create or replace function PDLTOOLS_SCHEMA.gs_kmeanspp(
+    id_column text,
+    mdl_output_tbl text,
+    num_clusters_arr int[],
+
+    rel_source text,
+    expr_point text,
+    fn_dist text, -- optional, default: 'squared_dist_norm2'
+    agg_centroid text, -- optional, default: 'avg'
+    max_num_iterations integer, -- optional, default: 20
+    min_frac_reassigned double precision, -- optional, default: 0.001
+    seeding_sample_ratio double precision -- optional, default: 1.0
+)
+returns text
+as
+$$
+    import plpy
+
+    #1) Create kmeanspp function call
+    kmeanspp_func = '''
+        madlib.kmeanspp(
+             ''{rel_source}'', 
+             ''{expr_point}'', 
+             {num_clusters}, 
+             ''{fn_dist}'', 
+             ''{agg_centroid}'', 
+             {max_num_iterations}, 
+             {min_frac_reassigned},
+             {seeding_sample_ratio}
+         )
+    '''
+    
+    #2) Prepare a table to hold model results
+    sql = '''
+    select 
+        PDLTOOLS_SCHEMA.grid_search_kmeans_all(
+            '{id_column}',
+            '{mdl_output_tbl}',
+            array{num_clusters_arr},
+            '{kmeans_func}',
+            '{rel_source}',
+            '{expr_point}',
+            '{fn_dist}',
+            '{agg_centroid}',
+            {max_num_iterations},
+            {min_frac_reassigned},
+            {seeding_sample_ratio}
+        );
+    '''.format(
+            id_column=id_column,
+            mdl_output_tbl=mdl_output_tbl,
+            num_clusters_arr=num_clusters_arr,
+            kmeans_func=kmeanspp_func,
+            rel_source=rel_source,
+            expr_point=expr_point,
+            fn_dist=fn_dist,
+            agg_centroid=agg_centroid,
+            max_num_iterations=max_num_iterations,
+            min_frac_reassigned=min_frac_reassigned,
+            seeding_sample_ratio=seeding_sample_ratio
+        )
+
+    plpy.execute(sql)
+    return 'Model parameters written to {mdl_output_tbl} table'.format(mdl_output_tbl = mdl_output_tbl) 
+$$ language plpythonu;
+
+-- everything but seeding_sample_ratio given
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.gs_kmeanspp(
+    id_column text,
+    mdl_output_tbl text,
+    num_clusters_arr int[],
+    rel_source text,
+    expr_point text,
+    fn_dist text /*+ DEFAULT 'squared_dist_norm2' */,
+    agg_centroid text /*+ DEFAULT 'avg' */,
+    max_num_iterations integer /*+ DEFAULT 20 */,
+    min_frac_reassigned double precision /*+ DEFAULT 0.001 */
+) returns text AS 
+$$
+    declare 
+        ret text;
+    begin
+        select PDLTOOLS_SCHEMA.gs_kmeanspp(
+                id_column,
+                mdl_output_tbl,
+                num_clusters_arr,
+                rel_source,
+                expr_point,
+                fn_dist,
+                agg_centroid,
+                max_num_iterations,
+                min_frac_reassigned,
+                1.0::double precision
+            ) into ret;
+        return ret;
+    end;
+
+$$ language plpgsql;
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.gs_kmeanspp(
+    id_column text,
+    mdl_output_tbl text,
+    num_clusters_arr int[],
+    rel_source text,
+    expr_point text,
+    fn_dist text /*+ DEFAULT 'squared_dist_norm2' */,
+    agg_centroid text /*+ DEFAULT 'avg' */,
+    max_num_iterations integer /*+ DEFAULT 20 */
+) returns text AS 
+$$
+    declare 
+        ret text;
+    begin
+        select PDLTOOLS_SCHEMA.gs_kmeanspp(
+                id_column,
+                mdl_output_tbl,
+                num_clusters_arr,
+                rel_source,
+                expr_point,
+                fn_dist,
+                agg_centroid,
+                max_num_iterations,
+                0.001::double precision,
+                1.0::double precision
+            ) into ret;
+        return ret;
+    end;
+
+$$ language plpgsql;
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.gs_kmeanspp(
+    id_column text,
+    mdl_output_tbl text,
+    num_clusters_arr int[],
+    rel_source text,
+    expr_point text,
+    fn_dist text /*+ DEFAULT 'squared_dist_norm2' */,
+    agg_centroid text /*+ DEFAULT 'avg' */
+) returns text AS 
+$$
+    declare 
+        ret text;
+    begin
+        select PDLTOOLS_SCHEMA.gs_kmeanspp(
+                id_column,
+                mdl_output_tbl,
+                num_clusters_arr,
+                rel_source,
+                expr_point,
+                fn_dist,
+                agg_centroid,
+                20::integer,
+                0.001::double precision,
+                1.0::double precision
+            ) into ret;
+        return ret;
+    end;
+
+$$ language plpgsql;
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.gs_kmeanspp(
+    id_column text,
+    mdl_output_tbl text,
+    num_clusters_arr int[],
+    rel_source text,
+    expr_point text,
+    fn_dist text /*+ DEFAULT 'squared_dist_norm2' */
+) returns text AS 
+$$
+    declare 
+        ret text;
+    begin
+        select PDLTOOLS_SCHEMA.gs_kmeanspp(
+                id_column,
+                mdl_output_tbl,
+                num_clusters_arr,
+                rel_source,
+                expr_point,
+                fn_dist,
+                'madlib.avg',
+                20::integer,
+                0.001::double precision,
+                1.0::double precision
+            ) into ret;
+        return ret;
+    end;
+
+$$ language plpgsql;
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.gs_kmeanspp(
+    id_column text,
+    mdl_output_tbl text,
+    num_clusters_arr int[],
+    rel_source text,
+    expr_point text
+) returns text AS 
+$$
+    declare 
+        ret text;
+    begin
+        select PDLTOOLS_SCHEMA.gs_kmeanspp(
+                id_column,
+                mdl_output_tbl,
+                num_clusters_arr,
+                rel_source,
+                expr_point,
+                'madlib.squared_dist_norm2',
+                'madlib.avg',
+                20::integer,
+                0.001::double precision,
+                1.0::double precision
+            ) into ret;
+        return ret;
+    end;
+
+$$ language plpgsql;
+
+/*=============================================================================
+* kmeans random
+=============================================================================*/
+drop function if exists PDLTOOLS_SCHEMA.gs_kmeans_random(
+    text, 
+    text, 
+    int[],
+    text, 
+    text, 
+    text, 
+    text,
+    integer,
+    double precision
+) cascade;
+create or replace function PDLTOOLS_SCHEMA.gs_kmeans_random(
+    id_column text,
+    mdl_output_tbl text,
+    num_clusters_arr int[],
+
+    rel_source text,
+    expr_point text,
+    fn_dist text, -- optional, default: 'squared_dist_norm2'
+    agg_centroid text, -- optional, default: 'avg'
+    max_num_iterations integer, -- optional, default: 20
+    min_frac_reassigned double precision -- optional, default: 0.001
+)
+returns text
+as
+$$
+    import plpy
+
+    #1) Create kmeanspp function call
+    kmeanspp_func = '''
+        madlib.kmeans_random(
+             ''{rel_source}'', 
+             ''{expr_point}'', 
+             {num_clusters}, 
+             ''{fn_dist}'', 
+             ''{agg_centroid}'', 
+             {max_num_iterations}
+         )
+    '''
+    
+    #2) Prepare a table to hold model results
+    sql = '''
+    select 
+        PDLTOOLS_SCHEMA.grid_search_kmeans_all(
+            '{id_column}',
+            '{mdl_output_tbl}',
+            array{num_clusters_arr},
+            '{kmeans_func}',
+            '{rel_source}',
+            '{expr_point}',
+            '{fn_dist}',
+            '{agg_centroid}',
+            {max_num_iterations},
+            {min_frac_reassigned},
+            {seeding_sample_ratio}
+        );
+    '''.format(
+            id_column=id_column,
+            mdl_output_tbl=mdl_output_tbl,
+            num_clusters_arr=num_clusters_arr,
+            kmeans_func=kmeanspp_func,
+            rel_source=rel_source,
+            expr_point=expr_point,
+            fn_dist=fn_dist,
+            agg_centroid=agg_centroid,
+            max_num_iterations=max_num_iterations,
+            min_frac_reassigned=min_frac_reassigned,
+            seeding_sample_ratio='NULL'
+        )
+
+    plpy.execute(sql)
+    return 'Model parameters written to {mdl_output_tbl} table'.format(mdl_output_tbl = mdl_output_tbl) 
+$$ language plpythonu;
+
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.gs_kmeans_random(
+    id_column text,
+    mdl_output_tbl text,
+    num_clusters_arr int[],
+    rel_source text,
+    expr_point text,
+    fn_dist text /*+ DEFAULT 'squared_dist_norm2' */,
+    agg_centroid text /*+ DEFAULT 'avg' */,
+    max_num_iterations integer /*+ DEFAULT 20 */
+) returns text AS 
+$$
+    declare 
+        ret text;
+    begin
+        select PDLTOOLS_SCHEMA.gs_kmeans_random(
+                id_column,
+                mdl_output_tbl,
+                num_clusters_arr,
+                rel_source,
+                expr_point,
+                fn_dist,
+                agg_centroid,
+                max_num_iterations,
+                0.001::double precision
+            ) into ret;
+        return ret;
+    end;
+
+$$ language plpgsql;
+
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.gs_kmeans_random(
+    id_column text,
+    mdl_output_tbl text,
+    num_clusters_arr int[],
+    rel_source text,
+    expr_point text,
+    fn_dist text /*+ DEFAULT 'squared_dist_norm2' */,
+    agg_centroid text /*+ DEFAULT 'avg' */
+) returns text AS 
+$$
+    declare 
+        ret text;
+    begin
+        select PDLTOOLS_SCHEMA.gs_kmeans_random(
+                id_column,
+                mdl_output_tbl,
+                num_clusters_arr,
+                rel_source,
+                expr_point,
+                fn_dist,
+                agg_centroid,
+                20::integer,
+                0.001::double precision
+            ) into ret;
+        return ret;
+    end;
+
+$$ language plpgsql;
+
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.gs_kmeans_random(
+    id_column text,
+    mdl_output_tbl text,
+    num_clusters_arr int[],
+    rel_source text,
+    expr_point text,
+    fn_dist text /*+ DEFAULT 'squared_dist_norm2' */
+) returns text AS 
+$$
+    declare 
+        ret text;
+    begin
+        select PDLTOOLS_SCHEMA.gs_kmeans_random(
+                id_column,
+                mdl_output_tbl,
+                num_clusters_arr,
+                rel_source,
+                expr_point,
+                fn_dist,
+                'madlib.avg',
+                20::integer,
+                0.001::double precision
+            ) into ret;
+        return ret;
+    end;
+
+$$ language plpgsql;
+
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.gs_kmeans_random(
+    id_column text,
+    mdl_output_tbl text,
+    num_clusters_arr int[],
+    rel_source text,
+    expr_point text
+) returns text AS 
+$$
+    declare 
+        ret text;
+    begin
+        select PDLTOOLS_SCHEMA.gs_kmeans_random(
+                id_column,
+                mdl_output_tbl,
+                num_clusters_arr,
+                rel_source,
+                expr_point,
+                'madlib.squared_dist_norm2',
+                'madlib.avg',
+                20::integer,
+                0.001::double precision
+            ) into ret;
+        return ret;
+    end;
+
+$$ language plpgsql;
+
+
