@@ -13,7 +13,7 @@
 /**
 @addtogroup grp_multitbl_summary
 
-@brief PL/python driver to run madlib.summary() on multiple tables
+@brief PL/python driver to run MADLIB_SCHEMA.summary() on multiple tables
 
 <div class="toc"><b>Contents</b>
 <ul>
@@ -193,7 +193,7 @@ $$
       tmpTbl = '''{0}_tmp{1}'''.format(output_table,i)
 
       # prep a string to call madlib summary function
-      query = '''SELECT madlib.summary ('{0}','{1}',NULL,NULL,{2},{3},{4},{5},{6})
+      query = '''SELECT MADLIB_SCHEMA.summary ('{0}','{1}',NULL,NULL,{2},{3},{4},{5},{6})
               '''.format(tbl,tmpTbl,get_distinct,get_quartiles,ntile_array,how_many_mfv,get_estimates)
 
       # execute prepared query string
@@ -248,11 +248,11 @@ $$ LANGUAGE 'sql';
 CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.multitbl_summary()
 RETURNS text AS
 $$
-    return '''PL/python driver to run madlib.summary() on multiple tables'''
+    return '''PL/python driver to run MADLIB_SCHEMA.summary() on multiple tables'''
 $$ LANGUAGE 'plpythonu';
 
 CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.multitbl_summary(usage text)
 RETURNS text AS
 $$
-    return '''PL/python driver to run madlib.summary() on multiple tables. Refer to: http://pivotalsoftware.github.io/PDLTools/modules.html for more details'''
+    return '''PL/python driver to run MADLIB_SCHEMA.summary() on multiple tables. Refer to: http://pivotalsoftware.github.io/PDLTools/modules.html for more details'''
 $$ LANGUAGE 'plpythonu';

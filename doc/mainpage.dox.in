@@ -208,7 +208,7 @@ PL/Python
 
 A set of grid search functions for various algorithms.
 
-(Written by [April Song](mailto:asong@pivotal.io), 19 April 2016.)
+(Written by [April Song, Srivatsan Ramanujam](mailto:asong@pivotal.io, sramanujam@pivotal.io), 19 April 2016.)
 
 @sa Module source file: grid_search.sql_in
 @prereq

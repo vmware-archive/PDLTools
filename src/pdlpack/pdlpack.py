@@ -1286,7 +1286,7 @@ def install_check(schema, platform, sugar_schema, madlib_schema, args):
 	    _info("{sugarlib_schema} schema does not exist. Please run install-check after installing PDL Tools. Install-check stopped.".format(sugarlib_schema=sugar_schema), True)
             return
 
-	# Create install-check user
+        # Create install-check user
 	test_user = 'pdltools_installcheck'
 	try:
 	    session.exec_query("DROP USER IF EXISTS %s;" % (test_user), False)
@@ -1675,6 +1675,10 @@ def clean_install(schema, platform, sugar_schema, madlib_schema, output=True, se
           _error("SUgAR schema already exists. Cannot proceed with clean installation.", False)
           raise Exception
 
+        if not _schema_exists(madlib_schema, session):
+          _error("{madlib_schema} schema does not exists. Please install MADlib first.".format(madlib_schema=madlib_schema), False)
+          raise Exception
+
         # Create schemata
         _db_create_schema(schema, session)
         try:
@@ -1967,6 +1971,10 @@ def install(schema, platform, sugar_schema, madlib_schema):
         _info("Schema "+sugar_schema+" exists but schema "+schema+" does not exist.", True)
         _error("Library not properly installed and cannot be upgraded. Use 'reinstall' instead.",False)
         raise Exception
+
+      if not _schema_exists(madlib_schema, session):
+        _info("Schema "+madlib_schema+" does not exist.", True)
+        _error("Please install MADlib first before installing PDLTools.", False)
  
       # Get DB version
       dbrev = _get_installed_ver(schema, session)

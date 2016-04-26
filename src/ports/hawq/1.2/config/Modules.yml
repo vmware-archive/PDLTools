@@ -21,3 +21,5 @@ modules:
       depends: ['common']
     - name: generic_utilities
       depends: ['common']
+    - name: grid_search
+      depends: ['common']
