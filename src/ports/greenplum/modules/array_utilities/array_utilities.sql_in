@@ -1,0 +1,815 @@
+/* ----------------------------------------------------------------------- *//**
+
+@file array_utilities.sql_in
+
+@brief A set of utilities to ease basic table transformations (such as aggregating multiple columns in an array)
+
+@author Written by Esther Vasiete
+@date 18 March 2016
+
+ *//* ----------------------------------------------------------------------- */
+
+/**
+@addtogroup ArrayUtilities
+
+@brief Create a new table with all feature columns inserted into a single column as an array
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#cols2vec_syntax">Syntax</a>
+<li class="level1"><a href="#cols2vec_usage">Usage</a>
+<li class="level1"><a href="#cols2vec_example">Example</a>
+</ul>
+</div>
+
+@about
+Convert all feature columns in your table into an array in a single column.
+
+@anchor cols2vec_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION cols2vec(
+          table_name text,
+          exclude_columns text[],
+          output_table text.
+          distribution_key text
+       )
+RETURNS TEXT;
+</pre>
+
+@param table_name A text field representing the name of the input table  (as schema_name.table_name)
+@param exclude_columns An array of text fields representing the columns that will NOT be included in the output array
+@param output_table A text field representing the name of the output table (as schema_name.output_table_name)
+@param distribution_key The distribution key to use. If 'random' or '' (empty string) the table is distributed randomly
+@returns A status message indicating success/failure.
+
+@anchor cols2vec_usage
+@usage
+Given a table with varying number of columns, this function will create an output table 
+that will contain all the feature columns into an array. It will also contain the names
+of the features into another array so that this process can be reversed using the function
+vec2cols from array_utilities in PDLTools.
+
+The columns that need NOT be included in the feature array need to be specified in the exclude_columns field.
+
+@anchor cols2vec_example
+@examp
+@verbatim
+
+CREATE SCHEMA test;
+
+DROP TABLE IF EXISTS test.vec2cols;
+CREATE TABLE test.vec2cols (
+    id              bigint,
+    feat_vector     integer[],
+    feat_names      text[],
+    label           int,
+    other_col       float
+) distributed by (id);
+
+INSERT INTO test.vec2cols
+VALUES
+(1, ARRAY[1,2,3,4,5], ARRAY['feat1', 'feat2','feat3', 'feat4', 'feat5'],0, 0.5),
+(2, ARRAY[2,2,2,2,2], ARRAY['feat1', 'feat2','feat3', 'feat4', 'feat5'],1, 0.3),
+(3, ARRAY[1,2,2,4,6], ARRAY['feat1', 'feat2','feat3', 'feat4', 'feat5'],0, 1.1),
+(4, ARRAY[1,2,2,1,1], ARRAY['feat1', 'feat2','feat3', 'feat4', 'feat5'],1, 0.4);
+
+drop table if exists test.output_cols2vec;
+
+select cols2vec(
+      'test.cols2vec',                 -- input table
+      array['label','other_col'],-- exclude columns on feature vector
+      'test.utput_cols2vec',           -- output table
+      'id'                       -- distribution key
+);
+
+select * from test.output_cols2vec;
+
+Expected output:
+
+ id | label | other_col | feature_vector |    feature_names    
+----+-------+-----------+----------------+---------------------
+  3 |     0 |       1.1 | {0,0,0.1}      | {feat1,feat2,feat3}
+  2 |     1 |       0.3 | {0,1,0.3}      | {feat1,feat2,feat3}
+  1 |     0 |       0.9 | {1,1,0.5}      | {feat1,feat2,feat3}
+  4 |     1 |       0.4 | {1,0,0.9}      | {feat1,feat2,feat3}
+(4 rows)
+
+DROP SCHEMA test;
+@endverbatim
+
+*/
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.cols2vec(
+    input_table text,
+    exclude_columns text[],
+    output_table text,
+    distribution_key text
+)
+RETURNS text
+AS
+$$
+    import plpy
+    import uuid
+    
+    table_name = input_table.split('.')
+
+    sql = """
+        select 
+            column_name, 
+            data_type 
+        from 
+            information_schema.columns 
+        where 
+            table_schema = '{table_schema}' and 
+            table_name = '{table_name}' 
+        group by column_name, data_type
+        order by column_name;        
+    """.format(table_schema = table_name[0],table_name = table_name[1])
+     
+    result = plpy.execute(sql)
+    feat_list = ''
+    col_list = ''
+    for r in result:
+        if r['column_name'] not in exclude_columns:
+            feat_list = feat_list + r['column_name'] +','
+        else:
+            col_list = col_list + r['column_name'] +','
+    feat_list = feat_list[:-1]
+    
+    if distribution_key == '' or distribution_key == 'randomly' or distribution_key == 'random':
+        distr_key = 'randomly'
+    else:
+        distr_key = 'by (' + distribution_key + ')'
+
+    sql = """
+        drop table if exists {output_table};
+        create table {output_table}
+        as
+        (
+            select
+                {col_list}
+                array[{feat_list}] as feature_vector,
+                regexp_split_to_array('{feat_list}',',') as feature_names                
+            from 
+                {table_schema}.{table_name}
+        ) distributed {distribution_key};
+    """.format(
+        feat_list = feat_list,
+        col_list = col_list,
+        table_schema = table_name[0],
+        table_name = table_name[1],
+        output_table = output_table,
+        distribution_key = distr_key
+    )
+    plpy.execute(sql)
+    return '{output_table} created successfully'.format(output_table = output_table)
+$$ LANGUAGE PLPYTHONU;
+
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.cols2vec()
+RETURNS VARCHAR
+IMMUTABLE
+LANGUAGE SQL
+AS
+$$
+SELECT $ABC$
+cols2vec: Given a table with varying number of columns, this function will create an output table 
+that will contain all the feature columns into an array. It will also contain the names
+of the features into another array so that this process can be reversed using the function
+vec2cols from array_utilities in PDLTools.
+
+The columns that need NOT be included in the feature array need to be specified in the exclude_columns field.
+
+For full usage instructions, run "PDLTOOLS_SCHEMA.cols2vec('usage')".
+$ABC$::VARCHAR;
+$$;
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.cols2vec(option VARCHAR)
+RETURNS VARCHAR
+IMMUTABLE
+LANGUAGE SQL
+AS
+$$
+SELECT CASE WHEN $1!='usage' THEN PDLTOOLS_SCHEMA.cols2vec() ELSE
+$ABC$
+
+Synopsis
+=========
+PDLTOOLS_SCHEMA.cols2vec(
+          input_table text,
+          exclude_columns text[],
+          output_table text,
+          distribution_key text
+       );
+RETURNS TEXT;
+
+Usage
+======
+Given a table with varying number of columns, this function will create an output table 
+that will contain all the feature columns into an array. It will also contain the names
+of the features into another array so that this process can be reversed using the function
+vec2cols from array_utilities in PDLTools.
+
+The columns that need NOT be included in the feature array need to be specified in the exclude_columns field.
+
+Example
+========
+DROP SCHEMA IF EXISTS test;
+CREATE SCHEMA test;
+
+DROP TABLE IF EXISTS test.cols2vec;
+CREATE TABLE test.cols2vec (
+    id              bigint,
+    label           int,
+    feat1           int,
+    feat2           int,
+    feat3           float,
+    other_col       float
+) distributed by (id);
+
+INSERT INTO test.cols2vec 
+VALUES
+    (1, 0, 1, 1, 0.5, 0.9),
+    (2, 1, 0, 1, 0.3, 0.3),
+    (3, 0, 0, 0, 0.1, 1.1),
+    (4, 1, 1, 0, 0.9, 0.4);
+
+drop table if exists test.output_cols2vec;
+
+select 
+   pdltools.cols2vec(
+      'test.cols2vec',             -- input table
+      array['id','label','other_col'],-- exclude columns on feature vector
+      'test.output_cols2vec',           -- output table
+      'id'                         -- distribution key
+);
+
+select * from test.output_cols2vec;
+
+Expected output:
+
+ id | label | other_col | feature_vector |    feature_names    
+----+-------+-----------+----------------+---------------------
+  3 |     0 |       1.1 | {0,0,0.1}      | {feat1,feat2,feat3}
+  2 |     1 |       0.3 | {0,1,0.3}      | {feat1,feat2,feat3}
+  1 |     0 |       0.9 | {1,1,0.5}      | {feat1,feat2,feat3}
+  4 |     1 |       0.4 | {1,0,0.9}      | {feat1,feat2,feat3}
+(4 rows)
+
+DROP SCHEMA test;
+
+$ABC$
+END;
+$$;
+
+/**
+@addtogroup ArrayUtilities
+
+@brief Create a new table that expands an array into columns
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#vec2cols_syntax">Syntax</a>
+<li class="level1"><a href="#vec2cols_usage">Usage</a>
+<li class="level1"><a href="#vec2cols_example">Example</a>
+</ul>
+</div>
+
+@about
+Expand an array in your table into independent columns.
+
+@anchor vec2cols_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION vec2cols(
+        table_name text,
+        vector_column text,
+        output_table text,
+        distribution_key text
+)
+RETURNS text
+</pre>
+
+@param table_name A text field representing the name of the input table including schema (e.g. public.table1)
+@param vector_column A text field representing the name of the column that contains the array
+@param output_table A text field representing the name of the output table (including schema)
+@param distribution_key The distribution key to use. If 'random' or '' (empty string) the table is distributed randomly
+@returns A status message indicating success/failure.
+
+@anchor vec2cols_usage
+@usage
+Given a table with a column containing an array of features, this function will create an output table 
+that will expand the features in the array into independent columns. It will rename the columns as f1, f2,...fN
+unless the input table contains an array of feature names and the column name is passed as an input (optional).
+
+@anchor vec2cols_example
+@examp
+@verbatim
+
+CREATE SCHEMA test;
+
+DROP TABLE IF EXISTS test.vec2cols;
+CREATE TABLE test.vec2cols (
+    id              bigint,
+    feat_vector     integer[],
+    feat_names      text[],
+    label           int,
+    other_col       float
+) distributed by (id);
+
+
+INSERT INTO test.vec2cols
+VALUES
+(1, ARRAY[1,2,3,4,5], ARRAY['feat1', 'feat2','feat3', 'feat4', 'feat5'],0, 0.5),
+(2, ARRAY[2,2,2,2,2], ARRAY['feat1', 'feat2','feat3', 'feat4', 'feat5'],1, 0.3),
+(3, ARRAY[1,2,2,4,6], ARRAY['feat1', 'feat2','feat3', 'feat4', 'feat5'],0, 1.1),
+(4, ARRAY[1,2,2,1,1], ARRAY['feat1', 'feat2','feat3', 'feat4', 'feat5'],1, 0.4);
+
+drop table if exists test.output_vec2cols_v1;
+select
+    vec2cols(
+        'test.vec2cols',            -- input table
+        'feat_vector',         -- vector column
+        'test.output_vec2cols_v1',   -- output table
+        'random'                -- distribution key
+    );
+
+select * from test.output_vec2cols_v1;
+
+Expected output:
+
+ id |           feat_names            | label | other_col | f1 | f2 | f3 | f4 | f5 
+----+---------------------------------+-------+-----------+----+----+----+----+----
+  3 | {feat1,feat2,feat3,feat4,feat5} |     0 |       1.1 |  1 |  2 |  2 |  4 |  6
+  2 | {feat1,feat2,feat3,feat4,feat5} |     1 |       0.3 |  2 |  2 |  2 |  2 |  2
+  1 | {feat1,feat2,feat3,feat4,feat5} |     0 |       0.5 |  1 |  2 |  3 |  4 |  5
+  4 | {feat1,feat2,feat3,feat4,feat5} |     1 |       0.4 |  1 |  2 |  2 |  1 |  1
+(4 rows)
+
+If array of feature names is available, use:
+
+drop table if exists test.output_vec2cols_v2;
+select
+    vec2cols(
+        'test.vec2cols',            -- input table
+        'feat_vector',         -- vector column
+        'feat_names',          -- vector names column 
+        'test.output_vec2cols_v2',   -- output table
+        'id'                   --distribution key
+    );
+
+select * from test.output_vec2cols_v2;
+
+Expected output:
+
+ id | label | other_col | feat1 | feat2 | feat3 | feat4 | feat5 
+----+-------+-----------+-------+-------+-------+-------+-------
+  1 |     0 |       0.5 |     1 |     2 |     3 |     4 |     5
+  4 |     1 |       0.4 |     1 |     2 |     2 |     1 |     1
+  3 |     0 |       1.1 |     1 |     2 |     2 |     4 |     6
+  2 |     1 |       0.3 |     2 |     2 |     2 |     2 |     2
+(4 rows)
+
+DROP SCHEMA test;
+@endverbatim
+
+*/
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.vec2cols(
+    input_table text,
+    vector_column text,
+    output_table text,
+    distribution_key text
+)
+RETURNS text
+AS
+$$
+    import plpy
+    table_name = input_table.split('.')
+    sql = """
+        select 
+            array_upper({vector_column},1) as vector_len
+        from 
+            {table_schema}.{table_name}
+        limit 1;        
+    """.format(table_schema = table_name[0],table_name = table_name[1], vector_column = vector_column)
+    result = plpy.execute(sql)
+    vlen = result[0]['vector_len']
+
+    feat_string = ''
+    for i in range(1, vlen + 1):
+        feat_string += '{vector_column}[{i}] as f{i}, '.format(vector_column = vector_column, i = i)
+    feat_string = feat_string[:-2]
+    
+    sql = """
+        select 
+            column_name,
+            ordinal_position
+        from 
+            information_schema.columns 
+        where 
+            table_schema = '{table_schema}' and 
+            table_name = '{table_name}' 
+        group by column_name, ordinal_position
+        order by ordinal_position     
+    """.format(table_schema = table_name[0],table_name = table_name[1])
+    result = plpy.execute(sql)
+    
+    col_list = ''
+    for r in result:
+        if r['column_name'] != vector_column:
+            col_list = col_list + r['column_name'] +','
+    
+    if distribution_key == '' or distribution_key == 'randomly' or distribution_key == 'random':
+        distr_key = 'randomly'
+    else:
+        distr_key = 'by (' + distribution_key + ')'
+
+    sql = """
+    drop table if exists {output_table};
+    create table {output_table} as (
+        select
+            {col_list}
+            {vector_features}
+        from
+            {table_schema}.{table_name}
+    ) distributed {distribution_key};
+    """.format(vector_features = feat_string, table_schema = table_name[0], table_name = table_name[1], output_table = output_table, col_list = col_list, distribution_key = distr_key)
+    plpy.execute(sql)
+    return '{output_table} created successfully'.format(output_table = output_table)
+$$ LANGUAGE PLPYTHONU;
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.vec2cols(
+    input_table text,
+    vector_column text,
+    vnames_column text,
+    output_table text,
+    distribution_key text
+)
+RETURNS text
+AS
+$$
+    import plpy
+
+    table_name = input_table.split('.')
+    sql = """
+        select 
+            array_upper({vector_column},1) as vector_len
+        from 
+            {table_schema}.{table_name}
+        limit 1;        
+    """.format(table_schema = table_name[0],table_name = table_name[1], vector_column = vector_column)
+    result = plpy.execute(sql)
+    vlen = result[0]['vector_len']
+    
+    sql = """
+        select 
+            {vnames_column} as fnames
+        from 
+            {table_schema}.{table_name}
+        limit 1;        
+    """.format(table_schema = table_name[0],table_name = table_name[1], vnames_column = vnames_column)
+    result = plpy.execute(sql)
+    fnames = result[0]['fnames']
+    
+    feat_string = ''
+    if vlen != len(fnames):
+        for i in range(1, vlen + 1):
+            feat_string += '{vector_column}[{i}] as f{i}, '.format(vector_column = vector_column, i = i)
+        feat_string = feat_string[:-2]
+    else:
+        for i in range(1, vlen + 1):
+            feat_string += '{vector_column}[{i}] '.format(vector_column = vector_column, i = i) +'as ' + fnames[i-1] + ', '
+        feat_string = feat_string[:-2]
+    
+    sql = """
+        select 
+            column_name,
+            ordinal_position
+        from 
+            information_schema.columns 
+        where 
+            table_schema = '{table_schema}' and 
+            table_name = '{table_name}' 
+        group by column_name, ordinal_position
+        order by ordinal_position     
+    """.format(table_schema = table_name[0],table_name = table_name[1])
+    result = plpy.execute(sql)
+    
+    col_list = ''
+    for r in result:
+        if r['column_name'] != vector_column and r['column_name'] != vnames_column:
+            col_list = col_list + r['column_name'] +','
+    if distribution_key == '' or distribution_key == 'randomly' or distribution_key == 'random':
+        distr_key = 'randomly'
+    else:
+        distr_key = 'by (' + distribution_key + ')'
+
+    sql = """
+    drop table if exists {output_table};
+    create table {output_table} as (
+        select
+            {col_list}
+            {vector_features}
+        from
+            {table_schema}.{table_name}
+    ) distributed {distribution_key};
+    """.format(vector_features = feat_string, table_schema = table_name[0], table_name = table_name[1], output_table = output_table, col_list = col_list, distribution_key = distr_key)
+    plpy.execute(sql)
+    return '{output_table} created successfully'.format(output_table = output_table)
+$$ LANGUAGE PLPYTHONU;
+
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.vec2cols()
+RETURNS VARCHAR
+IMMUTABLE
+LANGUAGE SQL
+AS
+$$
+SELECT $ABC$
+vec2cols: Given a table with a column containing an array of features, this function will create an output table 
+that will expand the features in the array into independent columns. It will rename the columns as f1, f2,...fN
+unless the input table contains an array of feature names and the column name is passed as an input (optional).
+
+For full usage instructions, run "PDLTOOLS_SCHEMA.vec2cols('usage')".
+$ABC$::VARCHAR;
+$$;
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.vec2cols(option VARCHAR)
+RETURNS VARCHAR
+IMMUTABLE
+LANGUAGE SQL
+AS
+$$
+SELECT CASE WHEN $1!='usage' THEN PDLTOOLS_SCHEMA.vec2cols() ELSE
+$ABC$
+
+Synopsis
+=========
+PDLTOOLS_SCHEMA.vec2cols(
+        table_name text,
+        vector_column text,
+        output_table text,
+        distribution_key text
+)
+RETURNS text;
+
+OR
+
+PDLTOOLS_SCHEMA.vec2cols(
+        table_name text,
+        vector_column text,
+        vnames_column text,
+        output_table text,
+        distribution_key text
+)
+RETURNS text;
+
+Usage
+======
+Given a table with a column containing an array of features, this function will create an output table 
+that will expand the features in the array into independent columns. It will rename the columns as f1, f2,...fN
+unless the input table contains an array of feature names and the column name is passed as an input (optional).
+
+Example
+========
+DROP SCHEMA IF EXISTS test;
+CREATE SCHEMA test;
+
+DROP TABLE IF EXISTS test.vec2cols;
+CREATE TABLE test.vec2cols (
+    id              bigint,
+    feat_vector     integer[],
+    feat_names      text[],
+    label           int,
+    other_col       float
+) distributed by (id);
+
+
+INSERT INTO test.vec2cols
+VALUES
+(1, ARRAY[1,2,3,4,5], ARRAY['feat1', 'feat2','feat3', 'feat4', 'feat5'],0, 0.5),
+(2, ARRAY[2,2,2,2,2], ARRAY['feat1', 'feat2','feat3', 'feat4', 'feat5'],1, 0.3),
+(3, ARRAY[1,2,2,4,6], ARRAY['feat1', 'feat2','feat3', 'feat4', 'feat5'],0, 1.1),
+(4, ARRAY[1,2,2,1,1], ARRAY['feat1', 'feat2','feat3', 'feat4', 'feat5'],1, 0.4);
+
+drop table if exists test.output_vec2cols_v1;
+select
+    pdltools.vec2cols(
+        'test.vec2cols',             -- input table
+        'feat_vector',               -- vector column
+        'test.output_vec2cols_v1',   -- output table
+        ''                           -- distribution key
+    );
+
+select * from test.output_vec2cols_v1;
+
+Expected output:
+
+ id |           feat_names            | label | other_col | f1 | f2 | f3 | f4 | f5 
+----+---------------------------------+-------+-----------+----+----+----+----+----
+  3 | {feat1,feat2,feat3,feat4,feat5} |     0 |       1.1 |  1 |  2 |  2 |  4 |  6
+  2 | {feat1,feat2,feat3,feat4,feat5} |     1 |       0.3 |  2 |  2 |  2 |  2 |  2
+  1 | {feat1,feat2,feat3,feat4,feat5} |     0 |       0.5 |  1 |  2 |  3 |  4 |  5
+  4 | {feat1,feat2,feat3,feat4,feat5} |     1 |       0.4 |  1 |  2 |  2 |  1 |  1
+(4 rows)
+
+If array of feature names is available, use:
+
+drop table if exists test.output_vec2cols_v2;
+select
+    pdltools.vec2cols(
+        'test.vec2cols',            -- input table
+        'feat_vector',         -- vector column
+        'feat_names',          -- vector names column 
+        'test.output_vec2cols_v2',   -- output table
+        'distribution_key'           -- distribution key 
+    );
+
+select * from test.output_vec2cols_v2;
+
+Expected output:
+
+ id | label | other_col | feat1 | feat2 | feat3 | feat4 | feat5 
+----+-------+-----------+-------+-------+-------+-------+-------
+  1 |     0 |       0.5 |     1 |     2 |     3 |     4 |     5
+  4 |     1 |       0.4 |     1 |     2 |     2 |     1 |     1
+  3 |     0 |       1.1 |     1 |     2 |     2 |     4 |     6
+  2 |     1 |       0.3 |     2 |     2 |     2 |     2 |     2
+(4 rows)
+
+DROP SCHEMA IF EXISTS test;
+
+$ABC$
+END;
+$$;
+
+/* ----------------------------------------------------------------------- *//**
+
+@file array_utilities.sql_in
+
+@brief A set of basic utilities when working with arrays
+
+@author Written by Esther Vasiete
+@date 14 April 2016
+
+ *//* ----------------------------------------------------------------------- */
+
+/**
+@addtogroup ArrayUtilities
+
+@brief Create a table that drops user-specified columns
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#cols2vec_syntax">Syntax</a>
+<li class="level1"><a href="#cols2vec_usage">Usage</a>
+<li class="level1"><a href="#cols2vec_example">Example</a>
+</ul>
+</div>
+
+@about
+Drops columns of a table
+
+@anchor dropcols_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION dropcols(
+          table_name text,
+          drop_columns text[],
+          output_table text.
+          distribution_key text
+       )
+RETURNS TEXT;
+</pre>
+
+@param table_name A text field representing the name of the input table  (as schema_name.table_name)
+@param drop_columns An array of text fields representing the columns that will NOT be included in the output table
+@param output_table A text field representing the name of the output table (as schema_name.output_table_name)
+@param distribution_key The distribution key to use. If 'random' or '' (empty string) the table is distributed randomly
+@returns A status message indicating success/failure.
+
+@anchor dropcols_usage
+@usage
+Given a table with varying number of columns, this function will create an output table 
+that will contain all the columns except the ones specified to drop.
+
+The columns that need NOT be included in the output table need to be specified in the drop_columns field.
+
+@anchor dropcols_example
+@examp
+@verbatim
+
+-- Example here
+
+DROP SCHEMA test;
+@endverbatim
+
+*/
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.dropcols(
+    input_table text,
+    drop_columns text[],
+    output_table text,
+    distribution_key text
+)
+RETURNS text
+AS
+$$
+    import plpy
+    table_name = input_table.split('.')
+    sql = """
+        select 
+            column_name
+        from 
+            information_schema.columns 
+        where 
+            table_schema = '{table_schema}' and 
+            table_name = '{table_name}' 
+        group by column_name, data_type
+        order by column_name;        
+    """.format(table_schema = table_name[0],table_name = table_name[1])
+     
+    result = plpy.execute(sql)
+    col_list = ''
+    for r in result:
+        if r['column_name'] not in drop_columns:
+            col_list = col_list + r['column_name'] +','
+    col_list = col_list[:-1]
+
+    if distribution_key == '' or distribution_key == 'randomly' or distribution_key == 'random':
+        distr_key = 'randomly'
+    else:
+        distr_key = 'by (' + distribution_key + ')'
+
+    sql = """
+        drop table if exists {output_table};
+        create table {output_table}
+        as
+        (
+            select
+                {col_list}
+            from 
+                {table_schema}.{table_name}
+        ) distributed {distribution_key};
+    """.format(
+        col_list = col_list,
+        table_schema = table_name[0],
+        table_name = table_name[1],
+        output_table = output_table,
+        distribution_key = distr_key
+    )
+    plpy.execute(sql)
+    return '{output_table} created successfully'.format(output_table = output_table)
+$$ LANGUAGE PLPYTHONU;
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.dropcols()
+RETURNS VARCHAR
+IMMUTABLE
+LANGUAGE SQL
+AS
+$$
+SELECT $ABC$
+dropcols: Given a table with varying number of columns, this function will create an output table 
+that will contain all the columns except the ones specified to drop.
+
+The columns that need NOT be included in the output table need to be specified in the drop_columns field.
+
+For full usage instructions, run "PDLTOOLS_SCHEMA.dropcols('usage')".
+$ABC$::VARCHAR;
+$$;
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.dropcols(option VARCHAR)
+RETURNS VARCHAR
+IMMUTABLE
+LANGUAGE SQL
+AS
+$$
+SELECT CASE WHEN $1!='usage' THEN PDLTOOLS_SCHEMA.dropcols() ELSE
+$ABC$
+
+Synopsis
+=========
+PDLTOOLS_SCHEMA.dropcols(
+        input_table text,
+        drop_columns text[],
+        output_table text,
+        distribution_key text
+)
+RETURNS text;
+
+
+Usage
+======
+Given a table with varying number of columns, this function will create an output table 
+that will contain all the columns except the ones specified to drop.
+
+The columns that need NOT be included in the output table need to be specified in the drop_columns field.
+
+Example
+======
+
+$ABC$
+END;
+$$;
