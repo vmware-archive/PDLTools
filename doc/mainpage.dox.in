@@ -222,7 +222,7 @@ PL/Python, PL/pgSQL, MADlib 1.8+
 
 Collection of miscellaneous utility functions.
 
-(Started by [Jarrod Vawdrey](mailto:jvawdrey@pivotal.io), 19 Apr 2016.)
+(Started by [Jarrod Vawdrey, Esther Vasiete](mailto:jvawdrey@pivotal.io, evasiete@pivotal.io), 19 Apr 2016.)
 
 @sa Module source file: generic_utilities.sql_in.
 
@@ -230,6 +230,7 @@ Collection of miscellaneous utility functions.
 PL/pgSQL, MADlib 1.8+
 
       @defgroup grp_multitbl_summary multitbl_summary
+      @defgroup grp_array_utilities array_utilities
   @}
 @}
 
