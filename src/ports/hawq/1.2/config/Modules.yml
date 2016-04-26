@@ -17,6 +17,8 @@ modules:
       depends: ['common']
     - name: one_vs_rest
       depends: ['common']
+    - name: array_utilities
+      depends: ['common']
     - name: prediction_metrics
       depends: ['common']
     - name: generic_utilities
