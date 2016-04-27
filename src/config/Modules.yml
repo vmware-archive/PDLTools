@@ -31,8 +31,6 @@ modules:
       depends: ['common']
     - name: generic_utilities
       depends: ['common']
-    - name: array_utilities
-      depends: ['common']
 #    - name: plr_placeholder
 #      depends: ['common']
 #  PL/R package disabled until PL/R will be part of Continuous Integration tool.

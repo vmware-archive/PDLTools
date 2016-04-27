@@ -39,35 +39,35 @@ VALUES
 drop table if exists output_cols2vec;
 SELECT assert(
          PDLTOOLS_SCHEMA.cols2vec(
-                  'pdltools_installcheck_array_utilities.cols2vec',                 -- input table
+                  'pdltools_installcheck_generic_utilities.cols2vec',                 -- input table
                   array['id','label','other_col'],-- exclude columns on feature vector
-                  'pdltools_installcheck_array_utilities.output_cols2vec',           -- output table
+                  'pdltools_installcheck_generic_utilities.output_cols2vec',           -- output table
                   'randomly'
          ),
-         'pdltools_installcheck_array_utilities.output_cols2vec created successfully'
+         'pdltools_installcheck_generic_utilities.output_cols2vec created successfully'
        );
 
 drop table if exists output_vec2cols_v1;
 SELECT assert(
          PDLTOOLS_SCHEMA.vec2cols(
-                  'pdltools_installcheck_array_utilities.vec2cols',         -- input table
+                  'pdltools_installcheck_generic_utilities.vec2cols',         -- input table
                   'feat_vector',   -- vector column
-                  'pdltools_installcheck_array_utilities.output_vec2cols_v1',   -- output table
+                  'pdltools_installcheck_generic_utilities.output_vec2cols_v1',   -- output table
                   'randomly'
          ),
-         'pdltools_installcheck_array_utilities.output_vec2cols_v1 created successfully'
+         'pdltools_installcheck_generic_utilities.output_vec2cols_v1 created successfully'
        );
 
 drop table if exists output_vec2cols_v2;
 SELECT assert(
          PDLTOOLS_SCHEMA.vec2cols(
-                  'pdltools_installcheck_array_utilities.vec2cols',         -- input table
+                  'pdltools_installcheck_generic_utilities.vec2cols',         -- input table
                   'feat_vector',      -- vector column
                   'feat_names',       -- vector names column 
-                  'pdltools_installcheck_array_utilities.output_vec2cols_v2',   -- output table
+                  'pdltools_installcheck_generic_utilities.output_vec2cols_v2',   -- output table
                   'randomly'
          ),
-         'pdltools_installcheck_array_utilities.output_vec2cols_v2 created successfully'
+         'pdltools_installcheck_generic_utilities.output_vec2cols_v2 created successfully'
        );
 
 select 
