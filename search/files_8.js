@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['sampling_2esql_5fin',['sampling.sql_in',['../sampling_8sql__in.html',1,'']]],
-  ['session_2esql_5fin',['session.sql_in',['../session_8sql__in.html',1,'']]],
-  ['sugar_2esql_5fin',['sugar.sql_in',['../sugar_8sql__in.html',1,'']]]
+  ['plr_5fsample_2esql_5fin',['plr_sample.sql_in',['../plr__sample_8sql__in.html',1,'']]],
+  ['porter_5fstemmer_2esql_5fin',['porter_stemmer.sql_in',['../porter__stemmer_8sql__in.html',1,'']]],
+  ['prediction_5fmetrics_2esql_5fin',['prediction_metrics.sql_in',['../prediction__metrics_8sql__in.html',1,'']]]
 ];

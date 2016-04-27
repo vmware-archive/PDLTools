@@ -1,6 +1,7 @@
 var searchData=
 [
-  ['levenshtein_5fdistance',['levenshtein_distance',['../edit__distance_8sql__in.html#ac99d80105c39f2529c9ec27a57812d60',1,'levenshtein_distance(text str1, text str2):&#160;edit_distance.sql_in'],['../edit__distance_8sql__in.html#a7a1184c79b7be13f361aadbb8646670d',1,'levenshtein_distance():&#160;edit_distance.sql_in'],['../edit__distance_8sql__in.html#af995a9e7d971512ee3e96daee6756930',1,'levenshtein_distance(varchar option):&#160;edit_distance.sql_in']]],
-  ['ln',['ln',['../complex__type_8sql__in.html#a03c31989ddf5e2cbf49d730ac1ba3afa',1,'complex_type.sql_in']]],
-  ['log',['log',['../complex__type_8sql__in.html#abfe75a84c6c3991f0ad5d676a0b07612',1,'log(complex):&#160;complex_type.sql_in'],['../complex__type_8sql__in.html#acea186581245df21002cc76ad482681b',1,'log(complex, complex):&#160;complex_type.sql_in']]]
+  ['im',['im',['../complex__type_8sql__in.html#ae0aa7d3d6c1089531b50926b7dcbfc59',1,'complex_type.sql_in']]],
+  ['int22complex',['int22complex',['../complex__type_8sql__in.html#a4771e6dfdd753742b39d32a267278c58',1,'complex_type.sql_in']]],
+  ['int42complex',['int42complex',['../complex__type_8sql__in.html#aac5842af6f47d847905a6c794561e3e0',1,'complex_type.sql_in']]],
+  ['int82complex',['int82complex',['../complex__type_8sql__in.html#a91e9e2b48b5f81cd9d7d68191084dd1d',1,'complex_type.sql_in']]]
 ];

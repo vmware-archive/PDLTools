@@ -40,7 +40,7 @@
   <td id="projectlogo"><img alt="Logo" src="pdl.png"/></td>
   <td style="padding-left: 0.5em;">
    <div id="projectname">PDL Tools
-   &#160;<span id="projectnumber">1.5</span>
+   &#160;<span id="projectnumber">1.6</span>
    </div>
    <div id="projectbrief">User Documentation</div>
   </td>
@@ -132,7 +132,7 @@ SELECT (madlib.linregr(price,array[
 </pre><p>This SELECT call is identical to the previous example, but instead of explicitly selecting all dummy variable columns, we're selecting all columns (<code>'%'</code>) except two columns that we want to omit: <code>price</code> and <code>row_num</code>. What to omit is also defined by a regular expression. In this case, <code>'price|row_num'</code>.</p>
 <p>As you can see, we never actually needed to omit a column from the pivoting output at all. It would have been equally possible to simply de-select, using <code>glob</code>, the unwanted columns prior to sending them to further processing.</p>
 <h3>Getting help</h3>
-<p>There are many ways to get help when using <b>PDL Tools</b>. This manual is available in HTML, as an <a href="manual/pdltools-1.5-manual.tgz">HTML tar ball</a> and as a <a href="manual/pdltools-1.5-manual.pdf">PDF</a> file. This is to make sure help is always accessible to you, regardless of what your work environment is, even if it is a lab with no access to any outside network. Additionally, the library objects themselves provide online help: all <b>PDL Tools</b> and all <b>SUgAR</b> functions return a brief usage message if invoked without parameters or with the empty string as a parameter (unless this interferes with their normal behavior). Invoking a library function with the string <code>'usage'</code> gives the full usage instructions. For <b>SUgAR</b> pseudofunctions, use</p>
+<p>There are many ways to get help when using <b>PDL Tools</b>. This manual is available in HTML, as an <a href="manual/pdltools-1.6-manual.tgz">HTML tar ball</a> and as a <a href="manual/pdltools-1.6-manual.pdf">PDF</a> file. This is to make sure help is always accessible to you, regardless of what your work environment is, even if it is a lab with no access to any outside network. Additionally, the library objects themselves provide online help: all <b>PDL Tools</b> and all <b>SUgAR</b> functions return a brief usage message if invoked without parameters or with the empty string as a parameter (unless this interferes with their normal behavior). Invoking a library function with the string <code>'usage'</code> gives the full usage instructions. For <b>SUgAR</b> pseudofunctions, use</p>
 <pre class="example">
 SELECT sugar('usage','<em>funcname</em>');
 </pre><p>where <em>funcname</em> is the function to get usage instructions on. <code>sugar()</code> provides other methods of giving help to the user, for example by listing all supported <b>SUgAR</b> functions. See <a class="el" href="group__grp__sugar.html">sugar</a> for the complete set of options.</p>

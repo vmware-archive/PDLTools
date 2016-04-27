@@ -1,16 +1,11 @@
 var searchData=
 [
-  ['stratified_20sampling',['Stratified Sampling',['../group__grp__sampling.html',1,'']]],
-  ['session_5fsplit',['session_split',['../group__grp__session__split.html',1,'']]],
-  ['sessionization',['Sessionization',['../group__grp__sessionization.html',1,'']]],
-  ['stem_5ftoken',['stem_token',['../group__grp__stem__token.html',1,'']]],
-  ['stem_5ftoken_5farr',['stem_token_arr',['../group__grp__stem__token__arr.html',1,'']]],
-  ['stemming',['Stemming',['../group__grp__stemming.html',1,'']]],
-  ['strat_5fpartition',['strat_partition',['../group__grp__strat__partition.html',1,'']]],
-  ['strat_5fsampling',['strat_sampling',['../group__grp__strat__sampling.html',1,'']]],
-  ['sugar',['sugar',['../group__grp__sugar.html',1,'']]],
-  ['sugar_5fdb_20_28table_29',['sugar_db (Table)',['../group__grp__sugar__db.html',1,'']]],
-  ['sugar_20pseudofunctions',['SUgAR Pseudofunctions',['../group__grp__sugar__funcs.html',1,'']]],
-  ['sugar_5fhelp_5fdb_20_28table_29',['sugar_help_db (Table)',['../group__grp__sugar__help__db.html',1,'']]],
-  ['sugar_20_2d_20syntactic_20upgrades_20for_20analytics_20routines',['SUgAR - Syntactic Upgrades for Analytics Routines',['../group__grp__sugar__module.html',1,'']]]
+  ['parse_5fdomain',['parse_domain',['../group__grp__parse__domain.html',1,'']]],
+  ['parse_5furi',['parse_uri',['../group__grp__parse__uri.html',1,'']]],
+  ['pivot_20_28pseudo_2daggregate_29',['pivot (Pseudo-aggregate)',['../group__grp__pivot.html',1,'']]],
+  ['pivot01_20_28pseudofunction_29',['pivot01 (Pseudofunction)',['../group__grp__pivot01.html',1,'']]],
+  ['prediction_20metrics',['Prediction Metrics',['../group__grp__prediction__metrics.html',1,'']]],
+  ['proportion_20_28pseudo_2dwindow_2dfunction_29',['proportion (Pseudo-window-function)',['../group__grp__proportion.html',1,'']]],
+  ['proportional_5ftrans',['proportional_trans',['../group__grp__proportional__trans.html',1,'']]],
+  ['pvalue_20_28pseudo_2dwindow_2dfunction_29',['pvalue (Pseudo-window-function)',['../group__grp__pvalue.html',1,'']]]
 ];

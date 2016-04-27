@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['levenshtein_5fdistance',['levenshtein_distance',['../group__grp__levenshtein__distance.html',1,'']]]
+  ['k_2dmeans',['k-Means',['../group__grp__kmeans.html',1,'']]]
 ];

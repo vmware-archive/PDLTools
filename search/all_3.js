@@ -2,6 +2,7 @@ var searchData=
 [
   ['cbrt',['cbrt',['../complex__type_8sql__in.html#aefb21253af7bc8560f0e62e784a13d41',1,'complex_type.sql_in']]],
   ['changelog_2edox',['changelog.dox',['../changelog_8dox.html',1,'']]],
+  ['cols2vec',['cols2vec',['../array__utilities_8sql__in.html#aa86bd0159315c2eac0f4a53501967637',1,'cols2vec(text input_table, text[] exclude_columns, text output_table, text distribution_key):&#160;array_utilities.sql_in'],['../array__utilities_8sql__in.html#a02f50d4d40cd928609a386860b0f6846',1,'cols2vec():&#160;array_utilities.sql_in'],['../array__utilities_8sql__in.html#a265b886a63518656fada0c960709e6eb',1,'cols2vec(varchar option):&#160;array_utilities.sql_in']]],
   ['complete_5flinkage',['complete_linkage',['../complete__linkage_8sql__in.html#ac52c0c24bfbea54d49059689a5d6cb6d',1,'complete_linkage(text dist_tab, text id1, text id2, text dist, text output, int iter):&#160;complete_linkage.sql_in'],['../complete__linkage_8sql__in.html#a1fdb6c7c3f81a5671fc6afcc412dec81',1,'complete_linkage():&#160;complete_linkage.sql_in'],['../complete__linkage_8sql__in.html#a5bdc74c6cd7019ef545a570c19f6dc95',1,'complete_linkage(text):&#160;complete_linkage.sql_in']]],
   ['complete_5flinkage_2esql_5fin',['complete_linkage.sql_in',['../complete__linkage_8sql__in.html',1,'']]],
   ['complex',['complex',['../complex__type_8sql__in.html#ae40cd425519e814058fc8e9d95507ecf',1,'complex_type.sql_in']]],
