@@ -1,7 +1,0 @@
-UDF: FUNCTION PDLTOOLS_SCHEMA.cols2vec(pg_catalog.text, pg_catalong.text[], pg_catalog.text, pg_catalog.text)
-UDF: FUNCTION PDLTOOLS_SCHEMA.cols2vec()
-UDF: FUNCTION PDLTOOLS_SCHEMA.vec2cols(pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalong.text)
-UDF: FUNCTION PDLTOOLS_SCHEMA.vec2cols(pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalong.text, pg_catalog.text)
-UDF: FUNCTION PDLTOOLS_SCHEMA.vec2cols()
-UDF: FUNCTION PDLTOOLS_SCHEMA.dropcols(pg_catalog.text, pg_catalong.text[], pg_catalog.text, pg_catalog.text)
-UDF: FUNCTION PDLTOOLS_SCHEMA.dropcols()
