@@ -9,11 +9,7 @@ Pivotal's GPDB and HAWQ. <B>PDL Tools</B> includes convenience tools,
 parallelized algorithms and the <B>SUgAR</B> library (enabling second-order
 SQL parsing).
 
-<B>PDL Tools</B> is provided to customers of Pivotal as
-part of Pivotal's differentiated Data Science services. PDL's <B>PDL Tools</B>
-customers are granted copyright and a license for their own internal use.
-
-Please refer to LEGAL.txt file for more information about usage rights.
+Please refer to [LEGAL.txt](https://github.com/pivotalsoftware/PDLTools/blob/master/LEGAL.txt) file for more information about usage rights.
 
 Call any function without parameters (or with the single parameter
 <code>'usage'</code>, as a string) for online help. Use
