@@ -843,8 +843,8 @@ def _schema_writable(schema,session):
     return schema_writable
 
 def _cmp_versions(ver_a, ver_b):
-  a_list = [int(x) for x in ver_a.split('.')]
-  b_list = [int(x) for x in ver_b.split('.')]
+  a_list = ver_a.split('.')
+  b_list = ver_b.split('.')
   return cmp(a_list,b_list)
 
 def parseConnectionStr(connectionStr):
@@ -1286,7 +1286,7 @@ def install_check(schema, platform, sugar_schema, madlib_schema, args):
 	    _info("{sugarlib_schema} schema does not exist. Please run install-check after installing PDL Tools. Install-check stopped.".format(sugarlib_schema=sugar_schema), True)
             return
 
-	# Create install-check user
+        # Create install-check user
 	test_user = 'pdltools_installcheck'
 	try:
 	    session.exec_query("DROP USER IF EXISTS %s;" % (test_user), False)
@@ -1296,7 +1296,7 @@ def install_check(schema, platform, sugar_schema, madlib_schema, args):
 	session.exec_query("CREATE USER %s;" % (test_user), True)
 	session.exec_query("GRANT ALL ON SCHEMA %s TO %s;" %(schema, test_user), True)
 	session.exec_query("GRANT ALL ON SCHEMA %s TO %s;" %(sugar_schema, test_user), True)
-
+        session.exec_query("GRANT USAGE ON SCHEMA %s TO %s;" %(madlib_schema, test_user),True)
 	# 2) Run test SQLs
 	_info("> Running test scripts for:", verbose)
 
@@ -1675,6 +1675,10 @@ def clean_install(schema, platform, sugar_schema, madlib_schema, output=True, se
           _error("SUgAR schema already exists. Cannot proceed with clean installation.", False)
           raise Exception
 
+        if not _schema_exists(madlib_schema, session):
+          _error("{madlib_schema} schema does not exists. Please install MADlib first.".format(madlib_schema=madlib_schema), False)
+          raise Exception
+
         # Create schemata
         _db_create_schema(schema, session)
         try:
@@ -1967,6 +1971,10 @@ def install(schema, platform, sugar_schema, madlib_schema):
         _info("Schema "+sugar_schema+" exists but schema "+schema+" does not exist.", True)
         _error("Library not properly installed and cannot be upgraded. Use 'reinstall' instead.",False)
         raise Exception
+
+      if not _schema_exists(madlib_schema, session):
+        _info("Schema "+madlib_schema+" does not exist.", True)
+        _error("Please install MADlib first before installing PDLTools.", False)
  
       # Get DB version
       dbrev = _get_installed_ver(schema, session)

@@ -9,11 +9,7 @@ Pivotal's GPDB and HAWQ. <B>PDL Tools</B> includes convenience tools,
 parallelized algorithms and the <B>SUgAR</B> library (enabling second-order
 SQL parsing).
 
-<B>PDL Tools</B> is provided to customers of Pivotal as
-part of Pivotal's differentiated Data Science services. PDL's <B>PDL Tools</B>
-customers are granted copyright and a license for their own internal use.
-
-Please refer to LEGAL.txt file for more information about usage rights.
+Please refer to [LEGAL.txt](https://github.com/pivotalsoftware/PDLTools/blob/master/LEGAL.txt) file for more information about usage rights.
 
 Call any function without parameters (or with the single parameter
 <code>'usage'</code>, as a string) for online help. Use
@@ -93,7 +89,7 @@ PL/pgSQL, PL/PythonU
 Utility to partition event streams into sessions by timeouts and identifiers.
 
 (Written by [Michael Brand](mailto:mbrand@pivotal.io), 22 Aug 2013, based on code by Jin Yu.)
-        
+
 @sa Module source file: session.sql_in.
 
 @prereq
@@ -109,7 +105,7 @@ PL/Perl
 Utility to perform stratified, randomized, proportional sampling and labeling.
 
 (Written by [Michael Brand](mailto:mbrand@pivotal.io), 3 Sep 2014.)
-        
+
 @sa Module source file: sampling.sql_in.
 
 @prereq
@@ -187,7 +183,53 @@ PL/Python
         @defgroup grp_balance_dataset balance_dataset
     @}
 
+	@defgroup grp_one_vs_rest_data_prep Data preparation for one-vs-rest multi-class classification
+	@{
+		@brief Prepare multi-class classification data to build one-vs-rest classifiers
+
+Given a table with multi-class labels (number of classes > 2), this function will replicate
+the data for building one-vs-rest classifiers.
+
+(Written by [Gautam Muralidhar](mailto:gmuralidhar@pivotal.io), 14 Mar 2016.)
+
+@sa Module source file: one_vs_rest_data_prep.sql_in
+@prereq
+PL/Python
+	    @defgroup grp_one_vs_rest one_vs_rest
+	@}
+
+    @defgroup grp_grid_search Grid Search
+    @{
+        @brief A set of grid search functions for various algorithms.
+
+A set of grid search functions for various algorithms.
+
+(Written by [April Song, Srivatsan Ramanujam](mailto:asong@pivotal.io, sramanujam@pivotal.io), 19 April 2016.)
+
+@sa Module source file: grid_search.sql_in
+@prereq
+PL/Python, PL/pgSQL, MADlib 1.8+
+        @defgroup grp_kmeans k-Means
+    @}
+
+  @defgroup grp_genutils Generic Utilities
+  @{
+      @brief Collection of miscellaneous utility functions
+
+Collection of miscellaneous utility functions.
+
+(Started by [Jarrod Vawdrey, Esther Vasiete](mailto:jvawdrey@pivotal.io, evasiete@pivotal.io), 19 Apr 2016.)
+
+@sa Module source file: generic_utilities.sql_in.
+
+@prereq
+PL/pgSQL, MADlib 1.8+
+
+      @defgroup grp_multitbl_summary multitbl_summary
+      @defgroup grp_array_utilities array_utilities
+  @}
 @}
+
 
 @defgroup grp_algorithms_module Algorithms
 @{

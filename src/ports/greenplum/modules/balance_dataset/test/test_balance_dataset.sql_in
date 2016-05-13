@@ -38,11 +38,11 @@ as
            count(distinct id_balanced) 
     from testing_balanced_dataset 
     group by 1
-);
+) distributed randomly;
 
 -- If the balancing is correct, every class should have atleast
 -- (max_class/2)+1 samples
-select assert(sum(ratio),3)
+select assert(sum(ratio),3, 'Assertion test')
 from
 (
     select label,

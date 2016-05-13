@@ -1,0 +1,258 @@
+/* ----------------------------------------------------------------------- *//**
+
+@file generic_utilities.sql_in
+
+@brief Collection of miscellaneous utility functions
+
+@author Jarrod Vawdrey
+@date April 11, 2016
+
+*//* ----------------------------------------------------------------------- */
+
+
+/**
+@addtogroup grp_multitbl_summary
+
+@brief PL/python driver to run MADLIB_SCHEMA.summary() on multiple tables
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#multitbl_summary_syntax">Syntax</a>
+<li class="level1"><a href="#multitbl_summary_usage">Usage</a>
+<li class="level1"><a href="#multitbl_summary_example">Examples</a>
+</ul>
+</div>
+
+@about
+A pl/python driver to run MADlib table summary function on multiple input tables. Provided with a text
+array of 'schema.table' values, this function will create a table with the standard summary output
+in addition to "table_schema" and "table_name" columns to differentiate between tables.
+
+@anchor multitbl_summary_syntax
+@par Syntax (All parameters)
+<pre class="syntax">
+FUNCTION multitbl_summary(
+  input_tables text[]    	-- Array of 'schema.table' strings to summarize
+ ,output_table text      	-- Name of output table (e.g. "public.summary_results")
+ ,get_distinct boolean      -- If true, distinct values are counted.
+ ,get_quartiles boolean     -- If true, quartiles are computed.
+ ,ntile_array float8[]      -- An array of quantile values to compute. If NULL, quantile values are not computed.
+ ,how_many_mfv integer      -- The number of most-frequent-values to compute.
+ ,get_estimates boolean     -- If true, estimated values are produced. If FALSE, exact values are calculated.
+)
+RETURNS text;
+</pre>
+
+@param input_tables Array of "schema.table" strings to iterate through
+@param output_table Name of output table (e.g. schema.table)
+@param get_distinct If TRUE, distinct values are counted.
+@param get_quartiles If TRUE, quartiles are computed.
+@param ntile_array An array of quantile values to compute. If NULL, quantile values are not computed.
+@param how_many_mfv The number of most-frequent-values to compute.
+@param get_estimates If TRUE, estimated values are produced. If FALSE, exact values are calculated.
+@return A string containing a count of tables summarized and skipped (due to not being found).
+
+@par Syntax (Default parameters)
+<pre class="syntax">
+FUNCTION multitbl_summary(
+  input_tables text[]    	-- Array of 'schema.table' strings to summarize
+ ,output_table text      	-- Name of output table (e.g. "public.summary_results")
+)
+RETURNS text;
+</pre>
+
+@param input_tables Array of "schema.table" strings to iterate through
+@param output_table Name of output table (e.g. schema.table)
+
+@return A string containing a count of tables summarized and skipped (due to not being found).
+
+@anchor multitbl_summary_usage
+@usage
+The multitbl_summary() function utilizes MADlib's summary() function to produce summary statistics for a set of provided tables.
+The underlying summary function invokes various methods from the MADlib library to provide the data overview.
+More information about the underlying MADlib function can be found http://madlib.incubator.apache.org/docs/latest/group__grp__summary.html
+
+Tables listed in the input array that are not found in the system catalog (e.g. does not exist, no permissions) are excluded from summary.
+
+@anchor multitbl_summary_example
+@examp
+
+@verbatim
+
+-- Create two test tables
+DROP TABLE IF EXISTS PDLTOOLS_SCHEMA.multitbl_summary_test1;
+CREATE TABLE PDLTOOLS_SCHEMA.multitbl_summary_test1 (
+  col1 float
+ ,col2 float
+ ,col3 float
+);
+INSERT INTO PDLTOOLS_SCHEMA.multitbl_summary_test1 (
+  SELECT random()
+        ,random()
+        ,random()
+  FROM generate_series(1,100)
+);
+
+DROP TABLE IF EXISTS PDLTOOLS_SCHEMA.multitbl_summary_test2;
+CREATE TABLE PDLTOOLS_SCHEMA.multitbl_summary_test2 (
+  col1 float
+ ,col2 float
+ ,col3 float
+);
+INSERT INTO PDLTOOLS_SCHEMA.multitbl_summary_test2 (
+  SELECT random()
+        ,random()
+        ,random()
+  FROM generate_series(1,100)
+);
+
+-- Summarize the 2 created test tables (an additional table name 'multitbl_summary_missing' is provided to demonstrate the behavior when a table is not found)
+user=# DROP TABLE IF EXISTS PDLTOOLS_SCHEMA.sum_output;
+user=# SELECT PDLTOOLS_SCHEMA.multitbl_summary(
+  array[
+    'PDLTOOLS_SCHEMA.multitbl_summary_test1'
+   ,'PDLTOOLS_SCHEMA.multitbl_summary_test2'
+   ,'PDLTOOLS_SCHEMA.multitbl_summary_missing'
+  ]
+ ,'PDLTOOLS_SCHEMA.sum_output'
+ ,TRUE
+ ,TRUE
+ ,NULL
+ ,10
+ ,TRUE
+);
+
+multitbl_summary
+---------------
+"2 tables summarized (1 table(s) not found)"
+(1 row)
+
+Time: 3409 ms.
+
+@endverbatim
+
+In this example, the function takes an array of 3 schema and table pairs and returns counts of tables summarized and not found. The summary
+results can be found in the given output table "sum_output"
+
+@prereq
+PL/Python
+
+@sa grp_multitbl_summary
+ */
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.multitbl_summary(
+  input_tables text[]
+ ,output_table text
+ ,get_distinct boolean
+ ,get_quartiles boolean
+ ,ntile_array float8[]
+ ,how_many_mfv integer
+ ,get_estimates boolean
+) RETURNS text AS
+$$
+  global ntile_array
+  import sys
+
+  i = 1 # iterator
+  notFound = 0 # tables not found
+
+  # if ntile_array is NULL will show up as None
+  if ntile_array == None:
+    ntile_array = 'Null'
+
+  # iterate through each table in "input_tables"
+  for tbl in input_tables:
+
+    # check if both schema and table provided
+    cur_sch = "public"
+    cur_tbl = tbl
+    if "." in tbl:
+      ind = tbl.index(".")
+      cur_sch = tbl[0:ind]
+      cur_tbl = tbl[ind+1:]
+
+    # check if table exists
+    query = '''SELECT count(*)
+               FROM information_schema.columns
+               WHERE table_schema = lower('{0}')
+               AND table_name = lower('{1}')
+            '''.format(cur_sch,cur_tbl)
+
+    res = plpy.execute(query)
+
+    if res[0]['count'] == 0:
+
+      print_string = '''*** Error: Table "{0}" not found ***
+                     '''.format(tbl)
+      plpy.info(print_string)
+
+      notFound+=1
+
+    else:
+
+      # prep a string with name of a temp table to use
+      tmpTbl = '''{0}_tmp{1}'''.format(output_table,i)
+
+      # prep a string to call madlib summary function
+      query = '''SELECT MADLIB_SCHEMA.summary ('{0}','{1}',NULL,NULL,{2},{3},{4},{5},{6})
+              '''.format(tbl,tmpTbl,get_distinct,get_quartiles,ntile_array,how_many_mfv,get_estimates)
+
+      # execute prepared query string
+      plpy.execute(query)
+
+      # if first iteration then create table
+      if i == 1:
+        query = '''CREATE TABLE {0} AS
+                   SELECT lower(('{1}'))::text AS table_schema
+                         ,lower(('{2}')::text) AS table_name
+                         ,*
+                   FROM {3}
+                '''.format(output_table,cur_sch,cur_tbl,tmpTbl)
+
+      # else insert into existing table
+      else:
+        query = '''INSERT INTO {0} (
+                     SELECT lower(('{1}'))::text AS table_schema
+                           ,lower(('{2}'))::text AS table_name
+                           ,*
+                     FROM {3}
+                   )
+                '''.format(output_table,cur_sch,cur_tbl,tmpTbl)
+
+      # execute prepared query string
+      plpy.execute(query)
+
+      # clean up temp table
+      query = '''DROP TABLE IF EXISTS {0}
+              '''.format(tmpTbl)
+
+      # execute prepared query string
+      plpy.execute(query)
+
+      # add one to iterator
+      i+=1
+
+  # return number of tables processed
+  returnString = '''{0} tables summarized ({1} table(s) not found)'''.format(i-1,notFound)
+  return returnString
+
+$$ LANGUAGE 'plpythonu';
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.multitbl_summary(
+  input_tables text[]
+ ,output_table text
+) RETURNS text AS
+$$
+    SELECT PDLTOOLS_SCHEMA.multitbl_summary($1,$2,TRUE,TRUE,NULL,10,TRUE)
+$$ LANGUAGE 'sql';
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.multitbl_summary()
+RETURNS text AS
+$$
+    return '''PL/python driver to run MADLIB_SCHEMA.summary() on multiple tables'''
+$$ LANGUAGE 'plpythonu';
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.multitbl_summary(usage text)
+RETURNS text AS
+$$
+    return '''PL/python driver to run MADLIB_SCHEMA.summary() on multiple tables. Refer to: http://pivotalsoftware.github.io/PDLTools/modules.html for more details'''
+$$ LANGUAGE 'plpythonu';

@@ -1,3 +1,6 @@
+UDF: FUNCTION PDLTOOLS_SCHEMA.multitbl_summary(pg_catalog._text,pg_catalog.text,pg_catalog.bool,pg_catalog.bool,pg_catalog._float8,pg_catalog.int,pg_catalog.bool)
+UDF: FUNCTION PDLTOOLS_SCHEMA.multitbl_summary(pg_catalog.text)
+UDF: FUNCTION PDLTOOLS_SCHEMA.multitbl_summary()
 UDF: FUNCTION PDLTOOLS_SCHEMA.cols2vec(pg_catalog.text, pg_catalong.text[], pg_catalog.text, pg_catalog.text)
 UDF: FUNCTION PDLTOOLS_SCHEMA.cols2vec()
 UDF: FUNCTION PDLTOOLS_SCHEMA.vec2cols(pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalong.text)

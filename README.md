@@ -15,13 +15,13 @@ Pre-requisites
 
 The following are the pre-requisites for building the pdltools package:
 
-    1. The cmake compiler (version >= 2.8)
+    1. The cmake compiler. (We recommend getting latest version (3.5) as older version don't seem to handle URL redirects, you can download the binary for Linux from here: https://cmake.org/files/v3.5/cmake-3.5.0-Linux-x86_64.tar.gz).
     2. g++, Flex (>= 2.5.33), Bison (>=2.4), Doxygen (1.8.7 recommended, needed only for generating docs), Latex (needed only for generating PDF docs). On CentOS this would be:
 
         sudo yum install gcc-c++
         sudo yum install flex
         sudo yum install bison 
-        sudo yum install doxygen (we recommended version 1.8.7, follow instructions https://www.stack.nl/~dimitri/doxygen/download.html to download and install the appropriate version from source).
+        sudo yum install doxygen (we recommend version 1.8.7, follow instructions at https://www.stack.nl/~dimitri/doxygen/download.html to download and install the appropriate binaries ex: http://ftp.stack.nl/pub/users/dimitri/doxygen-1.8.7.linux.bin.tar.gz).
         sudo yum install texlive-latex
 
     3. Greenplum Database (GPDB 4.2 or higher) and/or HAWQ (1.2.x and higher)
@@ -96,6 +96,11 @@ Post installation, you can run the unit tests in PDL Tools with the install-chec
 
 Parameters for `install-check` are the same as parameters for `install`.
 If any of the tests fail, you will see an error message displayed on your console.
+
+Contributing to PDLTools
+========================
+
+If you're interested in contributing to PDLTools, please refer to the instructions at [Guidelines for contributing to PDLTools](https://github.com/pivotalsoftware/PDLTools/blob/master/CONTRIBUTIONS.md)
 
 Legal
 ======

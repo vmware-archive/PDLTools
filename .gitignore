@@ -1,2 +1,31 @@
-*~
-build/*
+# Ignore build directory
+/build*
+
+# Ignore generated code files
+*.so
+*.o
+*.pyc
+
+# Meta data of Mac OS X's Finder.app
+.DS_Store
+
+# LaTeX temporary files
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.synctex.gz
+*.toc
+*.thm
+auto
+_region_.tex
+auto
+*.swp
+*.fdb_latexmk
+*.swo  # vim swap file
+
+# Biblatex temporary files
+*-blx.bib
+*.run.xml
+

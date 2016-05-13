@@ -11,7 +11,7 @@
 # "-DSOURCEFORGE_BASE_URL=http://test.local/projects"
 
 set(SOURCEFORGE_BASE_URL
-  "http://sourceforge.net/projects"
+  "https://sourceforge.net/projects"
   CACHE STRING
   "Base URL for Sourceforge projects. May be overridden for testing purposes.")
 
