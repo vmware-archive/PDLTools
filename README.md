@@ -10,6 +10,12 @@ Usage docs
 
 http://pivotalsoftware.github.io/PDLTools/
 
+Binaries (Pivotal internal)
+============================
+
+[PDLTools binaries](https://drive.google.com/a/pivotal.io/folderview?id=0B43lMs8oQk7xcGJqdlN6SElWOTQ&usp=sharing)
+
+
 Pre-requisites
 ===============
 
