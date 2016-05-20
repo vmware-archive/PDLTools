@@ -1,0 +1,984 @@
+/* ----------------------------------------------------------------------- *//**
+
+@file kd_tree.sql_in
+
+@brief KD-tree and its application to nearest neighbour search.
+
+@author Written by Jin Yu
+@date 16 May 2016
+
+ *//* ----------------------------------------------------------------------- */
+
+/**
+@addtogroup grp_kdtree
+
+@brief Organize multi-dimensional data in a KD-tree.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#kdtree_syntax">Syntax</a>
+<li class="level1"><a href="#kdtree_usage">Usage</a>
+<li class="level1"><a href="#kdtree_example">Example</a>
+</ul>
+</div>
+
+@about
+A KD-tree is a data structure that organizes multi-dimensional data in a binary tree (http://en.wikipedia.org/wiki/K-d_tree). 
+It is widely used for efficient nearest neighbour search in a low dimensional space (\ref grp_kdtree_knn). 
+Due to the "curse of dimensionality", the search however becomes less effective as the dimensionality of the 
+space increases (e.g. > 10). This function creates a KD-tree by recursively partitioning the data at the median  
+value along the dimension of maximum variance. Each leaf node of the resulting KD-tree contains no more than a pre-specified
+number of data points.
+
+
+@anchor kdtree_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION kd_tree(data_tab TEXT, id TEXT, dimension TEXT, val TEXT, subtree_size INT, output_tab TEXT) 
+RETURNS VOID;
+</pre>
+
+@param data_tab Table that contains the data. 
+@param id Name of the column specifying data IDs.
+@param dimension Name of the column specifying dimension indices.
+@param val Name of the column containing data values.
+@param subtree_size The desired number of data assigned to each leaf node.
+@param output_tab Name of the output table.
+
+@sa grp_kdtree_knn for k-nearest neighbour search with KD-tree.
+
+@anchor kdtree_usage
+@usage
+
+The data is expected to be provided in a table of the following structure:
+\n
+\code
+TABLE/VIEW data_table
+(
+    ...
+    data_id INT,    -- Data ID
+    dimension INT,  -- Dimension index
+    val FLOAT8,     -- Data value
+    ...
+)
+\endcode
+
+The function accepts sparse data, i.e., zero entries do not need to be present in the data table.
+
+The constructed KD-tree is specified in the output table. It provides information about each node of the tree in the following columns:
+
+- node_location: An array of 0s and 1s that specifies the location of a node. The 
+                      ith element of the array indicates whether to go via the left (0) 
+                      or the right branch (1) at the ith level of the tree in order to 
+                      reach the current node. Set to NULL for the root node.
+- split_dimension: Index of the dimension, along which the data in the current node 
+                      is further split. The splitting dimension is chosen to be the 
+                      dimension of maximum variance. Set to NULL for leaf nodes.
+- split_value: Median of the data in the current node along the splitting dimension.
+                      Set to NULL for leaf nodes.
+- pop_variance: Population variance of the data in the current node along the 
+                      splitting dimension. Set to NULL for leaf nodes.
+- leaf_member: IDs of the data in the leaf node. Set to NULL for non-leaf nodes.
+
+
+
+@anchor kdtree_example
+@examp
+
+-# Create a test dataset of 10 2D data points. Note: The function accepts sparse representation of the data. 
+For example, the first input: (1,1,0), in the example below can be removed without affecting the result.
+\code
+CREATE TABLE kdtree_test_data (id INT, dimension INT, val FLOAT8) DISTRIBUTED RANDOMLY;
+INSERT INTO kdtree_test_data VALUES
+(1, 1, 0),  
+(1, 2, 1),
+(2, 1, 2),
+(2, 2, 2),
+(3, 1, 3),
+(3, 2, 6),
+(4, 1, 4),
+(4, 2, 9),
+(5, 1, 5),
+(5, 2, 7),
+(6, 1, 6),
+(6, 2, 2),
+(7, 1, 7),
+(7, 2, 3),
+(8, 1, 8),
+(8, 2, 4),
+(9, 1, 9),
+(9, 2, 7),
+(10, 1, 10),
+(10, 2, 8);
+\endcode
+\n
+
+-# Construct a KD-tree with each leaf node containing no more than 3 data points.
+\code
+SELECT pdltools.kd_tree('kdtree_test_data', 'id', 'dimension', 'val', 3, 'kdtree_test_output'); 
+\endcode
+\n
+
+-# Find the 2-nearest neighbours for point (3.5,4); see \ref grp_kdtree_knn for the usage of the kdtree_knn() function.
+\code
+SELECT * FROM pdltools.kdtree_knn('kdtree_test_data', 'id', 'dimension', 'val', 'kdtree_test_output', array[3.5,4], 2);
+
+ knn_id |        knn_dist        
+--------+------------------------
+ {3,2}  | {2.06155281280883,2.5}
+
+\endcode
+
+The \a knn_id field shows the IDs of the 2-nearest neighbours; the \a knn_dist field provides 
+the corresponding Euclidean distance from the query point to its nearest neighbours. One can 
+also query the k-nearest neighbours of a set of data as follows:
+
+\code
+CREATE TABLE query_data (query_id INT, query_point FLOAT8[]) DISTRIBUTED RANDOMLY;
+INSERT INTO query_data VALUES
+(1, array[8,1]), 
+(2, array[3,4]),
+(3, array[1,2.5]);
+
+SELECT pdltools.kdtree_knn('kdtree_test_data', 'id', 'dimension', 'val', 'kdtree_test_output','query_data', 'query_id', 'query_point', 2, 'query_result');
+
+SELECT * FROM query_result ORDER BY query_id
+
+ query_id | knn_id |              knn_dist               
+----------+--------+-------------------------------------
+        1 | {7,6}  | {2.23606797749979,2.23606797749979}
+        2 | {3,2}  | {2,2.23606797749979}
+        3 | {2,1}  | {1.11803398874989,1.80277563773199}
+        
+\endcode
+
+
+The above \a query_data table contains IDs of the query points: \a query_id, and 
+their coordinates: \a query_point. The k-nearest neighbours (2 in the above example) 
+is given in the \a query_result table. See the two versions of the kdtree_knn() 
+function (\ref grp_kdtree_knn) for more details.
+
+*/
+
+
+/**
+@addtogroup grp_kdtree_knn
+
+@brief K-nearest neighbour search with KD-tree.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#kdtree_knn_syntax">Syntax</a>
+<li class="level1"><a href="#kdtree_knn_example">Example</a>
+</ul>
+</div>
+
+@about
+This function finds the k-nearest neighbours of a query point by searching through a pre-learned KD-tree (e.g. produced by \ref grp_kdtree). 
+The hope is that most of the branches in the KD-tree can be eliminated from search. The function is intended for large-scale problems, 
+e.g. finding nearest neighbours from millions of data points. For small- to median- scale problems, a brute-force approach that compares 
+distances between the query point to all the data may work well enough by leveraging the parallel computation capability of the Greenplum database.
+Also note that due to the "curse of dimensionality" problem with KD-tree, the function is more suitable for search in a low dimensional space
+(e.g. dimensionality of < 10).
+
+
+
+@anchor kdtree_knn_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION kdtree_knn(training_data_tab TEXT, id TEXT, dimension TEXT, val TEXT, kdtree_tab TEXT, query_point FLOAT8[], k INT)
+RETURNS kdtree_knn_result;
+</pre>
+
+@param training_data_tab Table that contains the data that was used for the construction of the KD-tree. 
+@param id Name of the column specifying data IDs.
+@param dimension Name of the column specifying dimension indices.
+@param val Name of the column containing data values.
+@param kdtree_tab Table that specifies the KD-tree.
+@param query_point Query point.
+@param k Number of nearest neighbours to search for.
+@return A data structure that contains the IDs of the k-nearest neighbours of the query point and the corresponding distances to those neighbours.
+
+\n\n
+The above function finds the k-nearest neighbours of a single query point. One can use the following function to handle multiple queries. 
+\n
+<pre class="syntax">
+FUNCTION kdtree_knn(training_data_tab TEXT, id TEXT, dimension TEXT, val TEXT, kdtree_tab TEXT, 
+                    query_tab TEXT, query_id TEXT, query_point TEXT, k INT, result_tab TEXT)
+RETURNS VOID;
+</pre>
+
+@param training_data_tab Table that contains the data that was used for the construction of the KD-tree. 
+@param id Name of the column specifying data IDs.
+@param dimension Name of the column specifying dimension indices.
+@param val Name of the column containing data values.
+@param kdtree_tab Table that specifies the KD-tree.
+@param query_tab Table that contains the query points.
+@param query_id Name of the column specifying query point IDs.
+@param query_point Name of the column specifying query points.
+@param k Number of nearest neighbours to search for.
+@param result_tab Name of table that contains the search result.
+
+
+@sa \ref grp_kdtree for building a KD-tree.
+
+@anchor kdtree_knn_example
+@examp
+
+See \ref grp_kdtree for a usage example.
+
+*/
+
+
+
+
+/**
+ * @brief Build a KD-tree to divide multi-dimensional data into groups of a pre-specified size. 
+ *
+ * @param data_tab Table that contains the data. The table  
+ * is expected to be in the form of (data_id INT, dimension INT, val FLOAT8).
+ * The function accepts sparse representation of the data, i.e. zero entries do
+ * not need to be present in the data table.
+ * @param id Name of the column specifying data IDs.
+ * @param dimension Name of the column specifying dimension indices.
+ * @param val Name of the column containing data values.
+ * @param subtree_size The desired number of data assigned to each leaf node.
+ * @param output_tab Name of the output table.
+ *
+ */ 
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.kd_tree(data_tab TEXT, id TEXT, dimension TEXT, val TEXT, subtree_size INT, output_tab TEXT)
+RETURNS VOID AS 
+$$
+
+    BEGIN
+       PERFORM PDLTOOLS_SCHEMA.__clink_kd_tree_max_variance(data_tab, id, dimension, val, NULL, subtree_size, NULL, NULL, output_tab);
+       RETURN;
+    END;
+    
+$$ LANGUAGE PLPGSQL;
+
+
+
+
+/**
+ * @internal
+ * @brief Build a KD-tree to divide multi-dimensional data into groups of a
+ * pre-specified size. This function should be called through the wrapper 
+ * function kd_tree().
+ *
+ * @param data_tab Table that contains the data. The table  
+ * is expected to be in the form of (data_id INT, dimension INT, val FLOAT8).
+ * The function accepts sparse representation of the data, i.e. zero entries do
+ * not need to be present in the data table.
+ * @param id Name of the column specifying data IDs.
+ * @param dimension Name of the column specifying dimension indices.
+ * @param val Name of the column containing data values.
+ * @param data_size Number of data to split. 
+ * @param subtree_size The desired number of data assigned to each subtree.
+ * @param selected_ids IDs of the data to split.
+ * @param node_location Array of 0s and 1s that specifies the location of the current node. 
+ * The ith element of the array indicates whether to go via the left (0) or the right branch (1) 
+ * at the ith level of the tree in order to reach the current node. Set to NULL for the root node.
+ * @param output_tab Name of the output table.
+ *
+ */ 
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__clink_kd_tree_max_variance(data_tab TEXT, id TEXT, dimension TEXT, val TEXT, 
+data_size BIGINT, subtree_size INT, selected_ids INT[], node_location INT[], output_tab TEXT) 
+RETURNS VOID AS 
+$$
+    DECLARE 
+        sql TEXT;
+        num_data INT;
+        mid_point INT;
+        current_dim INT;
+        var_times_n FLOAT8;
+        split record;
+    BEGIN
+       
+        IF node_location IS NULL THEN  -- root node
+        
+            -- Number of data points.
+            EXECUTE('SELECT count(distinct '  || id ||') FROM ' || data_tab) INTO num_data;
+  
+            -- Create a table that specifies the structure of the tree.
+            -- The table has 4 columns: 
+            -- node_location INT[]: An array of 0s and 1s that specifies the location of a node. The ith element of the array indicates whether 
+            -- to go via the left (0) or the right branch (1) at the ith level of the tree in order to reach the current node. Set to NULL for the root node.
+            -- split_dimension INT: Index of the dimension, along which the data in the current node is further partitioned. 
+            -- The splitting dimension is chosen to be the dimension of maximum variance. Set to NULL for leaf nodes.
+            -- split_value FLOAT8: Median of the data in the current node along the splitting dimension. Set to NULL for leaf nodes.
+            -- pop_variance FLOAT8: Population variance of the data in the current node along the splitting dimension. Set to NULL for leaf nodes.
+            -- leaf_member INT[]: IDs of the data in the leaf node. Set to NULL for non-leaf nodes.
+
+            EXECUTE 'DROP TABLE IF EXISTS ' || output_tab;
+            sql = 'CREATE TABLE ' || output_tab || '( 
+                node_location INT[], split_dimension INT, split_value FLOAT8, pop_variance FLOAT8, leaf_member INT[]
+                ) DISTRIBUTED RANDOMLY';
+            EXECUTE sql;
+
+            -- Find the dimension of maximum variance.
+            sql = 'SELECT ' || dimension || ', var_times_n 
+                FROM ( 
+                SELECT '|| dimension || ', ('|| CAST(num_data AS TEXT) ||'-n)*power(mean,2)+sum(power('|| val || '-mean,2)) AS var_times_n
+                FROM ' || data_tab || '
+                JOIN ( 
+                SELECT '|| dimension || ', count(*) n, sum('|| val ||')*1.0/' || CAST(num_data AS TEXT) ||' mean
+                FROM ' || data_tab || ' 
+                GROUP BY ' || dimension || '
+                ) foo
+                USING (' || dimension || ')
+                GROUP BY  ' || dimension || ', n, mean
+                ) foo2
+                ORDER BY var_times_n DESC
+                LIMIT 1';
+            EXECUTE sql INTO current_dim, var_times_n;
+
+        ELSE
+            -- Number of data to further split.
+            num_data = data_size;
+
+            -- Find the dimension of maximum variance.
+            sql = 'SELECT ' || dimension || ', var_times_n 
+                FROM (
+                SELECT ' || dimension || ', ('|| CAST(num_data AS TEXT) ||'-n)*power(mean,2)+sum(power('|| val || '-mean,2)) AS var_times_n  
+                FROM (
+                SELECT ' || dimension || ',' || val || ',
+                count(*) OVER(PARTITION BY '|| dimension ||') n, 
+                sum(' || val || ') OVER(PARTITION BY '|| dimension ||')*1.0/' || CAST(num_data AS TEXT) ||' mean
+                FROM ' || data_tab || ' 
+                JOIN (
+                SELECT unnest(
+                string_to_array(' || quote_literal(array_to_string(selected_ids,',')) || ',' || quote_literal(',') ||')
+                )::INT AS ' || id || '
+                ) foo
+                USING (' || id || ')
+                ) foo2
+                GROUP BY  ' || dimension || ', n, mean
+                ) foo3
+                ORDER BY var_times_n DESC
+                LIMIT 1';
+            EXECUTE sql INTO current_dim, var_times_n;
+            
+        END IF;
+
+        -- Stop if the desired subtree size is reached.
+        IF num_data <= subtree_size THEN -- leaf node
+            sql = 'INSERT INTO ' || output_tab || ' 
+                VALUES(
+                    array[' || array_to_string(node_location,',') || '],
+                    NULL,
+                    NULL,
+                    NULL,
+                    array[' || array_to_string(selected_ids,',') || ']            
+                )';
+            EXECUTE sql;
+            RETURN; 
+        END IF;
+
+        -- Mid-point.
+        SELECT ceil(num_data/2.0) INTO mid_point; 
+
+        -- Split data by median along the dimension of maximum variance.
+        IF node_location IS NULL THEN
+            sql = 'SELECT array_agg(CASE WHEN row_number <= ' || CAST(mid_point AS TEXT) || ' THEN id END ORDER BY id) less,
+                array_agg(CASE WHEN row_number > ' || CAST(mid_point AS TEXT) || ' THEN id END ORDER BY id) greater,
+                sum((row_number=' || CAST(mid_point AS TEXT) || ')::INT*val) median_val,
+                sum((row_number<='|| CAST(mid_point AS TEXT) || ')::INT) less_node_size,
+                sum((row_number>' || CAST(mid_point AS TEXT) || ')::INT) greater_node_size
+                FROM (
+                SELECT id, coalesce(val,0) val, row_number() OVER(ORDER BY coalesce(val,0), id)
+                FROM (
+                SELECT ' || id || ' AS id,' || val || ' AS val FROM '|| data_tab || ' 
+                WHERE '|| dimension ||'='|| CAST(current_dim AS TEXT) ||' 
+                ) foo
+                RIGHT JOIN (SELECT distinct '|| id ||' AS id FROM ' || data_tab || ') foo2
+                USING (id)
+                ) foo3';
+
+        ELSE         
+            sql = 'SELECT array_agg(CASE WHEN row_number <= ' || CAST(mid_point AS TEXT) || ' THEN id END ORDER BY id) less,
+                array_agg(CASE WHEN row_number > ' || CAST(mid_point AS TEXT) || ' THEN id END ORDER BY id) greater,
+                sum((row_number=' || CAST(mid_point AS TEXT) || ')::INT*val) median_val,
+                sum((row_number<=' || CAST(mid_point AS TEXT) || ')::INT) less_node_size,
+                sum((row_number>' || CAST(mid_point AS TEXT) || ')::INT) greater_node_size
+                FROM (
+                SELECT id, coalesce(val,0) val, row_number() OVER (ORDER BY coalesce(val,0), id)
+                FROM (
+                SELECT '|| id ||' AS id,' || val || ' AS val 
+                FROM '|| data_tab || ' WHERE '|| dimension ||'=' || CAST(current_dim AS TEXT) ||'
+                ) foo
+                RIGHT JOIN (
+                SELECT unnest(
+                string_to_array(' || quote_literal(array_to_string(selected_ids,',')) || ',' || quote_literal(',') ||')
+                )::INT AS id
+                ) foo2
+                USING (id)
+                ) foo3';
+
+        END IF;      
+
+        FOR split IN EXECUTE(sql) LOOP
+
+            -- Record the node location, its corresponding splitting dimension, median and population variance.
+            IF node_location IS NULL THEN 
+                sql = 'INSERT INTO ' || output_tab || ' 
+                VALUES(
+                    NULL, ' || 
+                    CAST(current_dim AS TEXT) || ',' ||
+                    CAST(split.median_val AS TEXT) || ',' ||
+                    CAST(var_times_n/num_data AS TEXT) || ',
+                    NULL                
+                )';
+                EXECUTE sql;        
+
+            ELSE       
+                sql = 'INSERT INTO ' || output_tab || ' 
+                    VALUES(
+                        array[' || array_to_string(node_location,',') || '],' || 
+                        CAST(current_dim AS TEXT) || ',' ||
+                        CAST(split.median_val AS TEXT) || ',' ||
+                        CAST(var_times_n/num_data AS TEXT) || ',
+                        NULL             
+                    )';
+                 EXECUTE sql;
+                               
+            END IF;        
+            
+            -- Repeat the process to further split the data.
+            IF node_location IS NULL THEN
+                PERFORM PDLTOOLS_SCHEMA.__clink_kd_tree_max_variance(data_tab, id, dimension, val, split.less_node_size, subtree_size, split.less, array[0]::INT[], output_tab);
+                PERFORM PDLTOOLS_SCHEMA.__clink_kd_tree_max_variance(data_tab, id, dimension, val, split.greater_node_size, subtree_size, split.greater, array[1]::INT[], output_tab); 
+            ELSE
+                PERFORM PDLTOOLS_SCHEMA.__clink_kd_tree_max_variance(data_tab, id, dimension, val, split.less_node_size, subtree_size, split.less, array_append(node_location,0), output_tab);
+                PERFORM PDLTOOLS_SCHEMA.__clink_kd_tree_max_variance(data_tab, id, dimension, val, split.greater_node_size, subtree_size, split.greater, array_append(node_location,1), output_tab); 
+            END IF;
+        END LOOP;
+        
+    END;
+$$ LANGUAGE PLPGSQL;
+
+
+
+
+/**
+ * @internal
+ * @brief Data type to represent the K nearest neighbors.
+*/
+DROP TYPE IF EXISTS PDLTOOLS_SCHEMA.__clink_kdtree_knn_result CASCADE; 
+CREATE TYPE PDLTOOLS_SCHEMA.__clink_kdtree_knn_result AS (
+    knn_id INT[],
+    knn_dist FLOAT8[]
+);
+
+
+
+/**
+ * @brief Nearest neighbour search with KD-tree for one query point.
+ *
+ * @param training_data_tab Table that contains the data that was used for the construction of the KD-tree. 
+ * @param id Name of the column specifying data IDs.
+ * @param dimension Name of the column specifying dimension indices.
+ * @param val Name of the column containing data values.
+ * @param kdtree_tab Table that specifies the KD-tree.
+ * @param query_point Query point.
+ * @param k Number of nearest neighbours to search for.
+ * @return a data structure that contains the IDs of the k-nearest neighbours and the corresponding distances to those neighbours.
+*/
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.kdtree_knn(training_data_tab TEXT, id TEXT, dimension TEXT, val TEXT, kdtree_tab TEXT, query_point FLOAT8[], k INT)
+RETURNS PDLTOOLS_SCHEMA.__clink_kdtree_knn_result AS 
+$$
+    DECLARE 
+        sql TEXT;
+        knn PDLTOOLS_SCHEMA.__clink_kdtree_knn_result;
+    BEGIN
+        SELECT * FROM PDLTOOLS_SCHEMA.__clink_kdtree_knn_0(training_data_tab, id, dimension, val, kdtree_tab, NULL, query_point, k, NULL) x INTO knn;        
+        RETURN knn;
+    END;
+    
+$$ LANGUAGE PLPGSQL;
+
+
+
+/**
+ * @brief Nearest neighbour search with KD-tree for a collection of query points.
+ *
+ * @param training_data_tab Table that contains the data that was used for the construction of the KD-tree. 
+ * @param id Name of the column specifying data IDs.
+ * @param dimension Name of the column specifying dimension indices.
+ * @param val Name of the column containing data values.
+ * @param kdtree_tab Table that specifies the KD-tree.
+ * @param query_tab Table that contains the query points.
+ * @param query_id Name of the column specifying query point IDs.
+ * @param query_point Name of the column specifying query points.
+ * @param k Number of nearest neighbours to search for.
+ * @param result_tab Name of table that contains the search result.
+*/
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.kdtree_knn(training_data_tab TEXT, id TEXT, dimension TEXT, val TEXT, kdtree_tab TEXT, query_tab TEXT, query_id TEXT, query_point TEXT, k INT, result_tab TEXT)
+RETURNS VOID AS 
+$$
+    DECLARE 
+        sql TEXT;
+        search_result_tab TEXT;
+        result record;
+        nn record;
+        knn PDLTOOLS_SCHEMA.__clink_kdtree_knn_result;
+       
+    BEGIN
+
+        EXECUTE('DROP TABLE IF EXISTS ' || result_tab);
+        sql = 'CREATE TABLE ' || result_tab || '('|| query_id ||' INT, knn_id INT[], knn_dist FLOAT8[]) DISTRIBUTED RANDOMLY';
+        EXECUTE(sql);
+        
+        FOR result IN EXECUTE('SELECT '|| query_id || ' AS id, ' || query_point || ' AS query_point FROM ' || query_tab) LOOP
+            SELECT * FROM PDLTOOLS_SCHEMA.__clink_kdtree_knn_0(training_data_tab, id, dimension, val, kdtree_tab, NULL, result.query_point, k, NULL) x INTO knn;
+            sql = 'INSERT INTO ' || result_tab || ' 
+                VALUES (' ||
+                CAST(result.id AS TEXT) || ', 
+                ARRAY[' || array_to_string(knn.knn_id,',') ||'], 
+                ARRAY[' || array_to_string(knn.knn_dist,',') ||']
+                )';
+            EXECUTE(sql);
+        END LOOP;
+       
+    END;
+    
+$$ LANGUAGE PLPGSQL;
+
+
+/**
+ * @internal
+ * @brief Nearest neighbour search with KD-tree. This function should be called through the wrapper
+ * function kdtree_knn().
+ *
+ * @param training_data_tab Table that contains the data that was used for the construction of the KD-tree. 
+ * @param id Name of the column specifying data IDs.
+ * @param dimension Name of the column specifying dimension indices.
+ * @param val Name of the column containing data values.
+ * @param kdtree_tab Table that specifies the KD-tree.
+ * @param query_tab Table that contains the query points.
+ * @param query_id Name of the column specifying query point IDs.
+ * @param query_point Name of the column specifying query points.
+ * @param k Number of nearest neighbours to search for.
+ * @param result_tab Name of table that contains the search result.
+*/
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__clink_kdtree_knn_0(training_data_tab TEXT, id TEXT, dimension TEXT, val TEXT, 
+kdtree_tab TEXT, search_node_location INT[], query_point FLOAT8[], k INT, current_knn PDLTOOLS_SCHEMA.__clink_kdtree_knn_result) 
+RETURNS kdtree_knn_result AS 
+$$
+    DECLARE 
+        sql TEXT;
+        split_dimension INT;
+        split_value FLOAT8;
+        leaf_member INT[];
+        max_knn_dist FLOAT8;
+        new_knn PDLTOOLS_SCHEMA.__clink_kdtree_knn_result;
+    BEGIN
+       
+        IF search_node_location IS NULL THEN
+            sql = 'SELECT split_dimension, split_value, leaf_member 
+                FROM ' || kdtree_tab || ' 
+                WHERE node_location IS NULL';
+                
+        ELSE
+            sql = 'SELECT split_dimension, split_value, leaf_member 
+                FROM ' || kdtree_tab || ' 
+                WHERE node_location = array[' || array_to_string(search_node_location,',')||']';
+        END IF;
+        
+        EXECUTE sql INTO split_dimension, split_value, leaf_member;
+
+       
+        IF leaf_member IS NOT NULL THEN
+            -- Find candidate nearest neighbours.
+            IF current_knn IS NULL THEN 
+                sql = 'SELECT array_agg(id ORDER BY dist,id) knn_id, array_agg(dist ORDER BY dist) knn_dist
+                    FROM (
+                    SELECT id, dist
+                    FROM (
+                    SELECT id, sqrt(sum(power(val1-coalesce(val2,0),2))) dist
+                    FROM 
+                    (SELECT generate_series(1,'|| array_upper(query_point,1) ||') AS ' || dimension || ', unnest(array[' || array_to_string(query_point,',') || ' ]) AS val1) foo
+                    LEFT JOIN
+                    (SELECT ' || id || ' AS id,' || dimension || ', ' || val || ' AS val2  
+                    FROM ' || training_data_tab || '
+                    JOIN (SELECT unnest(array['|| array_to_string(leaf_member,',') ||'])::INT AS id) foo2
+                    USING (id)
+                    ) foo3
+                    USING ('|| dimension ||')
+                    GROUP BY id
+                    ) foo4
+                    ORDER BY dist
+                    LIMIT ' || CAST(k AS TEXT)|| ') foo5';
+                    
+            ELSE
+                       
+                sql = 'SELECT array_agg(id ORDER BY dist,id) knn_id, array_agg(dist ORDER BY dist) knn_dist
+                    FROM (
+                    SELECT id, dist
+                    FROM (
+                    SELECT id, sqrt(sum(power(val1-coalesce(val2,0),2))) dist
+                    FROM
+                    (SELECT generate_series(1,'|| array_upper(query_point,1) ||') AS ' || dimension || ', unnest(array[' || array_to_string(query_point,',') || ' ]) AS val1) foo
+                    LEFT JOIN
+                    (SELECT ' || id || ' AS id,' || dimension || ', ' || val || ' AS val2  
+                    FROM ' || training_data_tab || '
+                    JOIN (SELECT unnest(array['|| array_to_string(leaf_member,',') ||'])::INT AS id) foo2
+                    USING (id)
+                    ) foo3
+                    USING ('|| dimension ||')
+                    GROUP BY id               
+                    UNION
+                    SELECT unnest(array['|| array_to_string(current_knn.knn_id,',') ||'])::INT id, unnest(array['|| array_to_string(current_knn.knn_dist,',') ||'])::FLOAT8 dist
+                    ) foo4
+                    ORDER BY dist                               
+                    LIMIT ' || CAST(k AS TEXT) || ') foo5' ;
+             END IF;
+             
+             EXECUTE sql INTO new_knn;
+             RETURN new_knn;
+                                 
+        ELSE
+            IF current_knn IS NULL THEN
+                max_knn_dist = 'infinity'::FLOAT8;
+            ELSE
+                max_knn_dist = current_knn.knn_dist[array_upper(current_knn.knn_dist,1)];
+            END IF;
+
+           -- Recursively search through the KD-tree.d
+            IF query_point[split_dimension] <= split_value THEN
+                IF query_point[split_dimension] - max_knn_dist <= split_value THEN
+                    SELECT * FROM PDLTOOLS_SCHEMA.__clink_kdtree_knn_0(training_data_tab, id, dimension, val, kdtree_tab, array_append(search_node_location,0), query_point, k, current_knn) x INTO new_knn; 
+                END IF;
+                
+                max_knn_dist = new_knn.knn_dist[array_upper(new_knn.knn_dist,1)];
+
+                IF query_point[split_dimension] + max_knn_dist > split_value THEN
+                    SELECT * FROM PDLTOOLS_SCHEMA.__clink_kdtree_knn_0(training_data_tab, id, dimension, val, kdtree_tab, array_append(search_node_location,1), query_point, k, new_knn) x INTO new_knn; 
+                END IF;
+            ELSE
+                IF query_point[split_dimension] + max_knn_dist > split_value THEN
+                    SELECT * FROM PDLTOOLS_SCHEMA.__clink_kdtree_knn_0(training_data_tab, id, dimension, val, kdtree_tab, array_append(search_node_location,1), query_point, k, current_knn) x INTO new_knn;
+                END IF;
+
+                max_knn_dist = new_knn.knn_dist[array_upper(new_knn.knn_dist,1)];
+                
+                IF query_point[split_dimension] - max_knn_dist <= split_value THEN
+                    SELECT * FROM PDLTOOLS_SCHEMA.__clink_kdtree_knn_0(training_data_tab, id, dimension, val, kdtree_tab, array_append(search_node_location,0), query_point, k, new_knn) x INTO new_knn;
+                END IF;
+            END IF;
+            
+        END IF;
+
+        RETURN new_knn;
+        
+    END;
+
+$$ LANGUAGE PLPGSQL;
+
+
+    
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.kd_tree() 
+RETURNS TEXT AS $$
+SELECT '
+kd_tree: Organize multi-dimensional data in a KD-tree.
+
+This function creates a KD-tree by recursively partitioning the data at the median  
+value along the dimension of maximum variance. Each leaf node of the resulting 
+KD-tree contains no more than a pre-specified number of data points.
+
+For full usage instructions, run "PDLTOOLS_SCHEMA.kd_tree(''usage'')".
+'::TEXT;
+$$ LANGUAGE SQL;
+
+
+
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.kd_tree(TEXT) 
+RETURNS TEXT AS $$
+
+SELECT CASE WHEN $1!='usage' THEN PDLTOOLS_SCHEMA.kd_tree() ELSE 
+'kd_tree: Organize multi-dimensional data in a KD-tree.
+
+This function creates a KD-tree by recursively partitioning the data at the median  
+value along the dimension of maximum variance. Each leaf node of the resulting 
+KD-tree contains no more than a pre-specified number of data points.
+
+Syntax
+======
+
+FUNCTION pdltools.kd_tree(data_tab TEXT, id TEXT, dimension TEXT, val TEXT, subtree_size INT, output_tab TEXT) 
+RETURNS VOID;
+
+data_tab     - Table that contains the data. 
+id           - Name of the column specifying data IDs.
+dimension    - Name of the column specifying dimension indices.
+val          - Name of the column containing data values.
+subtree_size - The desired number of data assigned to each leaf node.
+output_tab   - Name of the output table.
+
+See also kdtree_knn() for k-nearest neighbour search with KD-tree.
+
+
+Usage
+=====
+
+The data is expected to be provided in a table of the following structure:
+
+TABLE/VIEW data_table
+(
+    ...
+    data_id INT,    -- data ID
+    dimension INT,  -- Dimension index
+    val FLOAT8,     -- data value
+    ...
+)
+
+The function accepts sparse data, i.e. zero entries do need to be present in the data table.
+
+The constructed KD-tree is specified in the output table. It provides information about 
+each node of the tree in the following columns:
+
+node_location INT[] - An array of 0s and 1s that specifies the location of a node. The 
+                      ith element of the array indicates whether to go via the left (0) 
+                      or the right branch (1) at the ith level of the tree in order to 
+                      reach the current node. Set to NULL for the root node.
+split_dimension INT - Index of the dimension, along which the data in the current node 
+                      is further split. The splitting dimension is chosen to be the 
+                      dimension of maximum variance. Set to NULL for leaf nodes.
+split_value FLOAT8  - Median of the data in the current node along the splitting dimension.
+                      Set to NULL for leaf nodes.
+pop_variance FLOAT8 - Population variance of the data in the current node along the 
+                      splitting dimension. Set to NULL for leaf nodes.
+leaf_member INT[]   - IDs of the data in the leaf node. Set to NULL for non-leaf nodes.
+
+
+Example
+=======
+
+1. Create a test dataset of 10 2D data points. Note: The function accepts sparse representation of the data. 
+   For example, the first insersion in the following code can be removed without affecting the result.
+
+
+CREATE TABLE kdtree_test_data (id INT, dimension INT, val FLOAT8) DISTRIBUTED RANDOMLY;
+INSERT INTO kdtree_test_data VALUES
+(1, 1, 0),  
+(1, 2, 1),
+(2, 1, 2),
+(2, 2, 2),
+(3, 1, 3),
+(3, 2, 6),
+(4, 1, 4),
+(4, 2, 9),
+(5, 1, 5),
+(5, 2, 7),
+(6, 1, 6),
+(6, 2, 2),
+(7, 1, 7),
+(7, 2, 3),
+(8, 1, 8),
+(8, 2, 4),
+(9, 1, 9),
+(9, 2, 7),
+(10, 1, 10),
+(10, 2, 8);
+
+
+2. Construct a KD-tree with each leaf node containing no more than 3 data points.
+
+SELECT pdltools.kd_tree(''kdtree_test_data'', ''id'', ''dimension'', ''val'', 3, ''kdtree_test_output''); 
+
+
+3. Find the 2-nearest neighbours for point (3.5,4); cf. the usage of the kdtree_knn() function.
+
+SELECT * FROM pdltools.kdtree_knn(''kdtree_test_data'', ''id'', ''dimension'', ''val'', 
+                                  ''kdtree_test_output'', array[3.5,4], 2);
+
+ knn_id |        knn_dist        
+--------+------------------------
+ {3,2}  | {2.06155281280883,2.5}
+
+
+The knn_id field shows the IDs of the 2-nearest neighbours; the knn_dist field provides the corresponding 
+Euclidean distance from the query point to its nearest neighbours. One can also query the k-nearest 
+neighbours of a set of data as follows:
+
+
+CREATE TABLE query_data (query_id INT, query_point FLOAT8[]) DISTRIBUTED RANDOMLY;
+INSERT INTO query_data VALUES
+(1, array[8,1]), 
+(2, array[3,4]),
+(3, array[1,2.5]);
+
+SELECT pdltools.kdtree_knn(''kdtree_test_data'', ''id'', ''dimension'', ''val'', ''kdtree_test_output'', 
+                           ''query_data'', ''query_id'', ''query_point'', 2, ''query_result'');
+
+SELECT * FROM query_result ORDER BY query_id
+
+ query_id | knn_id |              knn_dist               
+----------+--------+-------------------------------------
+        1 | {7,6}  | {2.23606797749979,2.23606797749979}
+        2 | {3,2}  | {2,2.23606797749979}
+        3 | {2,1}  | {1.11803398874989,1.80277563773199}
+        
+The query_data table contains IDs of the query points: query_id, and 
+their coordinates: query_point. The k-nearest neighbours (2 in the above example) 
+is given in the query_result table. See the two versions of the kdtree_knn() function.
+
+' END;
+    
+$$ LANGUAGE SQL;
+
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.kdtree_knn() 
+RETURNS TEXT AS $$
+SELECT '
+kdtree_knn: K-nearest neighbour search with KD-tree.
+
+This function finds the k-nearest neighbours of a query point by searching through 
+a pre-learned KD-tree (cf. kd_tree()). The hope is that most of the branches in 
+the KD-tree can be eliminated from search. The function is intended for large-scale 
+problems, e.g. finding nearest neighbours from millions of data points. For small- 
+to median- scale problems, a brute-force approach that compares distances between 
+the query point to all the data may work well enough by leveraging the parallel 
+computation capability of the Greenplum database. Also note that due to the 
+"curse of dimensionality" problem with KD-tree, the function is more suitable for 
+search in a low dimensional space (e.g. dimensionality of <10).
+
+For full usage instructions, run "PDLTOOLS_SCHEMA.kdtree_knn(''usage'')".
+'::TEXT;
+$$ LANGUAGE SQL;
+
+
+
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.kdtree_knn(TEXT) 
+RETURNS TEXT AS $$
+
+SELECT CASE WHEN $1!='usage' THEN PDLTOOLS_SCHEMA.kdtree_knn() ELSE 
+'kdtree_knn: K-nearest neighbour search with KD-tree.
+
+This function finds the k-nearest neighbours of a query point by searching through 
+a pre-learned KD-tree (cf. kd_tree()). The hope is that most of the branches in 
+the KD-tree can be eliminated from search. The function is intended for large-scale 
+problems, e.g. finding nearest neighbours from millions of data points. For small- 
+to median- scale problems, a brute-force approach that compares distances between 
+the query point to all the data may work well enough by leveraging the parallel 
+computation capability of the Greenplum database. Also note that due to the 
+"curse of dimensionality" problem with KD-tree, the function is more suitable for 
+search in a low dimensional space (e.g. dimensionality of <10).
+
+Syntax
+======
+
+FUNCTION kdtree_knn(training_data_tab TEXT, id TEXT, dimension TEXT, val TEXT, kdtree_tab TEXT, query_point FLOAT8[], k INT)
+RETURNS kdtree_knn_result;
+
+training_data_tab - Table that contains the data that was used for the construction of the KD-tree. 
+id                - Name of the column specifying data IDs.
+dimension         - Name of the column specifying dimension indices.
+val               - Name of the column containing data values.
+kdtree_tab        - Table that specifies the KD-tree.
+query_point       - Query point.
+k                 - Number of nearest neighbours to search for.
+return            - a data structure that contains the IDs of the k-nearest neighbours of the query 
+                    point and the corresponding distances to those neighbours.
+
+
+FUNCTION kdtree_knn(training_data_tab TEXT, id TEXT, dimension TEXT, val TEXT, kdtree_tab TEXT, 
+                    query_tab TEXT, query_id TEXT, query_point TEXT, k INT, result_tab TEXT)
+RETURNS VOID;
+
+training_data_tab - Table that contains the data that was used for the construction of the KD-tree. 
+id                - Name of the column specifying data IDs.
+dimension         - Name of the column specifying dimension indices.
+val               - Name of the column containing data values.
+kdtree_tab        - Table that specifies the KD-tree.
+query_tab         - Table that contains the query points.
+query_id          - Name of the column specifying query point IDs.
+query_point       - Name of the column specifying query points.
+k                 - Number of nearest neighbours to search for.
+result_tab        - Name of table that contains the search result.
+
+
+Example
+=======
+
+The following example shows how to use a pre-learned KD-tree for nearest neighbour search; 
+run "PDLTOOLS_SCHEMA.kdtree(''usage'')" for more information on how to build a KD-tree.
+
+
+1. Create a test dataset of 10 2D data points. The data is to be organized in a KD-tree.
+
+CREATE TABLE kdtree_test_data (id INT, dimension INT, val FLOAT8) DISTRIBUTED RANDOMLY;
+INSERT INTO kdtree_test_data VALUES
+(1, 1, 0),  
+(1, 2, 1),
+(2, 1, 2),
+(2, 2, 2),
+(3, 1, 3),
+(3, 2, 6),
+(4, 1, 4),
+(4, 2, 9),
+(5, 1, 5),
+(5, 2, 7),
+(6, 1, 6),
+(6, 2, 2),
+(7, 1, 7),
+(7, 2, 3),
+(8, 1, 8),
+(8, 2, 4),
+(9, 1, 9),
+(9, 2, 7),
+(10, 1, 10),
+(10, 2, 8);
+
+
+2. Construct a KD-tree with each leaf node containing no more than 3 data points.
+
+SELECT pdltools.kd_tree(''kdtree_test_data'', ''id'', ''dimension'', ''val'', 3, ''kdtree_test_output''); 
+
+
+3. Find the 2-nearest neighbours for point (3.5,4).
+
+SELECT * FROM pdltools.kdtree_knn(''kdtree_test_data'', ''id'', ''dimension'', ''val'', 
+                                  ''kdtree_test_output'', array[3.5,4], 2);
+
+ knn_id |        knn_dist        
+--------+------------------------
+ {3,2}  | {2.06155281280883,2.5}
+
+
+The knn_id field shows the IDs of the 2-nearest neighbours; the knn_dist field provides the corresponding 
+Euclidean distance from the query point to its nearest neighbours. One can also query the k-nearest 
+neighbours of a set of data as follows:
+
+CREATE TABLE query_data (query_id INT, query_point FLOAT8[]) DISTRIBUTED RANDOMLY;
+INSERT INTO query_data VALUES
+(1, array[8,1]), 
+(2, array[3,4]),
+(3, array[1,2.5]);
+
+SELECT pdltools.kdtree_knn(''kdtree_test_data'', ''id'', ''dimension'', ''val'', ''kdtree_test_output'', 
+                           ''query_data'', ''query_id'', ''query_point'', 2, ''query_result'');
+
+SELECT * FROM query_result ORDER BY query_id
+
+ query_id | knn_id |              knn_dist               
+----------+--------+-------------------------------------
+        1 | {7,6}  | {2.23606797749979,2.23606797749979}
+        2 | {3,2}  | {2,2.23606797749979}
+        3 | {2,1}  | {1.11803398874989,1.80277563773199}
+        
+The query_data table contains IDs of the query points: query_id, and 
+their coordinates: query_point. The k-nearest neighbours (2 in the above example) 
+is given in the query_result table. 
+
+' END;
+    
+$$ LANGUAGE SQL;
+
+
