@@ -23,3 +23,5 @@ modules:
       depends: ['common']
     - name: grid_search
       depends: ['common']
+    - name: kd_tree
+      depends: ['common']
