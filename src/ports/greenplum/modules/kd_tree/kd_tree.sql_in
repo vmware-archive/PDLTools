@@ -252,7 +252,7 @@ RETURNS VOID AS
 $$
 
     BEGIN
-       PERFORM PDLTOOLS_SCHEMA.__clink_kd_tree_max_variance(data_tab, id, dimension, val, NULL, subtree_size, NULL, NULL, output_tab);
+       PERFORM PDLTOOLS_SCHEMA.__kdtree_kd_tree_max_variance(data_tab, id, dimension, val, NULL, subtree_size, NULL, NULL, output_tab);
        RETURN;
     END;
     
@@ -284,7 +284,7 @@ $$ LANGUAGE PLPGSQL;
  *
  */ 
 
-CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__clink_kd_tree_max_variance(data_tab TEXT, id TEXT, dimension TEXT, val TEXT, 
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__kdtree_kd_tree_max_variance(data_tab TEXT, id TEXT, dimension TEXT, val TEXT, 
 data_size BIGINT, subtree_size INT, selected_ids INT[], node_location INT[], output_tab TEXT) 
 RETURNS VOID AS 
 $$
@@ -448,11 +448,11 @@ $$
             
             -- Repeat the process to further split the data.
             IF node_location IS NULL THEN
-                PERFORM PDLTOOLS_SCHEMA.__clink_kd_tree_max_variance(data_tab, id, dimension, val, split.less_node_size, subtree_size, split.less, array[0]::INT[], output_tab);
-                PERFORM PDLTOOLS_SCHEMA.__clink_kd_tree_max_variance(data_tab, id, dimension, val, split.greater_node_size, subtree_size, split.greater, array[1]::INT[], output_tab); 
+                PERFORM PDLTOOLS_SCHEMA.__kdtree_kd_tree_max_variance(data_tab, id, dimension, val, split.less_node_size, subtree_size, split.less, array[0]::INT[], output_tab);
+                PERFORM PDLTOOLS_SCHEMA.__kdtree_kd_tree_max_variance(data_tab, id, dimension, val, split.greater_node_size, subtree_size, split.greater, array[1]::INT[], output_tab); 
             ELSE
-                PERFORM PDLTOOLS_SCHEMA.__clink_kd_tree_max_variance(data_tab, id, dimension, val, split.less_node_size, subtree_size, split.less, array_append(node_location,0), output_tab);
-                PERFORM PDLTOOLS_SCHEMA.__clink_kd_tree_max_variance(data_tab, id, dimension, val, split.greater_node_size, subtree_size, split.greater, array_append(node_location,1), output_tab); 
+                PERFORM PDLTOOLS_SCHEMA.__kdtree_kd_tree_max_variance(data_tab, id, dimension, val, split.less_node_size, subtree_size, split.less, array_append(node_location,0), output_tab);
+                PERFORM PDLTOOLS_SCHEMA.__kdtree_kd_tree_max_variance(data_tab, id, dimension, val, split.greater_node_size, subtree_size, split.greater, array_append(node_location,1), output_tab); 
             END IF;
         END LOOP;
         
@@ -466,8 +466,8 @@ $$ LANGUAGE PLPGSQL;
  * @internal
  * @brief Data type to represent the K nearest neighbors.
 */
-DROP TYPE IF EXISTS PDLTOOLS_SCHEMA.__clink_kdtree_knn_result CASCADE; 
-CREATE TYPE PDLTOOLS_SCHEMA.__clink_kdtree_knn_result AS (
+DROP TYPE IF EXISTS PDLTOOLS_SCHEMA.__kdtree_kdtree_knn_result CASCADE; 
+CREATE TYPE PDLTOOLS_SCHEMA.__kdtree_kdtree_knn_result AS (
     knn_id INT[],
     knn_dist FLOAT8[]
 );
@@ -487,13 +487,13 @@ CREATE TYPE PDLTOOLS_SCHEMA.__clink_kdtree_knn_result AS (
  * @return a data structure that contains the IDs of the k-nearest neighbours and the corresponding distances to those neighbours.
 */
 CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.kdtree_knn(training_data_tab TEXT, id TEXT, dimension TEXT, val TEXT, kdtree_tab TEXT, query_point FLOAT8[], k INT)
-RETURNS PDLTOOLS_SCHEMA.__clink_kdtree_knn_result AS 
+RETURNS PDLTOOLS_SCHEMA.__kdtree_kdtree_knn_result AS 
 $$
     DECLARE 
         sql TEXT;
-        knn PDLTOOLS_SCHEMA.__clink_kdtree_knn_result;
+        knn PDLTOOLS_SCHEMA.__kdtree_kdtree_knn_result;
     BEGIN
-        SELECT * FROM PDLTOOLS_SCHEMA.__clink_kdtree_knn_0(training_data_tab, id, dimension, val, kdtree_tab, NULL, query_point, k, NULL) x INTO knn;        
+        SELECT * FROM PDLTOOLS_SCHEMA.__kdtree_kdtree_knn_0(training_data_tab, id, dimension, val, kdtree_tab, NULL, query_point, k, NULL) x INTO knn;        
         RETURN knn;
     END;
     
@@ -523,7 +523,7 @@ $$
         search_result_tab TEXT;
         result record;
         nn record;
-        knn PDLTOOLS_SCHEMA.__clink_kdtree_knn_result;
+        knn PDLTOOLS_SCHEMA.__kdtree_kdtree_knn_result;
        
     BEGIN
 
@@ -532,7 +532,7 @@ $$
         EXECUTE(sql);
         
         FOR result IN EXECUTE('SELECT '|| query_id || ' AS id, ' || query_point || ' AS query_point FROM ' || query_tab) LOOP
-            SELECT * FROM PDLTOOLS_SCHEMA.__clink_kdtree_knn_0(training_data_tab, id, dimension, val, kdtree_tab, NULL, result.query_point, k, NULL) x INTO knn;
+            SELECT * FROM PDLTOOLS_SCHEMA.__kdtree_kdtree_knn_0(training_data_tab, id, dimension, val, kdtree_tab, NULL, result.query_point, k, NULL) x INTO knn;
             sql = 'INSERT INTO ' || result_tab || ' 
                 VALUES (' ||
                 CAST(result.id AS TEXT) || ', 
@@ -564,9 +564,9 @@ $$ LANGUAGE PLPGSQL;
  * @param result_tab Name of table that contains the search result.
 */
 
-CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__clink_kdtree_knn_0(training_data_tab TEXT, id TEXT, dimension TEXT, val TEXT, 
-kdtree_tab TEXT, search_node_location INT[], query_point FLOAT8[], k INT, current_knn PDLTOOLS_SCHEMA.__clink_kdtree_knn_result) 
-RETURNS kdtree_knn_result AS 
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__kdtree_kdtree_knn_0(training_data_tab TEXT, id TEXT, dimension TEXT, val TEXT, 
+kdtree_tab TEXT, search_node_location INT[], query_point FLOAT8[], k INT, current_knn PDLTOOLS_SCHEMA.__kdtree_kdtree_knn_result) 
+RETURNS PDLTOOLS_SCHEMA.__kdtree_kdtree_knn_result AS 
 $$
     DECLARE 
         sql TEXT;
@@ -574,7 +574,7 @@ $$
         split_value FLOAT8;
         leaf_member INT[];
         max_knn_dist FLOAT8;
-        new_knn PDLTOOLS_SCHEMA.__clink_kdtree_knn_result;
+        new_knn PDLTOOLS_SCHEMA.__kdtree_kdtree_knn_result;
     BEGIN
        
         IF search_node_location IS NULL THEN
@@ -650,23 +650,23 @@ $$
            -- Recursively search through the KD-tree.d
             IF query_point[split_dimension] <= split_value THEN
                 IF query_point[split_dimension] - max_knn_dist <= split_value THEN
-                    SELECT * FROM PDLTOOLS_SCHEMA.__clink_kdtree_knn_0(training_data_tab, id, dimension, val, kdtree_tab, array_append(search_node_location,0), query_point, k, current_knn) x INTO new_knn; 
+                    SELECT * FROM PDLTOOLS_SCHEMA.__kdtree_kdtree_knn_0(training_data_tab, id, dimension, val, kdtree_tab, array_append(search_node_location,0), query_point, k, current_knn) x INTO new_knn; 
                 END IF;
                 
                 max_knn_dist = new_knn.knn_dist[array_upper(new_knn.knn_dist,1)];
 
                 IF query_point[split_dimension] + max_knn_dist > split_value THEN
-                    SELECT * FROM PDLTOOLS_SCHEMA.__clink_kdtree_knn_0(training_data_tab, id, dimension, val, kdtree_tab, array_append(search_node_location,1), query_point, k, new_knn) x INTO new_knn; 
+                    SELECT * FROM PDLTOOLS_SCHEMA.__kdtree_kdtree_knn_0(training_data_tab, id, dimension, val, kdtree_tab, array_append(search_node_location,1), query_point, k, new_knn) x INTO new_knn; 
                 END IF;
             ELSE
                 IF query_point[split_dimension] + max_knn_dist > split_value THEN
-                    SELECT * FROM PDLTOOLS_SCHEMA.__clink_kdtree_knn_0(training_data_tab, id, dimension, val, kdtree_tab, array_append(search_node_location,1), query_point, k, current_knn) x INTO new_knn;
+                    SELECT * FROM PDLTOOLS_SCHEMA.__kdtree_kdtree_knn_0(training_data_tab, id, dimension, val, kdtree_tab, array_append(search_node_location,1), query_point, k, current_knn) x INTO new_knn;
                 END IF;
 
                 max_knn_dist = new_knn.knn_dist[array_upper(new_knn.knn_dist,1)];
                 
                 IF query_point[split_dimension] - max_knn_dist <= split_value THEN
-                    SELECT * FROM PDLTOOLS_SCHEMA.__clink_kdtree_knn_0(training_data_tab, id, dimension, val, kdtree_tab, array_append(search_node_location,0), query_point, k, new_knn) x INTO new_knn;
+                    SELECT * FROM PDLTOOLS_SCHEMA.__kdtree_kdtree_knn_0(training_data_tab, id, dimension, val, kdtree_tab, array_append(search_node_location,0), query_point, k, new_knn) x INTO new_knn;
                 END IF;
             END IF;
             
