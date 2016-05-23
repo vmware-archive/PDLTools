@@ -199,7 +199,7 @@ RETURNS kdtree_knn_result;
 @param k Number of nearest neighbours to search for.
 @return A data structure that contains the IDs of the k-nearest neighbours of the query point and the corresponding distances to those neighbours.
 
-\n\n
+@par Syntax
 The above function finds the k-nearest neighbours of a single query point. One can use the following function to handle multiple queries. 
 \n
 <pre class="syntax">
