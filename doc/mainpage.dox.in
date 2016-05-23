@@ -239,25 +239,25 @@ A collection of machine-learning algorithms.
     @{
         @brief Implementation of complete-linkage agglomerative hierarchical clustering
 
-Implementation of the commonly used complete-linkage hierarchical clustering
-algorithm. It constructs a hierarchical clustering tree from bottom up by
-merging closest clusters. Complete-linkage clustering defines the distance
-between two clusters as the distance between the farthest pair of data points
-in the two clusters
-(See http://en.wikipedia.org/wiki/Complete-linkage_clustering).
-
-(Written by [Jin Yu](mailto:jyu@pivotal.io), 22 Sep 2014.)
-
-@sa Module source file: complete_linkage.sql_in.
-
-@prereq
-PL/pgSQL
+	Implementation of the commonly used complete-linkage hierarchical clustering
+	algorithm. It constructs a hierarchical clustering tree from bottom up by
+	merging closest clusters. Complete-linkage clustering defines the distance
+	between two clusters as the distance between the farthest pair of data points
+	in the two clusters
+	(See http://en.wikipedia.org/wiki/Complete-linkage_clustering).
+	
+	(Written by [Jin Yu](mailto:jyu@pivotal.io), 22 Sep 2014.)
+	
+	@sa Module source file: complete_linkage.sql_in.
+	
+	@prereq
+	PL/pgSQL
 
         @defgroup grp_complete_linkage complete_linkage
         @defgroup grp_cut_hclust_tree cut_hclust_tree
     @}
-    
-    @defgroup grp_clink KD-tree
+
+    @defgroup grp_kdtree_and_knn KD-tree
     @{
         @brief KD-tree and its application to k-nearest neighbour search
 
@@ -270,12 +270,12 @@ PL/pgSQL
  	that compares distances between the query point to all the data may work well enough by 
  	leveraging the parallel computation capability of the Greenplum database.
 
-(Written by [Jin Yu](mailto:jyu@pivotal.io), 15 May 2016.)
-
-@sa Module source file: kd_tree.sql_in.
-
-@prereq
-PL/pgSQL
+	(Written by [Jin Yu](mailto:jyu@pivotal.io), 15 May 2016.)
+	
+	@sa Module source file: kd_tree.sql_in.
+	
+	@prereq
+	PL/pgSQL
 
         @defgroup grp_kdtree kd_tree
         @defgroup grp_kdtree_knn kdtree_knn
