@@ -1,19 +1,19 @@
--- This script implements complete-linkage hierarchical clustering.
 
--- File: test_complete_linkage.sql
--- Unit test for complete_linkage.sql
+-- File: test_complete_linkage.sql_in
+-- Unit test for complete_linkage.sql_in
 
 
 -- 1. Create a test pairwise distance matrix
 -- DROP TABLE IF EXISTS complete_linkage_test_dist;
 CREATE TEMP TABLE complete_linkage_test_dist (id1 INT, id2 INT, dist FLOAT) DISTRIBUTED RANDOMLY;
 
-INSERT INTO complete_linkage_test_dist VALUES(1,2,0); 
-INSERT INTO complete_linkage_test_dist VALUES(1,3,1);
-INSERT INTO complete_linkage_test_dist VALUES(1,4,5);
-INSERT INTO complete_linkage_test_dist VALUES(2,3,2);
-INSERT INTO complete_linkage_test_dist VALUES(2,4,4);
-INSERT INTO complete_linkage_test_dist VALUES(3,4,3);
+INSERT INTO complete_linkage_test_dist VALUES
+(1,2,0), 
+(1,3,1),
+(1,4,5),
+(2,3,2),
+(2,4,4),
+(3,4,3);
 
 -- 2. Build a hierarchical clustering tree
 SELECT complete_linkage('complete_linkage_test_dist','id1','id2','dist','complete_linkage_test_output',NULL);
@@ -30,6 +30,8 @@ SELECT assert(string_agg(cluster_id::TEXT || ' ' || array_to_string(array(SELECT
 -- Clean up temp tables.
 DROP TABLE complete_linkage_test_dist;
 DROP TABLE complete_linkage_test_cluster;
+DROP TABLE complete_linkage_test_output;
+
 
 
 

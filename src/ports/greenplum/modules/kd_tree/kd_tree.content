@@ -1,0 +1,10 @@
+UDF: FUNCTION PDLTOOLS_SCHEMA.kd_tree(pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.int4, pg_catalog.text)
+UDF: FUNCTION PDLTOOLS_SCHEMA.__kdtree_kd_tree_max_variance(pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.int8, pg_catalog.int4, pg_catalog.int4[], pg_catalog.int4[], pg_catalog.text)
+REL: TYPE PDLTOOLS_SCHEMA.__kdtree_kdtree_knn_result
+UDF: FUNCTION PDLTOOLS_SCHEMA.kdtree_knn(pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.float8[], pg_catalog.int4)
+UDF: FUNCTION PDLTOOLS_SCHEMA.kdtree_knn(pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.int4, pg_catalog.text)
+UDF: FUNCTION PDLTOOLS_SCHEMA.__kdtree_kdtree_knn_0(pg_catalog.text, pg_catalog.text, pg_catalog.text, vpg_catalog.text, pg_catalog.text, pg_catalog.int4[], pg_catalog.float8[], pg_catalog.int4, PDLTOOLS_SCHEMA.__kdtree_kdtree_knn_result)
+UDF: FUNCTION PDLTOOLS_SCHEMA.kd_tree()
+UDF: FUNCTION PDLTOOLS_SCHEMA.kd_tree(pg_catalog.text)
+UDF: FUNCTION PDLTOOLS_SCHEMA.kdtree_knn()
+UDF: FUNCTION PDLTOOLS_SCHEMA.kdtree_knn(pg_catalog.text)
