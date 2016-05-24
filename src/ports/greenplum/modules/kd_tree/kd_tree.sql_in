@@ -74,8 +74,8 @@ The constructed KD-tree is specified in the output table. It provides informatio
 - split_dimension: Index of the dimension, along which the data in the current node 
                       is further split. The splitting dimension is chosen to be the 
                       dimension of maximum variance. Set to NULL for leaf nodes.
-- split_value: Median of the data in the current node along the splitting dimension.
-                      Set to NULL for leaf nodes.
+- split_value: Median of the data in the current node along the splitting dimension. In case of
+	              even number of data, take the min of the two middle values. Set to NULL for leaf nodes.
 - pop_variance: Population variance of the data in the current node along the 
                       splitting dimension. Set to NULL for leaf nodes.
 - leaf_member: IDs of the data in the leaf node. Set to NULL for non-leaf nodes.
@@ -116,6 +116,19 @@ INSERT INTO kdtree_test_data VALUES
 -# Construct a KD-tree with each leaf node containing no more than 3 data points.
 \code
 SELECT pdltools.kd_tree('kdtree_test_data', 'id', 'dimension', 'val', 3, 'kdtree_test_output'); 
+
+SELECT * FROM kdtree_test_output ORDER BY node_location;
+
+ node_location | split_dimension | split_value | pop_variance | leaf_member 
+---------------+-----------------+-------------+--------------+-------------
+ {0}           |               2 |           6 |          9.2 | 
+ {0,0}         |                 |             |              | {1,2,3}
+ {0,1}         |                 |             |              | {4,5}
+ {1}           |               2 |           4 |         5.36 | 
+ {1,0}         |                 |             |              | {6,7,8}
+ {1,1}         |                 |             |              | {9,10}
+               |               1 |           5 |         9.24 | 
+
 \endcode
 \n
 
@@ -142,7 +155,7 @@ INSERT INTO query_data VALUES
 
 SELECT pdltools.kdtree_knn('kdtree_test_data', 'id', 'dimension', 'val', 'kdtree_test_output','query_data', 'query_id', 'query_point', 2, 'query_result');
 
-SELECT * FROM query_result ORDER BY query_id
+SELECT * FROM query_result ORDER BY query_id;
 
  query_id | knn_id |              knn_dist               
 ----------+--------+-------------------------------------
@@ -176,7 +189,7 @@ function (\ref grp_kdtree_knn) for more details.
 @about
 This function finds the k-nearest neighbours of a query point by searching through a pre-learned KD-tree (e.g. produced by \ref grp_kdtree). 
 The hope is that most of the branches in the KD-tree can be eliminated from search. The function is intended for large-scale problems, 
-e.g. finding nearest neighbours from millions of data points. For small- to median- scale problems, a brute-force approach that compares 
+e.g. finding nearest neighbours from millions of data points. For small- to medium- scale problems, a brute-force approach that compares 
 distances between the query point to all the data may work well enough by leveraging the parallel computation capability of the Greenplum database.
 Also note that due to the "curse of dimensionality" problem with KD-tree, the function is more suitable for search in a low dimensional space
 (e.g. dimensionality of < 10).
@@ -308,7 +321,8 @@ $$
             -- to go via the left (0) or the right branch (1) at the ith level of the tree in order to reach the current node. Set to NULL for the root node.
             -- split_dimension INT: Index of the dimension, along which the data in the current node is further partitioned. 
             -- The splitting dimension is chosen to be the dimension of maximum variance. Set to NULL for leaf nodes.
-            -- split_value FLOAT8: Median of the data in the current node along the splitting dimension. Set to NULL for leaf nodes.
+            -- split_value FLOAT8: Median of the data in the current node along the splitting dimension. In case of
+            -- even number of data, take the min of the two middle values. Set to NULL for leaf nodes.
             -- pop_variance FLOAT8: Population variance of the data in the current node along the splitting dimension. Set to NULL for leaf nodes.
             -- leaf_member INT[]: IDs of the data in the leaf node. Set to NULL for non-leaf nodes.
 
@@ -749,8 +763,9 @@ node_location INT[] - An array of 0s and 1s that specifies the location of a nod
 split_dimension INT - Index of the dimension, along which the data in the current node 
                       is further split. The splitting dimension is chosen to be the 
                       dimension of maximum variance. Set to NULL for leaf nodes.
-split_value FLOAT8  - Median of the data in the current node along the splitting dimension.
-                      Set to NULL for leaf nodes.
+split_value FLOAT8  - Median of the data in the current node along the splitting dimension. 
+                      In case of even number of data, take the min of the two middle values. 
+		      Set to NULL for leaf nodes.
 pop_variance FLOAT8 - Population variance of the data in the current node along the 
                       splitting dimension. Set to NULL for leaf nodes.
 leaf_member INT[]   - IDs of the data in the leaf node. Set to NULL for non-leaf nodes.
@@ -791,6 +806,18 @@ INSERT INTO kdtree_test_data VALUES
 
 SELECT pdltools.kd_tree(''kdtree_test_data'', ''id'', ''dimension'', ''val'', 3, ''kdtree_test_output''); 
 
+SELECT * FROM kdtree_test_output ORDER BY node_location;
+
+ node_location | split_dimension | split_value | pop_variance | leaf_member
+---------------+-----------------+-------------+--------------+-------------
+ {0}           |               2 |           6 |          9.2 |
+ {0,0}         |                 |             |              | {1,2,3}
+ {0,1}         |                 |             |              | {4,5}
+ {1}           |               2 |           4 |         5.36 |
+ {1,0}         |                 |             |              | {6,7,8}
+ {1,1}         |                 |             |              | {9,10}
+               |               1 |           5 |         9.24 |
+
 
 3. Find the 2-nearest neighbours for point (3.5,4); cf. the usage of the kdtree_knn() function.
 
@@ -816,7 +843,7 @@ INSERT INTO query_data VALUES
 SELECT pdltools.kdtree_knn(''kdtree_test_data'', ''id'', ''dimension'', ''val'', ''kdtree_test_output'', 
                            ''query_data'', ''query_id'', ''query_point'', 2, ''query_result'');
 
-SELECT * FROM query_result ORDER BY query_id
+SELECT * FROM query_result ORDER BY query_id;
 
  query_id | knn_id |              knn_dist               
 ----------+--------+-------------------------------------
@@ -842,7 +869,7 @@ This function finds the k-nearest neighbours of a query point by searching throu
 a pre-learned KD-tree (cf. kd_tree()). The hope is that most of the branches in 
 the KD-tree can be eliminated from search. The function is intended for large-scale 
 problems, e.g. finding nearest neighbours from millions of data points. For small- 
-to median- scale problems, a brute-force approach that compares distances between 
+to medium- scale problems, a brute-force approach that compares distances between 
 the query point to all the data may work well enough by leveraging the parallel 
 computation capability of the Greenplum database. Also note that due to the 
 "curse of dimensionality" problem with KD-tree, the function is more suitable for 
@@ -865,7 +892,7 @@ This function finds the k-nearest neighbours of a query point by searching throu
 a pre-learned KD-tree (cf. kd_tree()). The hope is that most of the branches in 
 the KD-tree can be eliminated from search. The function is intended for large-scale 
 problems, e.g. finding nearest neighbours from millions of data points. For small- 
-to median- scale problems, a brute-force approach that compares distances between 
+to medium- scale problems, a brute-force approach that compares distances between 
 the query point to all the data may work well enough by leveraging the parallel 
 computation capability of the Greenplum database. Also note that due to the 
 "curse of dimensionality" problem with KD-tree, the function is more suitable for 
@@ -941,6 +968,18 @@ INSERT INTO kdtree_test_data VALUES
 
 SELECT pdltools.kd_tree(''kdtree_test_data'', ''id'', ''dimension'', ''val'', 3, ''kdtree_test_output''); 
 
+SELECT * FROM kdtree_test_output ORDER BY node_location;
+
+ node_location | split_dimension | split_value | pop_variance | leaf_member
+---------------+-----------------+-------------+--------------+-------------
+ {0}           |               2 |           6 |          9.2 |
+ {0,0}         |                 |             |              | {1,2,3}
+ {0,1}         |                 |             |              | {4,5}
+ {1}           |               2 |           4 |         5.36 |
+ {1,0}         |                 |             |              | {6,7,8}
+ {1,1}         |                 |             |              | {9,10}
+               |               1 |           5 |         9.24 |
+
 
 3. Find the 2-nearest neighbours for point (3.5,4).
 
@@ -965,7 +1004,7 @@ INSERT INTO query_data VALUES
 SELECT pdltools.kdtree_knn(''kdtree_test_data'', ''id'', ''dimension'', ''val'', ''kdtree_test_output'', 
                            ''query_data'', ''query_id'', ''query_point'', 2, ''query_result'');
 
-SELECT * FROM query_result ORDER BY query_id
+SELECT * FROM query_result ORDER BY query_id;
 
  query_id | knn_id |              knn_dist               
 ----------+--------+-------------------------------------
