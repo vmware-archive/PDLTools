@@ -1,0 +1,25 @@
+###
+# List of methods/modules and their dependencies:
+###
+modules:
+    - name: common
+    - name: uri_utils
+      depends: ['common']
+    - name: edit_distance
+      depends: ['common']
+    - name: anonymization
+      depends: ['common']
+    - name: sugar
+      depends: ['common']
+    - name: stemming
+      depends: ['common']
+    - name: prediction_matrics
+      depends: ['common']
+    - name: balance_dataset
+      depends: ['common']
+    - name: one_vs_rest
+      depends: ['common']
+    - name: generic_utilities
+      depends: ['common']
+    - name: grid_search
+      depends: ['common']
