@@ -1,0 +1,396 @@
+﻿
+/* ----------------------------------------------------------------------- *//**
+
+@file pagerank.sql_in
+
+@brief PageRank algorithm.
+
+@author Written by Jin Yu
+@date 20 June 2016
+
+ *//* ----------------------------------------------------------------------- */
+
+/**
+@addtogroup grp_pagerank
+
+@brief Calculate PageRank of a directed graph by the power iteration method.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#pagerank_syntax">Syntax</a>
+<li class="level1"><a href="#pagerank_usage">Usage</a>
+<li class="level1"><a href="#pagerank_example">Example</a>
+</ul>
+</div>
+
+@about
+This function implements the PageRank algorithm (https://en.wikipedia.org/wiki/PageRank).
+It measures the relative importance of each node in a directed graph based on how 
+it is connected to other nodes. 
+
+
+@anchor pagerank_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION pagerank(
+            input_tab TEXT, 
+            source_node TEXT, 
+            dest_node TEXT, 
+            result_tab TEXT, 
+            damping_factor FLOAT, 
+            max_iter INT, 
+            epsilon FLOAT
+            )
+RETURNS VOID;
+</pre>
+
+@param input_tab Input table that contains the edges of a directed graph.
+@param source_node Column that specifies source nodes.
+@param dest_node Column that specifies destination nodes.
+@param result_tab Table to save PageRank values.
+@param damping_factor Damping factor to be used in PageRank calculation, commonly set to 0.85.
+@param max_iter Maximum number of iterations to run the algorithm.
+@param epsilon Convergence threshold. The function terminates if the L_1 difference of PageRank values between two iterations falls below epsilon.
+
+@anchor pagerank_usage
+@usage
+
+
+A directed graph is expected to be provided in a table of the following structure:
+\n
+\code
+TABLE/VIEW directed_graph
+(
+    ...
+    source TEXT/INT/BIGINT,       -- Source node ID 
+    destination TEXT/INT/BIGINT,  -- Destination node ID
+    ...
+)
+\endcode
+
+
+The PageRank value of each node is provided in the user-specified result table.
+
+
+@anchor pagerank_example
+@examp
+
+-# Create a test graph of 11 nodes.
+\code
+CREATE TEMP TABLE pagerank_test_data (source TEXT, dest TEXT) DISTRIBUTED RANDOMLY;
+INSERT INTO pagerank_test_data VALUES 
+('B','C'),
+('C','B'),
+('D','A'),
+('D','B'),
+('E','B'),
+('E','D'),
+('E','F'),
+('F','B'),
+('F','E'),
+('G','B'),
+('G','E'),
+('H','B'),
+('H','E'),
+('I','B'),
+('I','E'),
+('J','E'),
+('K','E');
+\endcode
+\n
+
+-# Calculate PageRank value for each node with damping factor set to 0.85, maximum iteration number to 50, and tolerance threshold to 1e-3.
+\code
+SELECT pdltools.pagerank('pagerank_test_data', 'source', 'dest', 'pagerank_test_output', 0.85, 50, 1e-3);
+
+SELECT * FROM pagerank_test_output ORDER BY node;
+
+ node |      pagerank      
+------+--------------------
+ A    | 0.0327814931654425
+ B    |  0.384181829876377
+ C    |  0.343129404410408
+ D    | 0.0390870921067852
+ E    | 0.0808856932454106
+ F    | 0.0390870921067852
+ G    | 0.0161694790177579
+ H    | 0.0161694790177579
+ I    | 0.0161694790177579
+ J    | 0.0161694790177579
+ K    | 0.0161694790177579
+ 
+\endcode
+
+*/
+
+ 
+
+/**
+ * @brief Calculate PageRank of directed graph (http://en.wikipedia.org/wiki/PageRank). 
+ *
+ * @param input_tab Input table that contains the edges of a directed graph.
+ * @param source_node Column that specifies source nodes.
+ * @param dest_node Column that specifies destination nodes.
+ * @param result_tab Table to save PageRank values.
+ * @param damping_factor Damping factor to be used in PageRank calculation, commonly set to 0.85.
+ * @param max_iter Maximum number of iterations to run the algorithm.
+ * @param epsilon Convergence threshold. The function terminates if the L_1 difference of PageRank values between two iterations falls below epsilon.
+ */
+create or replace function PDLTOOLS_SCHEMA.pagerank(input_tab text, source_node text, dest_node text, result_tab text, damping_factor float, max_iter int, epsilon float)
+returns void as 
+$$
+    declare
+        sql text;
+        num_node int;
+        init_pagerank text;
+        damping_factor_text text;
+        random_chance text;
+        diff float;
+        num_sink int;
+        sink_pagerank float; -- pagerank from sink nodes
+    begin
+
+        -- A list of nodes.
+        sql = 'create table __pagerank_temp_node as (
+            select ' || source_node || ' node
+            from ' || input_tab || ' 
+            union
+            select ' || dest_node || ' node 
+            from ' || input_tab || ' 
+            ) distributed randomly';
+
+        execute(sql);
+
+        -- A temporary copy of the input graph.
+        sql = 'create table __pagerank_temp_graph as (
+        select ' || source_node || ' node1, '  ||
+           dest_node || ' node2  
+        from ' || input_tab || ' 
+        group by ' || source_node || ',' || dest_node || '           
+        ) distributed randomly';
+
+        execute(sql);
+
+        -- Number of nodes.
+        execute('select count(*) from __pagerank_temp_node') into num_node;
+
+        -- Set initial pagerank values to 1/N.
+        init_pagerank = cast(1.0/num_node as text);
+
+        -- Chance of jumping to a page at random: (1-damping_factor)/N.
+        random_chance = cast((1.0-damping_factor)/num_node as text);
+
+        -- Count the number of outgoing links.
+        sql = 'create table __pagerank_temp_outgoing_stage as (
+            select node1 node, 
+                count(node2) num_outgoing_links 
+            from __pagerank_temp_graph
+            group by node1           
+            ) distributed by (node)';
+
+        execute(sql);
+
+        -- Set initial pagerank to 1/num_node, and indicate if a node is a sink.
+        sql = 'create table __pagerank_temp_outgoing as (
+            select a.node, '  || init_pagerank || ' pagerank, 
+               coalesce(b.num_outgoing_links,0) num_outgoing_links,
+               case when b.node is null then 1 else 0 end sink 
+            from __pagerank_temp_node a 
+                left join __pagerank_temp_outgoing_stage b
+                using (node)
+            ) distributed by (node)';
+        execute(sql);
+
+        execute('select count(*) from __pagerank_temp_outgoing where sink=1') into num_sink;
+        
+        damping_factor_text = cast(damping_factor as text);
+        
+        
+        -- Main loop.
+        for i in 1..max_iter loop
+
+            -- Sum dampened pageranks from sink nodes. The sum will be divided
+            -- evenly among all the nodes.
+            if num_sink > 0 then 
+                sql = 'select sum(pagerank)*'|| damping_factor_text || '*' || init_pagerank || ' 
+                    from __pagerank_temp_outgoing 
+                    where sink = 1';
+                execute(sql) into sink_pagerank;
+            else
+                sink_pagerank = 0;
+            end if;
+            
+            -- Compute dampened summation of incoming pagerank values for each node.
+            sql = 'create table __pagerank_temp_incoming as (
+                select a.node2 node, ' || 
+                damping_factor_text || '* sum(b.pagerank/b.num_outgoing_links) incoming_pagerank
+                from __pagerank_temp_graph a 
+                join __pagerank_temp_outgoing b
+                on (a.node1 = b.node)
+                group by a.node2
+            ) distributed by (node)';
+
+            execute(sql);
+
+            -- Compute pagerank value for each node.
+            sql = 'create table __pagerank_temp_outgoing_new as (
+                select a.node, 
+                (' || random_chance || ' 
+                + ' || ' coalesce(b.incoming_pagerank,0) 
+                + ' || cast(sink_pagerank as text) || '
+                ) pagerank,
+                a.num_outgoing_links,
+                a.sink
+                from __pagerank_temp_outgoing a 
+                left join 
+                __pagerank_temp_incoming b using(node)
+
+            ) distributed by (node)';
+
+            execute(sql);
+
+         
+            -- L1 norm of pagerank differences between two iterations.
+            execute('select sum(abs(a.pagerank - b.pagerank)) 
+                from __pagerank_temp_outgoing_new a 
+                join __pagerank_temp_outgoing b 
+                using(node)') into diff;            
+
+            -- Exit if the difference falls below the given threshold epsilon or 
+            -- maximum number of iterations is reached.
+            if diff < epsilon or i = max_iter then
+                sql = 'create table ' || result_tab || ' as (
+                    select node, pagerank::float from __pagerank_temp_outgoing_new
+                ) distributed randomly';
+                execute(sql);
+                exit;
+            else 
+                drop table if exists __pagerank_temp_incoming;
+                drop table __pagerank_temp_outgoing;
+                alter table __pagerank_temp_outgoing_new rename to __pagerank_temp_outgoing;
+            end if;
+
+        end loop;
+
+
+        drop table if exists __pagerank_temp_node;
+        drop table if exists __pagerank_temp_graph;
+        drop table if exists __pagerank_temp_outgoing_stage;
+        drop table if exists __pagerank_temp_outgoing;
+        drop table if exists __pagerank_temp_outgoing_new;
+        drop table if exists __pagerank_temp_incoming;
+                
+    end;
+
+
+$$ language plpgsql;
+
+
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.pagerank() 
+RETURNS TEXT AS $$
+SELECT '
+pagerank: Calculate PageRank of a directed graph by the power iteration method.
+
+This function implements the PageRank algorithm (https://en.wikipedia.org/wiki/PageRank).
+It measures the relative importance of each node in a directed graph based on how 
+it is connected to other nodes.  
+
+For full usage instructions, run "PDLTOOLS_SCHEMA.pagerank(''usage'')".
+'::TEXT;
+$$ LANGUAGE SQL;
+
+
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.pagerank(TEXT) 
+RETURNS TEXT AS $$
+
+SELECT CASE WHEN $1!='usage' THEN PDLTOOLS_SCHEMA.pagerank() ELSE 
+'pagerank: Calculate PageRank of a directed graph by the power iteration method.
+
+This function implements the PageRank algorithm (https://en.wikipedia.org/wiki/PageRank).
+It measures the relative importance of each node in a directed graph based on how 
+it is connected to other nodes.  
+
+Syntax
+======
+
+FUNCTION pagerank(input_tab TEXT, source_node TEXT, dest_node TEXT, result_tab TEXT, damping_factor FLOAT, max_iter INT, epsilon FLOAT)
+RETURNS VOID;
+
+input_tab      - Input table that contains the edges of a directed graph.
+source_node    - Column that specifies source nodes.
+dest_node      - Column that specifies destination nodes.
+result_tab     - Table to save PageRank values.
+damping_factor - Damping factor to be used in PageRank calculation, commonly set to 0.85.
+max_iter       - Maximum number of iterations to run the algorithm.
+epsilon        - Convergence threshold. The function terminates if the L_1 difference of 
+                 PageRank values between two iterations falls below epsilon.
+
+
+Usage
+=====
+
+A directed graph is expected to be provided in a table of the following structure:
+
+TABLE/VIEW directed_graph
+(
+    ...
+    source TEXT/INT/BIGINT,       -- Source node ID 
+    destination TEXT/INT/BIGINT,  -- Destination node ID
+    ...
+)
+
+
+Example
+=======
+
+1. Create a test graph of 11 nodes.
+
+CREATE TEMP TABLE pagerank_test_data (source TEXT, dest TEXT) DISTRIBUTED RANDOMLY;
+INSERT INTO pagerank_test_data VALUES 
+(''B'',''C''),
+(''C'',''B''),
+(''D'',''A''),
+(''D'',''B''),
+(''E'',''B''),
+(''E'',''D''),
+(''E'',''F''),
+(''F'',''B''),
+(''F'',''E''),
+(''G'',''B''),
+(''G'',''E''),
+(''H'',''B''),
+(''H'',''E''),
+(''I'',''B''),
+(''I'',''E''),
+(''J'',''E''),
+(''K'',''E'');
+
+
+2. Calculate PageRank value for each node with damping factor set to 0.85, maximum iteration number to 50, and tolerance threshold to 1e-3.
+
+SELECT pdltools.pagerank(''pagerank_test_data'', ''source'', ''dest'', ''pagerank_test_output'', 0.85, 50, 1e-3);
+
+SELECT * FROM pagerank_test_output ORDER BY node;
+
+ node |      pagerank      
+------+--------------------
+ A    | 0.0327814931654425
+ B    |  0.384181829876377
+ C    |  0.343129404410408
+ D    | 0.0390870921067852
+ E    | 0.0808856932454106
+ F    | 0.0390870921067852
+ G    | 0.0161694790177579
+ H    | 0.0161694790177579
+ I    | 0.0161694790177579
+ J    | 0.0161694790177579
+ K    | 0.0161694790177579
+ 
+
+' END;
+    
+$$ LANGUAGE SQL;
+
+

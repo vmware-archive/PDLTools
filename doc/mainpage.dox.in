@@ -280,6 +280,25 @@ A collection of machine-learning algorithms.
         @defgroup grp_kdtree kd_tree
         @defgroup grp_kdtree_knn kdtree_knn
     @}
+
+
+    @defgroup grp_pagerank_alg PageRank
+    @{
+        @brief PageRank algorithm
+
+        The module implements the PageRank algorithm (https://en.wikipedia.org/wiki/PageRank).
+        It measures the relative importance of each node in a directed graph based on how 
+        it is connected to other nodes. 
+        
+        (Written by [Jin Yu](mailto:jyu@pivotal.io), 20 June 2016.)
+        
+        @sa Module source file: pagerank.sql_in.
+  
+        @prereq
+        PL/pgSQL
+
+        @defgroup grp_pagerank pagerank
+    @}
 @}
 
 @defgroup grp_sugar_module SUgAR - Syntactic Upgrades for Analytics Routines

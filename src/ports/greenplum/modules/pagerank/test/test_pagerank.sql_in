@@ -1,0 +1,41 @@
+-- File: test_pagerank.sql_in
+-- Unit test for pagerank.sql_in
+
+
+-- Create a test dataset. 
+CREATE TEMP TABLE pagerank_test_data (source TEXT, dest TEXT) DISTRIBUTED RANDOMLY;
+INSERT INTO pagerank_test_data VALUES 
+('B','C'),
+('C','B'),
+('D','A'),
+('D','B'),
+('E','B'),
+('E','D'),
+('E','F'),
+('F','B'),
+('F','E'),
+('G','B'),
+('G','E'),
+('H','B'),
+('H','E'),
+('I','B'),
+('I','E'),
+('J','E'),
+('K','E');
+
+
+-- Calculate PageRank value for each node.
+SELECT PDLTOOLS_SCHEMA.pagerank('pagerank_test_data', 'source', 'dest', 'pagerank_test_output', 0.85, 50, 1e-3);
+
+
+-- Check if the result is correct.
+SELECT PDLTOOLS_SCHEMA.assert(
+    array_to_string(array_agg(round(pagerank::NUMERIC,2) ORDER BY node),','),
+    '0.03,0.38,0.34,0.04,0.08,0.04,0.02,0.02,0.02,0.02,0.02') 
+FROM pagerank_test_output;
+
+
+-- Clean up temp tables.
+DROP TABLE pagerank_test_data;
+DROP TABLE pagerank_test_output;
+

@@ -25,3 +25,5 @@ modules:
       depends: ['common']
     - name: kd_tree
       depends: ['common']
+    - name: pagerank
+      depends: ['common']
