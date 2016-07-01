@@ -294,6 +294,148 @@ simple_silhouette | 0.877815152206439
 
  */
 
+
+/**
+@addtogroup grp_elastic_net
+
+@brief A function for grid search over Elastic Net wth k-fold cross validation.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#elasticnet_syntax">Syntax</a>
+<li class="level1"><a href="#elasticnet_usage">Usage</a>
+<li class="level1"><a href="#elasticenet_example">Example</a>
+</ul>
+</div>
+
+@about
+Elastic Nets combine the the benefits of L1 and L2 regularizations with regression models. L1 regularization results in very sparse features, while L2 regularization results in features whose coefficients are closer to zero. By adjusting the alpha and lambda parameters, we can achieve the benefits of both L1 and L2 regularization. Refer to <A HREF="http://madlib.incubator.apache.org/docs/latest/group__grp__elasticnet.html">MADlib Elastic Net Regression</A> for more information.
+
+@anchor elasticnet_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION gs_elasticnet_cv(
+    tbl_source text, 
+    tbl_result text,
+    col_dep_var text,
+    col_ind_var text,
+    regress_family text,
+    alphas float8[],
+    lambdas float8[],
+    id_column text,
+    mdl_table text,
+    k_folds int,
+    standardize boolean, -- OPTIONAL, default: TRUE
+    optimizer text, -- OPTIONAL, default: 'fista'
+    optimizer_params text, -- OPTIONAL, defaut: NULL
+    excluded text, -- OPTIONAL, default: NULL
+    max_iter integer, -- OPTIONAL, default: 1000
+    tolerance float8 -- OPTIONAL, default is 1e-6
+returns text;
+</pre>
+
+
+@param tbl_source The name of the table containing the training data.
+@param tbl_result Name of the generated table containing the output model.
+@param col_dep_var Name of label column in input table. 
+@param col_ind_var Name of features column in input table. Use '*' to specify all columns of tbl_source except those listed in the excluded string.
+@param regress_family The regression type, either 'gaussian' ('linear') or 'binomial' ('logistic').
+@param alphas List of elastic net control parameters, values in [0, 1], 1 for L-1 regularization, 0 for L-2.
+@param lambdas List of regularization parameter, positive values.  
+@param id_column The name of id column in input table.
+@param mdl_table intermediate table to store elastic net models 
+@param k_folds The number of folds for cross-validation.
+@param standardize (optional)  Whether to normalize the data. Setting this to TRUE usually yields better results and faster convergence. Default: TRUE.
+@param optimizer (optional)  The name of optimizer, either 'fista' or 'igd'. Default: 'fista'.
+@param optimizer_params (optional)  Optimizer parameters, delimited with commas, defaut: NULL.
+@param excluded (optional)  If the col_ind_var input is '*' then excluded can be provided as a comma-delimited list of column names that are to be excluded from the features. Default: NULL 
+@param max_iter (optional)  The maximum number of iterations that are allowed. Default: 1000.
+@param tolerance (optional)  Criteria to end iterations. Default is 1e-6.
+
+
+@returns Name of table in which grid search results are saved.
+
+@anchor elasticnet_usage
+@usage
+Given an array of alphas and lambdas, the function runs MADlib's Elastic Net Regularization with k-fold cross-validation. The resulting table contains the AUC values for each model iteration. Refer to <A HREF="http://madlib.incubator.apache.org/docs/latest/group__grp__elasticnet.html">MADlib Elastic Net Regression</A> for more information.
+
+@anchor elasticnet_example
+@examp
+Create sample data.
+@verbatim
+DROP TABLE IF EXISTS houses_sample;
+CREATE TABLE houses_sample ( id INT,
+                      tax INT,
+                      bedroom INT,
+                      bath FLOAT,
+                      price INT,
+                      size INT,
+                      lot INT
+                    );
+COPY houses_sample FROM STDIN WITH DELIMITER '|';
+  1 |  590 |       2 |    1 |  50000 |  770 | 22100
+  2 | 1050 |       3 |    2 |  85000 | 1410 | 12000
+  3 |   20 |       3 |    1 |  22500 | 1060 |  3500
+  4 |  870 |       2 |    2 |  90000 | 1300 | 17500
+  5 | 1320 |       3 |    2 | 133000 | 1500 | 30000
+  6 | 1350 |       2 |    1 |  90500 |  820 | 25700
+  7 | 2790 |       3 |  2.5 | 260000 | 2130 | 25000
+  8 |  680 |       2 |    1 | 142500 | 1170 | 22000
+  9 | 1840 |       3 |    2 | 160000 | 1500 | 19000
+ 10 | 3680 |       4 |    2 | 240000 | 2790 | 20000
+ 11 | 1660 |       3 |    1 |  87000 | 1030 | 17500
+ 12 | 1620 |       3 |    2 | 118600 | 1250 | 20000
+ 13 | 3100 |       3 |    2 | 140000 | 1760 | 38000
+ 14 | 2070 |       2 |    3 | 148000 | 1550 | 14000
+ 15 |  650 |       3 |  1.5 |  65000 | 1450 | 12000
+\.
+@endverbatim
+
+Run elastic net with some different alphas and lambdas. 
+@verbatim
+select gs_elasticnet_cv(
+    'houses',
+    'houses_en',
+    'price',
+    'array[tax, bath, size]',
+    'gaussian',
+    ARRAY[0.05, 0.20], -- alphas
+    ARRAY[0.05, 0.20], -- lambdas
+    'id',
+    'elastic_net_mdls',
+    2,
+    TRUE,
+    'fista',
+    NULL,
+    NULL,
+    10000,
+    1e-6
+);
+             gs_elasticnet_cv             
+------------------------------------------
+ Grid search results written to houses_en
+(1 row)
+@endverbatim
+
+View results.
+@verbatim
+select * from houses_en;
+ alpha | lamda | fold | auc 
+-------+-------+------+-----
+  0.05 |   0.2 |    0 | 0.5
+  0.05 |   0.2 |    1 | 0.5
+  0.05 |  0.05 |    0 | 0.5
+  0.05 |  0.05 |    1 | 0.5
+   0.2 |  0.05 |    0 | 0.5
+   0.2 |  0.05 |    1 | 0.5
+   0.2 |   0.2 |    0 | 0.5
+   0.2 |   0.2 |    1 | 0.5
+(8 rows)
+@endverbatim
+
+ */
+
+
  ------------------------------------------------------------------------
  -- base kmeans function
 drop function if exists PDLTOOLS_SCHEMA.grid_search_kmeans_all(
@@ -841,4 +983,547 @@ $$
 
 $$ language plpgsql;
 
+/*=============================================================================
+* Elastic Net 
+=============================================================================*/
+drop function if exists PDLTOOLS_SCHEMA.gs_elasticnet_cv(
+    tbl_source text, -- input table
+    tbl_result text, -- results of grid search 
+    col_dep_var text, -- name of label column in input table
+    col_ind_var text, -- name of features column in input table
+    regress_family text, -- regression type
+    alphas float8[],  -- list of possible value for alpha
+    lambdas float8[], -- list of possible values for lambdas
+    id_column text, -- name of id column in input table
+    mdl_table text, -- intermediate table to store elastic net models
+    k_folds int, -- number of folds
+    standardize boolean, -- OPTIONAL: whether to normalize the data, default: TRUE
+    optimizer text, -- OPTIONAL: name of optimizer, either 'fista' or 'igd', default: 'fista'
+    optimizer_params text, -- OPTIONAL: optimizer parameters, delimited with commas, defaut: NULL
+    excluded text, -- OPTIONAL: If the col_ind_var input is '*' then excluded can be provided as a comma-delimited list of column names that are to be excluded from the features, default: NULL
+    max_iter integer, -- OPTIONAL: the maximum number of iterations that are allowed, default: 1000
+    tolerance float8 -- OPTIONAL: criteria to end iterations, default is 1e-6
+);
 
+
+
+
+create or replace function PDLTOOLS_SCHEMA.gs_elasticnet_cv(
+    tbl_source text, -- input table
+    tbl_result text, -- results of grid search 
+    col_dep_var text, -- name of label column in input table
+    col_ind_var text, -- name of features column in input table
+    regress_family text, -- regression type
+    alphas float8[],  -- list of possible value for alpha
+    lambdas float8[], -- list of possible values for lambdas
+    id_column text, -- name of id column in input table
+    mdl_table text, -- intermediate table to store elastic net models
+    k_folds int, -- number of folds
+    standardize boolean, -- OPTIONAL: whether to normalize the data, default: TRUE
+    optimizer text, -- OPTIONAL: name of optimizer, either 'fista' or 'igd', default: 'fista'
+    optimizer_params text, -- OPTIONAL: optimizer parameters, delimited with commas, defaut: NULL
+    excluded text, -- OPTIONAL: If the col_ind_var input is '*' then excluded can be provided as a comma-delimited list of column names that are to be excluded from the features, default: NULL
+    max_iter integer, -- OPTIONAL: the maximum number of iterations that are allowed, default: 1000
+    tolerance float8 -- OPTIONAL: criteria to end iterations, default is 1e-6
+)
+returns text
+as
+$$
+    import plpy
+    from itertools import product
+
+    cv_set = """
+        drop table if exists tbl_source_cv;
+        create temp table tbl_source_cv
+        as
+        (
+            select
+                *,
+                random() as cv_select
+            from
+                {tbl_source}
+        );
+    """.format(
+        tbl_source = tbl_source
+    )
+    plpy.execute(cv_set)
+
+    #training set creation
+    training_set = """
+        drop table if exists tbl_source_training_set_cv cascade;
+        create temp table tbl_source_training_set_cv
+        as
+        (
+            select
+                *
+            from
+                tbl_source_cv
+            where 
+                cv_select not between {lower_bound} and {upper_bound}
+        );
+    """
+
+    #test set creation
+    test_set = """
+        drop table if exists tbl_source_test_set_cv cascade;
+        create temp table tbl_source_test_set_cv
+        as
+        (
+            select
+                *
+            from
+                tbl_source_cv
+            where 
+                cv_select between {lower_bound} and {upper_bound}
+        );            
+    """
+
+    #model training code
+    mdl_train = """
+        drop table if exists {mdl_table};
+        select 
+            madlib.elastic_net_train( 
+                '{tbl_source}', --tbl_source
+                '{mdl_table}', --tbl_result,
+                '{col_dep_var}', --col_dep_var,
+                '{col_ind_var}', --col_ind_var,
+                '{regress_family}', --regress_family,
+                {alpha}, --alpha (=1 => L1, =0 => L2),
+                {lamda}, --lambda_value,
+                {standardize}, --standardize,
+                NULL, --grouping_col,
+                '{optimizer}', --optimizer,
+                '{optimizer_params}', --optimizer_params,
+                '{excluded}', --excluded,
+                {max_iter}, --max_iter,
+                {tolerance} --tolerance
+            );
+    """
+
+    mdl_score="""
+        drop table if exists tbl_source_test_set_cv_results cascade;
+        create temp table tbl_source_test_set_cv_results
+        as
+        (
+            select
+                {id_column},
+                {col_dep_var} as actual_label,
+                madlib.elastic_net_binomial_predict(
+                    coef_all,
+                    intercept,
+                    {col_ind_var}
+                ) as predicted_label,            
+                madlib.elastic_net_binomial_prob(
+                    coef_all,
+                    intercept,
+                    {col_ind_var}
+                ) as predicted_label_proba
+            from
+                {cv_model} mdl,
+                {test_set} test
+        ) distributed randomly;        
+    """
+
+    #output table CTAS
+    tbl_result_ctas = """
+        --drop table if exists {tbl_result} cascade;
+        create table {tbl_result}
+        (
+            alpha float8,
+            lamda float8,
+            fold int,
+            auc float8
+        )distributed randomly;
+    """
+    plpy.execute(tbl_result_ctas.format(tbl_result=tbl_result))
+
+    iter = 0
+    for alpha, lamda in product(alphas, lambdas):
+        plpy.info('Iteration {0} of {1}'.format(iter, len(list(product(alphas, lambdas)))))
+        plpy.info('alpha:{0}, lambda:{1}'.format(alpha, lamda))
+        for fold in range(k_folds):
+            lower_bound = fold*(1.0/k_folds)
+            upper_bound = (fold+1)*(1.0/k_folds)
+
+            #create training & test set
+            plpy.execute(training_set.format(lower_bound=lower_bound, upper_bound=upper_bound))
+            plpy.execute(test_set.format(lower_bound=lower_bound, upper_bound=upper_bound))
+            #train model
+            plpy.execute(
+                mdl_train.format(
+                    alpha=alpha, 
+                    lamda=lamda, 
+                    tbl_source='tbl_source_training_set_cv',
+                    mdl_table=mdl_table,
+                    col_dep_var=col_dep_var,
+                    col_ind_var=col_ind_var,
+                    regress_family=regress_family,
+                    standardize=standardize,
+                    optimizer=optimizer,
+                    optimizer_params=optimizer_params,
+                    excluded=excluded,
+                    max_iter=max_iter,
+                    tolerance=tolerance
+                ).replace("'None'","NULL")
+            )
+
+            #score on test set
+            plpy.execute(
+                mdl_score.format(
+                    cv_model=mdl_table, 
+                    test_set='tbl_source_test_set_cv',
+                    id_column=id_column,
+                    col_dep_var=col_dep_var,
+                    col_ind_var=col_ind_var
+                )
+            )
+
+            #Compute AUC and insert metrics into results table
+            auc_sql = """
+                insert into {tbl_result}
+                select
+                    {alpha} as alpha,
+                    {lamda} as lambda,         
+                    {fold} as fold,
+                    pdltools.mf_auc(
+                        'tbl_source_test_set_cv_results',
+                        'predicted_label_proba', -- predicted probabilities
+                        'actual_label' -- actual column
+                    ) as auc
+            """.format(
+                alpha=alpha,
+                lamda=lamda,
+                fold=fold,
+                tbl_result=tbl_result
+            )
+            plpy.execute(auc_sql)
+
+        iter+=1
+    return 'Grid search results written to {tbl_result}'.format(tbl_result=tbl_result)  
+$$language plpythonu;
+
+
+-- overloading functions
+drop function if exists PDLTOOLS_SCHEMA.gs_elasticnet_cv(
+    tbl_source text,
+    tbl_result text,
+    col_dep_var text,
+    col_ind_var text,
+    regress_family text,
+    alphas float8[],
+    lambdas float8[],
+    id_column text,
+    mdl_table text,
+    k_folds int,
+    standardize boolean, --optional, defualt: True
+    optimizer text, --optional, defualt: 'fista'
+    optimizer_params text, --optional, default: NULL
+    excluded text, --optional, default: NULL
+    max_iter integer --optional, default: 1000
+);
+create or replace function PDLTOOLS_SCHEMA.gs_elasticnet_cv(
+    tbl_source text,
+    tbl_result text,
+    col_dep_var text,
+    col_ind_var text,
+    regress_family text,
+    alphas float8[],
+    lambdas float8[],
+    id_column text,
+    mdl_table text,
+    k_folds int,
+    standardize boolean, --optional, defualt: True
+    optimizer text, --optional, defualt: 'fista'
+    optimizer_params text, --optional, default: NULL
+    excluded text, --optional, default: NULL
+    max_iter integer --optional, default: 1000
+) 
+returns text 
+as 
+$$
+    declare 
+        ret text;
+    begin 
+        select PDLTOOLS_SCHEMA.gs_elasticnet_cv(
+            tbl_source,
+            tbl_result,
+            col_dep_var,
+            col_ind_var,
+            regress_family,
+            alphas,
+            lambdas,
+            id_column,
+            mdl_table,
+            k_folds,
+            standardize,
+            optimizer,
+            optimizer_params,
+            excluded,
+            max_iter,
+            1e-6) into ret;
+        return ret;
+    end;
+$$ language plpgsql;
+
+
+drop function if exists PDLTOOLS_SCHEMA.gs_elasticnet_cv(
+    tbl_source text,
+    tbl_result text,
+    col_dep_var text,
+    col_ind_var text,
+    regress_family text,
+    alphas float8[],
+    lambdas float8[],
+    id_column text,
+    mdl_table text,
+    k_folds int,
+    standardize boolean, --optional, defualt: True
+    optimizer text, --optional, defualt: 'fista'
+    optimizer_params text, --optional, default: NULL
+    excluded text --optional, default: NULL
+);
+create or replace function PDLTOOLS_SCHEMA.gs_elasticnet_cv(
+    tbl_source text,
+    tbl_result text,
+    col_dep_var text,
+    col_ind_var text,
+    regress_family text,
+    alphas float8[],
+    lambdas float8[],
+    id_column text,
+    mdl_table text,
+    k_folds int,
+    standardize boolean, --optional, defualt: True
+    optimizer text, --optional, defualt: 'fista'
+    optimizer_params text, --optional, default: NULL
+    excluded text --optional, default: NULL
+) 
+returns text 
+as
+$$
+    declare 
+        ret text;
+    begin 
+        select PDLTOOLS_SCHEMA.gs_elasticnet_cv(
+            tbl_source,
+            tbl_result,
+            col_dep_var,
+            col_ind_var,
+            regress_family,
+            alphas,
+            lambdas,
+            id_column,
+            mdl_table,
+            k_folds,
+            standardize,
+            optimizer,
+            optimizer_params,
+            excluded,
+            1000) into ret;
+        return ret;
+    end;
+$$ language plpgsql;
+
+
+drop function if exists PDLTOOLS_SCHEMA.gs_elasticnet_cv(
+    tbl_source text,
+    tbl_result text,
+    col_dep_var text,
+    col_ind_var text,
+    regress_family text,
+    alphas float8[],
+    lambdas float8[],
+    id_column text,
+    mdl_table text,
+    k_folds int,
+    standardize boolean, --optional, defualt: True
+    optimizer text, --optional, defualt: 'fista'
+    optimizer_params text --optional, default: NULL
+);
+create or replace function PDLTOOLS_SCHEMA.gs_elasticnet_cv(
+    tbl_source text,
+    tbl_result text,
+    col_dep_var text,
+    col_ind_var text,
+    regress_family text,
+    alphas float8[],
+    lambdas float8[],
+    id_column text,
+    mdl_table text,
+    k_folds int,
+    standardize boolean, --optional, defualt: True
+    optimizer text, --optional, defualt: 'fista'
+    optimizer_params text --optional, default: NULL
+) 
+returns text 
+as
+$$
+    declare 
+        ret text;
+    begin 
+        select PDLTOOLS_SCHEMA.gs_elasticnet_cv(
+            tbl_source,
+            tbl_result,
+            col_dep_var,
+            col_ind_var,
+            regress_family,
+            alphas,
+            lambdas,
+            id_column,
+            mdl_table,
+            k_folds,
+            standardize,
+            optimizer,
+            optimizer_params,
+            NULL) into ret;
+        return ret;
+    end;
+$$ language plpgsql;
+
+drop function if exists PDLTOOLS_SCHEMA.gs_elasticnet_cv(
+    tbl_source text,
+    tbl_result text,
+    col_dep_var text,
+    col_ind_var text,
+    regress_family text,
+    alphas float8[],
+    lambdas float8[],
+    id_column text,
+    mdl_table text,
+    k_folds int,
+    standardize boolean, --optional, defualt: True
+    optimizer text --optional, defualt: 'fista'
+);
+create or replace function PDLTOOLS_SCHEMA.gs_elasticnet_cv(
+    tbl_source text,
+    tbl_result text,
+    col_dep_var text,
+    col_ind_var text,
+    regress_family text,
+    alphas float8[],
+    lambdas float8[],
+    id_column text,
+    mdl_table text,
+    k_folds int,
+    standardize boolean, --optional, defualt: True
+    optimizer text --optional, defualt: 'fista'
+) 
+returns text 
+as
+$$
+    declare 
+        ret text;
+    begin 
+        select PDLTOOLS_SCHEMA.gs_elasticnet_cv(
+            tbl_source,
+            tbl_result,
+            col_dep_var,
+            col_ind_var,
+            regress_family,
+            alphas,
+            lambdas,
+            id_column,
+            mdl_table,
+            k_folds,
+            standardize,
+            optimizer,
+            NULL) into ret;
+        return ret;
+    end;
+$$ language plpgsql;
+
+
+drop function if exists PDLTOOLS_SCHEMA.gs_elasticnet_cv(
+    tbl_source text,
+    tbl_result text,
+    col_dep_var text,
+    col_ind_var text,
+    regress_family text,
+    alphas float8[],
+    lambdas float8[],
+    id_column text,
+    mdl_table text,
+    k_folds int,
+    standardize boolean --optional, defualt: True
+);
+create or replace function PDLTOOLS_SCHEMA.gs_elasticnet_cv(
+    tbl_source text,
+    tbl_result text,
+    col_dep_var text,
+    col_ind_var text,
+    regress_family text,
+    alphas float8[],
+    lambdas float8[],
+    id_column text,
+    mdl_table text,
+    k_folds int,
+    standardize boolean --optional, defualt: True
+) 
+returns text 
+as
+$$
+    declare 
+        ret text;
+    begin 
+        select PDLTOOLS_SCHEMA.gs_elasticnet_cv(
+            tbl_source,
+            tbl_result,
+            col_dep_var,
+            col_ind_var,
+            regress_family,
+            alphas,
+            lambdas,
+            id_column,
+            mdl_table,
+            k_folds,
+            standardize,
+            'fista') into ret;
+        return ret;
+    end;
+$$ language plpgsql;
+
+drop function if exists PDLTOOLS_SCHEMA.gs_elasticnet_cv(
+    tbl_source text,
+    tbl_result text,
+    col_dep_var text,
+    col_ind_var text,
+    regress_family text,
+    alphas float8[],
+    lambdas float8[],
+    id_column text,
+    mdl_table text,
+    k_folds int
+);
+create or replace function PDLTOOLS_SCHEMA.gs_elasticnet_cv(
+    tbl_source text,
+    tbl_result text,
+    col_dep_var text,
+    col_ind_var text,
+    regress_family text,
+    alphas float8[],
+    lambdas float8[],
+    id_column text,
+    mdl_table text,
+    k_folds int
+) 
+returns text 
+as
+$$
+    declare 
+        ret text;
+    begin 
+        select PDLTOOLS_SCHEMA.gs_elasticnet_cv(
+            tbl_source,
+            tbl_result,
+            col_dep_var,
+            col_ind_var,
+            regress_family,
+            alphas,
+            lambdas,
+            id_column,
+            mdl_table,
+            k_folds,
+            True) into ret;
+        return ret;
+    end;
+$$ language plpgsql;

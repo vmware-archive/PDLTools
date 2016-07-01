@@ -22,3 +22,17 @@ UDF: FUNCTION PDLTOOLS_SCHEMA.gs_kmeans_random(pg_catalog.text, pg_catalog.text,
 )
 UDF: FUNCTION PDLTOOLS_SCHEMA.gs_kmeans_random(pg_catalog.text, pg_catalog.text, pg_catalog.int[],pg_catalog.text
 )
+UDF: FUNCTION PDLTOOLS_SCHEMA.gs_elasticnet_cv(pg_catalog.text,pg_catalog.text,pg_catalog.text,pg_catalog.text,pg_catalog.text,pg_catalog.float8[], pg_catalog.float8[],pg_catalog.text,pg_catalog.text,pg_catalog.int,pg_catalog.boolean,pg_catalog.text,pg_catalog.text,pg_catalog.text,pg_catalog.integer,pg_catalog.float8 
+)
+UDF: FUNCTION PDLTOOLS_SCHEMA.gs_elasticnet_cv(pg_catalog.text,pg_catalog.text,pg_catalog.text,pg_catalog.text,pg_catalog.text,pg_catalog.float8[], pg_catalog.float8[],pg_catalog.text,pg_catalog.text,pg_catalog.int,pg_catalog.boolean,pg_catalog.text,pg_catalog.text,pg_catalog.text,pg_catalog.integer
+)
+UDF: FUNCTION PDLTOOLS_SCHEMA.gs_elasticnet_cv(pg_catalog.text,pg_catalog.text,pg_catalog.text,pg_catalog.text,pg_catalog.text,pg_catalog.float8[], pg_catalog.float8[],pg_catalog.text,pg_catalog.text,pg_catalog.int,pg_catalog.boolean,pg_catalog.text,pg_catalog.text,pg_catalog.text
+)
+UDF: FUNCTION PDLTOOLS_SCHEMA.gs_elasticnet_cv(pg_catalog.text,pg_catalog.text,pg_catalog.text,pg_catalog.text,pg_catalog.text,pg_catalog.float8[], pg_catalog.float8[],pg_catalog.text,pg_catalog.text,pg_catalog.int,pg_catalog.boolean,pg_catalog.text,pg_catalog.text
+)
+UDF: FUNCTION PDLTOOLS_SCHEMA.gs_elasticnet_cv(pg_catalog.text,pg_catalog.text,pg_catalog.text,pg_catalog.text,pg_catalog.text,pg_catalog.float8[], pg_catalog.float8[],pg_catalog.text,pg_catalog.text,pg_catalog.int,pg_catalog.boolean,pg_catalog.text
+)
+UDF: FUNCTION PDLTOOLS_SCHEMA.gs_elasticnet_cv(pg_catalog.text,pg_catalog.text,pg_catalog.text,pg_catalog.text,pg_catalog.text,pg_catalog.float8[], pg_catalog.float8[],pg_catalog.text,pg_catalog.text,pg_catalog.int,pg_catalog.boolean
+)
+UDF: FUNCTION PDLTOOLS_SCHEMA.gs_elasticnet_cv(pg_catalog.text,pg_catalog.text,pg_catalog.text,pg_catalog.text,pg_catalog.text,pg_catalog.float8[], pg_catalog.float8[],pg_catalog.text,pg_catalog.text,pg_catalog.int
+)
