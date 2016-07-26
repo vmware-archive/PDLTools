@@ -151,14 +151,26 @@ $$
     begin
 
         -- A list of nodes.
-        sql = 'create table __pagerank_temp_node as (
-            select ' || source_node || ' node
-            from ' || input_tab || ' 
-            union
-            select ' || dest_node || ' node 
-            from ' || input_tab || ' 
-            ) distributed randomly';
+--         sql = 'create table __pagerank_temp_node as (
+--             select ' || source_node || ' node
+--             from ' || input_tab || ' 
+--             union
+--             select ' || dest_node || ' node 
+--             from ' || input_tab || ' 
+--             ) distributed randomly';
+--        execute(sql);
 
+        sql = 'create table __pagerank_temp_node (node text) distributed randomly';
+        execute(sql);
+
+        sql = 'insert into __pagerank_temp_node select distinct ' || source_node || 
+            ' from ' || input_tab;
+        execute(sql);
+
+        sql = 'insert into __pagerank_temp_node select distinct ' || dest_node || 
+            ' from ' || input_tab || ' where ' || dest_node || 
+            ' not in (select distinct ' || source_node || '
+            from ' || input_tab || ')' ;
         execute(sql);
 
         -- A temporary copy of the input graph.
