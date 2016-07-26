@@ -2,7 +2,7 @@
 
 # $0 - Script Path, $1 - Package Path, $2 - Target Location, and $3 - Target Volumn
 
-PDLTOOLS_VERSION=1.6
+PDLTOOLS_VERSION=1.7
 
 find /usr/local/pdltools/bin -type d -exec cp -RPf {} /usr/local/pdltools/old_bin \; 2>/dev/null
 find /usr/local/pdltools/bin -depth -type d -exec rm -r {} \; 2>/dev/null

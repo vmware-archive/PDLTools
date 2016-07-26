@@ -13,7 +13,7 @@ modules:
       depends: ['common']
     - name: stemming
       depends: ['common']
-    - name: prediction_matrics
+    - name: prediction_metrics
       depends: ['common']
     - name: balance_dataset
       depends: ['common']

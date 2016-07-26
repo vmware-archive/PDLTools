@@ -2,7 +2,7 @@
 # Packaging for Greenplum's gppkg
 # ------------------------------------------------------------------------------
 
-set(PDLTOOLS_GPPKG_VERSION "1.6")
+set(PDLTOOLS_GPPKG_VERSION "1.7")
 set(PDLTOOLS_GPPKG_RELEASE_NUMBER 1)
 set(PDLTOOLS_GPPKG_RPM_SOURCE_DIR
     "${CMAKE_BINARY_DIR}/_CPack_Packages/Linux/RPM/${CPACK_PACKAGE_FILE_NAME}"

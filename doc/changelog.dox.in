@@ -4,12 +4,13 @@
 
 ## PDL Tools Revision History
 
-### PDL Tools 1.7 (packaged with SUgAR 1.0)
+### PDL Tools 1.7 (packaged with SUgAR 1.0) -- Current version
 - Add module kd_tree for KD-tree and its application to k-nearest neighbour search.
 - Add module pagerank.
 - Add grid search function for elastic net in grid_search module.
+- Add PDL Tools tutorials in Jupyter notebook.
 
-### PDL Tools 1.6 (packaged with SUgAR 1.0) -- Current version
+### PDL Tools 1.6 (packaged with SUgAR 1.0)
 - Add module one_vs_rest for multi-class classification.
 - Add module grid_search for grid searching functions.
 - Add module generic_utilities (includes multi-table summary and array
