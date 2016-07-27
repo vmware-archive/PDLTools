@@ -6,6 +6,8 @@ var searchData=
   ['_5f_5fclink_5finit_5fnn_5ftable_5fcomplete',['__clink_init_nn_table_complete',['../complete__linkage_8sql__in.html#a9381b45b76fe1b511bfde584d00868c0',1,'complete_linkage.sql_in']]],
   ['_5f_5fclink_5frandom_5fstr',['__clink_random_str',['../complete__linkage_8sql__in.html#ad873c6eb1afdab197dffad92276cd04e',1,'complete_linkage.sql_in']]],
   ['_5f_5fclink_5fupdate_5fnn_5ftable_5fcomplete',['__clink_update_nn_table_complete',['../complete__linkage_8sql__in.html#a50a729f619747a4217e3faa4f01c3bfe',1,'complete_linkage.sql_in']]],
+  ['_5f_5fkdtree_5fkd_5ftree_5fmax_5fvariance',['__kdtree_kd_tree_max_variance',['../kd__tree_8sql__in.html#ab33b3a48161dcc55cecf1c8448e6ca7b',1,'kd_tree.sql_in']]],
+  ['_5f_5fkdtree_5fkdtree_5fknn_5f0',['__kdtree_kdtree_knn_0',['../kd__tree_8sql__in.html#af91808eb4f0be63c1465ba256c176f9a',1,'kd_tree.sql_in']]],
   ['_5f_5fpm_5fmf_5fadjusted_5fr2_5fcombine',['__pm_mf_adjusted_r2_combine',['../prediction__metrics_8sql__in.html#adaad656b94d92397f702452f203e1c89',1,'prediction_metrics.sql_in']]],
   ['_5f_5fpm_5fmf_5fadjusted_5fr2_5ffinal',['__pm_mf_adjusted_r2_final',['../prediction__metrics_8sql__in.html#a2ba844eec174de36e95dc9c6a1b6dba5',1,'prediction_metrics.sql_in']]],
   ['_5f_5fpm_5fmf_5fadjusted_5fr2_5ftransition',['__pm_mf_adjusted_r2_transition',['../prediction__metrics_8sql__in.html#afbe1fab835072123e74561e76ffb9d55',1,'prediction_metrics.sql_in']]],

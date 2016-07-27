@@ -40,7 +40,7 @@
   <td id="projectlogo"><img alt="Logo" src="pdl.png"/></td>
   <td style="padding-left: 0.5em;">
    <div id="projectname">PDL Tools
-   &#160;<span id="projectnumber">1.6</span>
+   &#160;<span id="projectnumber">1.7</span>
    </div>
    <div id="projectbrief">User Documentation</div>
   </td>
@@ -78,6 +78,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
       </li>
     </ul>
   </div>
+</div><!-- top -->
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -92,23 +93,59 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
-<div id="nav-path" class="navpath">
-  <ul>
-<li class="navelem"><a class="el" href="dir_bb7d990ba40bd75a8ed53230e6fadada.html">src</a></li><li class="navelem"><a class="el" href="dir_3bb6e39557c2b5e20710484cdef7616e.html">ports</a></li><li class="navelem"><a class="el" href="dir_1251a346ff152043611f50f52c1889fb.html">greenplum</a></li><li class="navelem"><a class="el" href="dir_0cd97984ab6691101e509370741788fa.html">modules</a></li><li class="navelem"><a class="el" href="dir_634f2930b3ca2b8a096f4ef6f9d7c4e2.html">prediction_metrics</a></li>  </ul>
-</div>
-</div><!-- top -->
 <div class="header">
   <div class="headertitle">
-<div class="title">prediction_metrics Directory Reference</div>  </div>
+<div class="title">kdtree_knn<div class="ingroups"><a class="el" href="group__grp__kdtree__and__knn.html">KD-tree</a></div></div>  </div>
 </div><!--header-->
 <div class="contents">
-<table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="files"></a>
-Files</h2></td></tr>
-<tr class="memitem:prediction__metrics_8sql__in"><td class="memItemLeft" align="right" valign="top">file &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="prediction__metrics_8sql__in.html">prediction_metrics.sql_in</a></td></tr>
-<tr class="memdesc:prediction__metrics_8sql__in"><td class="mdescLeft">&#160;</td><td class="mdescRight">Implementation of various prediction accuracy metrics. <br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table>
+<div class="toc"><b>Contents</b> </p><ul>
+<li class="level1">
+<a href="#kdtree_knn_syntax">Syntax</a> </li>
+<li class="level1">
+<a href="#kdtree_knn_example">Example</a> </li>
+</ul>
+</div><dl class="section user"><dt>About</dt><dd>This function finds the k-nearest neighbours of a query point by searching through a pre-learned KD-tree (e.g. produced by <a class="el" href="group__grp__kdtree.html">kd_tree</a>). The hope is that most of the branches in the KD-tree can be eliminated from search. The function is intended for large-scale problems, e.g. finding nearest neighbours from millions of data points. For small- to medium- scale problems, a brute-force approach that compares distances between the query point to all the data may work well enough by leveraging the parallel computation capability of the Greenplum database. Also note that due to the "curse of dimensionality" problem with KD-tree, the function is more suitable for search in a low dimensional space (e.g. dimensionality of &lt; 10).</dd></dl>
+<p><a class="anchor" id="kdtree_knn_syntax"></a></p><dl class="section user"><dt>Syntax</dt><dd><pre class="syntax">
+FUNCTION kdtree_knn(training_data_tab TEXT, id TEXT, dimension TEXT, val TEXT, kdtree_tab TEXT, query_point FLOAT8[], k INT)
+RETURNS kdtree_knn_result;
+</pre></dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">training_data_tab</td><td>Table that contains the data that was used for the construction of the KD-tree. </td></tr>
+    <tr><td class="paramname">id</td><td>Name of the column specifying data IDs. </td></tr>
+    <tr><td class="paramname">dimension</td><td>Name of the column specifying dimension indices. </td></tr>
+    <tr><td class="paramname">val</td><td>Name of the column containing data values. </td></tr>
+    <tr><td class="paramname">kdtree_tab</td><td>Table that specifies the KD-tree. </td></tr>
+    <tr><td class="paramname">query_point</td><td>Query point. </td></tr>
+    <tr><td class="paramname">k</td><td>Number of nearest neighbours to search for. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>A data structure that contains the IDs of the k-nearest neighbours of the query point and the corresponding distances to those neighbours.</dd></dl>
+<dl class="section user"><dt>Syntax</dt><dd>The above function finds the k-nearest neighbours of a single query point. One can use the following function to handle multiple queries. <br />
+<pre class="syntax">
+FUNCTION kdtree_knn(training_data_tab TEXT, id TEXT, dimension TEXT, val TEXT, kdtree_tab TEXT, 
+                    query_tab TEXT, query_id TEXT, query_point TEXT, k INT, result_tab TEXT)
+RETURNS VOID;
+</pre></dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">training_data_tab</td><td>Table that contains the data that was used for the construction of the KD-tree. </td></tr>
+    <tr><td class="paramname">id</td><td>Name of the column specifying data IDs. </td></tr>
+    <tr><td class="paramname">dimension</td><td>Name of the column specifying dimension indices. </td></tr>
+    <tr><td class="paramname">val</td><td>Name of the column containing data values. </td></tr>
+    <tr><td class="paramname">kdtree_tab</td><td>Table that specifies the KD-tree. </td></tr>
+    <tr><td class="paramname">query_tab</td><td>Table that contains the query points. </td></tr>
+    <tr><td class="paramname">query_id</td><td>Name of the column specifying query point IDs. </td></tr>
+    <tr><td class="paramname">query_point</td><td>Name of the column specifying query points. </td></tr>
+    <tr><td class="paramname">k</td><td>Number of nearest neighbours to search for. </td></tr>
+    <tr><td class="paramname">result_tab</td><td>Name of table that contains the search result.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="group__grp__kdtree.html">kd_tree</a> for building a KD-tree.</dd></dl>
+<p><a class="anchor" id="kdtree_knn_example"></a></p><dl class="section user"><dt>Examples</dt><dd></dd></dl>
+<p>See <a class="el" href="group__grp__kdtree.html">kd_tree</a> for a usage example. </p>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

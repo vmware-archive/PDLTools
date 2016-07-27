@@ -1,5 +1,7 @@
 var searchData=
 [
+  ['pagerank',['pagerank',['../group__grp__pagerank.html',1,'']]],
+  ['pagerank',['PageRank',['../group__grp__pagerank__alg.html',1,'']]],
   ['parse_5fdomain',['parse_domain',['../group__grp__parse__domain.html',1,'']]],
   ['parse_5furi',['parse_uri',['../group__grp__parse__uri.html',1,'']]],
   ['pivot_20_28pseudo_2daggregate_29',['pivot (Pseudo-aggregate)',['../group__grp__pivot.html',1,'']]],

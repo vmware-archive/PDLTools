@@ -1,5 +1,7 @@
 var searchData=
 [
+  ['pagerank',['pagerank',['../group__grp__pagerank.html',1,'']]],
+  ['pagerank',['PageRank',['../group__grp__pagerank__alg.html',1,'']]],
   ['parse_5fdomain',['parse_domain',['../group__grp__parse__domain.html',1,'']]],
   ['parse_5furi',['parse_uri',['../group__grp__parse__uri.html',1,'']]],
   ['pivot_20_28pseudo_2daggregate_29',['pivot (Pseudo-aggregate)',['../group__grp__pivot.html',1,'']]],
@@ -8,6 +10,8 @@ var searchData=
   ['proportion_20_28pseudo_2dwindow_2dfunction_29',['proportion (Pseudo-window-function)',['../group__grp__proportion.html',1,'']]],
   ['proportional_5ftrans',['proportional_trans',['../group__grp__proportional__trans.html',1,'']]],
   ['pvalue_20_28pseudo_2dwindow_2dfunction_29',['pvalue (Pseudo-window-function)',['../group__grp__pvalue.html',1,'']]],
+  ['pagerank',['pagerank',['../pagerank_8sql__in.html#a463876973b580305bcb6174410da6316',1,'pagerank(text input_tab, text source_node, text dest_node, text result_tab, float damping_factor, int max_iter, float epsilon):&#160;pagerank.sql_in'],['../pagerank_8sql__in.html#a90c99e9f18280741697437363b50d961',1,'pagerank():&#160;pagerank.sql_in'],['../pagerank_8sql__in.html#a208a34300f5ab3a7eb18455433011fba',1,'pagerank(text):&#160;pagerank.sql_in']]],
+  ['pagerank_2esql_5fin',['pagerank.sql_in',['../pagerank_8sql__in.html',1,'']]],
   ['parse_5fdomain',['parse_domain',['../uri__utils_8sql__in.html#ab921134fb45b44239dacbe653230d79a',1,'parse_domain(text domainname):&#160;uri_utils.sql_in'],['../uri__utils_8sql__in.html#a2036a6e89901ad2b51f367c7ee856c19',1,'parse_domain():&#160;uri_utils.sql_in']]],
   ['parse_5furi',['parse_uri',['../uri__utils_8sql__in.html#a2ebc37a03dc7fc2a373e3d98aea95390',1,'parse_uri(text uri, boolean normalize, boolean parse_query):&#160;uri_utils.sql_in'],['../uri__utils_8sql__in.html#abd2babd3b0c92c5223374300599eb833',1,'parse_uri():&#160;uri_utils.sql_in'],['../uri__utils_8sql__in.html#a685769a9ba402a76cd2c56eff18411e2',1,'parse_uri(varchar option):&#160;uri_utils.sql_in']]],
   ['pdltools_5fversion',['pdltools_version',['../udfs_8sql__in.html#a7721c5873a5c0fa8ed61c203a4b04a95',1,'udfs.sql_in']]],
