@@ -35,7 +35,50 @@ SELECT PDLTOOLS_SCHEMA.assert(
 FROM pagerank_test_output;
 
 
+-- Create a test set with 2 graphs.
+CREATE TEMP TABLE pagerank_test_data_multiple (source TEXT, dest TEXT, graph_id TEXT) DISTRIBUTED RANDOMLY;
+INSERT INTO pagerank_test_data_multiple VALUES 
+('B','C', 1),
+('C','B', 1),
+('D','A', 1),
+('D','B', 1),
+('E','B', 1),
+('E','D', 1),
+('E','F', 1),
+('F','B', 1),
+('F','E', 1),
+('G','B', 1),
+('G','E', 1),
+('H','B', 1),
+('H','E', 1),
+('I','B', 1),
+('I','E', 1),
+('J','E', 1),
+('K','E', 1),
+('B','C', 2),
+('C','B', 2),
+('D','A', 2),
+('D','B', 2),
+('E','B', 2),
+('E','D', 2),
+('I','E', 2),
+('J','E', 2),
+('K','E', 2);
+
+-- Calculate PageRanks for the 2 graphs in parallel.
+SELECT PDLTOOLS_SCHEMA.pagerank('pagerank_test_data_multiple', 'source', 'dest', 'graph_id', 'pagerank_test_output_multiple', 0.85, 50, 1e-3);
+
+
+-- Check if the result is correct.
+SELECT PDLTOOLS_SCHEMA.assert(
+    array_to_string(array_agg(round(pagerank::NUMERIC,2) ORDER BY graph_id, node),','),
+    '0.03,0.38,0.34,0.04,0.08,0.04,0.02,0.02,0.02,0.02,0.02,0.05,0.38,0.35,0.06,0.09,0.02,0.02,0.02') 
+FROM pagerank_test_output_multiple;
+
+
 -- Clean up temp tables.
 DROP TABLE pagerank_test_data;
 DROP TABLE pagerank_test_output;
+DROP TABLE pagerank_test_data_multiple;
+DROP TABLE pagerank_test_output_multiple;
 

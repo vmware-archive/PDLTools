@@ -1,1 +1,4 @@
 UDF: FUNCTION PDLTOOLS_SCHEMA.pagerank(pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.float, pg_catalog.int4, pg_catalog.float)
+UDF: FUNCTION PDLTOOLS_SCHEMA.pagerank(pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.float, pg_catalog.int4, pg_catalog.float)
+REL: TYPE PDLTOOLS_SCHEMA.__pagerank_l1_difference
+UDF: FUNCTION PDLTOOLS_SCHEMA.__pagerank_random_str(pg_catalog.int4)
