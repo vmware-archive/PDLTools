@@ -275,11 +275,11 @@ $$
         sql = 'create table '|| pagerank_temp_node_tab ||' (node text) distributed randomly';
         execute(sql);
 
-        sql = 'insert into '|| pagerank_temp_node_tab ||' select distinct ' || source_node || 
+        sql = 'insert into '|| pagerank_temp_node_tab ||' select distinct ' || source_node || '::text' ||
             ' from ' || input_tab;
         execute(sql);
 
-        sql = 'insert into '|| pagerank_temp_node_tab ||' select distinct ' || dest_node || 
+        sql = 'insert into '|| pagerank_temp_node_tab ||' select distinct ' || dest_node || '::text' ||
             ' from ' || input_tab || ' where ' || dest_node || 
             ' not in (select distinct ' || source_node || '
             from ' || input_tab || ')' ;
@@ -474,13 +474,13 @@ $$
         execute(sql);
 
         sql = 'insert into '|| pagerank_temp_node_tab ||' 
-            select ' || source_node || ',' || graph_id || '::text 
+            select ' || source_node || '::text, ' || graph_id || '::text
             from ' || input_tab || ' 
             group by ' || source_node || ',' || graph_id;        
         execute(sql);
 
         sql = 'insert into '|| pagerank_temp_node_tab ||' 
-            select ' || dest_node || ',' || graph_id || '::text 
+            select ' || dest_node || '::text, ' || graph_id || '::text
             from ' || input_tab || ' 
             where ' || dest_node || '::text||' || graph_id || '::text
             not in (
