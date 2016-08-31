@@ -1981,9 +1981,9 @@ $$
       FROM(
         SELECT threshold,
                sum(t) OVER (ORDER BY threshold DESC)
-                 *1.0/(sum(t) OVER ()) AS tpr,
+                 *1.0/NULLIF((sum(t) OVER ()),0) AS tpr,
                sum(f) OVER (ORDER BY threshold DESC)
-                 *1.0/(sum(f) OVER ()) AS fpr
+                 *1.0/NULLIF((sum(f) OVER ()),0) AS fpr
         FROM (
           SELECT {prediction_col} AS threshold,sum({observed_col}) AS t,
                  count(*)-sum({observed_col}) AS f
@@ -2021,10 +2021,10 @@ $$
         SELECT {grouping_col}, threshold,
                sum(t) OVER (PARTITION BY {grouping_col}
                             ORDER BY threshold DESC)
-                 *1.0/(sum(t) OVER (PARTITION BY {grouping_col})) AS tpr,
+                 *1.0/NULLIF((sum(t) OVER (PARTITION BY {grouping_col})),0) AS tpr,
                sum(f) OVER (PARTITION BY {grouping_col}
                             ORDER BY threshold DESC)
-                 *1.0/(sum(f) OVER (PARTITION BY {grouping_col})) AS fpr
+                 *1.0/NULLIF((sum(f) OVER (PARTITION BY {grouping_col})),0) AS fpr
         FROM (
           SELECT {grouping_col},
                  {prediction_col} AS threshold,sum({observed_col}) AS t,
