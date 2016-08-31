@@ -3,6 +3,8 @@
 @page changelog
 
 ## PDL Tools Revision History
+### PDL Tools 1.8dev (packaged with SUgAR 1.0) 
+- Add function for splitting data into train/test sets.
 
 ### PDL Tools 1.7 (packaged with SUgAR 1.0) -- Current version
 - Add module kd_tree for KD-tree and its application to k-nearest neighbour search.
