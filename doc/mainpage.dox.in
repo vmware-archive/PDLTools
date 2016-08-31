@@ -113,6 +113,7 @@ PL/Perl
 
         @defgroup grp_strat_partition strat_partition
         @defgroup grp_strat_sampling strat_sampling
+        @defgroup grp_train_test_split train_test_split
     @}
 
     @defgroup grp_complexnumbers Complex Numbers

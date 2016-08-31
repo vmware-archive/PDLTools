@@ -807,3 +807,126 @@ Requires PL/Perl
 ' END;
 $$;
 
+/**
+@addtogroup grp_train_test_split
+
+@brief Split the table into separate train/test tables based on chosen proportions.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#train_test_split_syntax">Syntax</a>
+<li class="level1"><a href="#train_test_split_usage">Usage</a>
+<li class="level1"><a href="#train_test_split_example">Example</a>
+</ul>
+</div>
+
+@about
+Given a table, an id column and split proportion, this function will create the desired train and test tables.
+
+@anchor train_test_split_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION train_test_split(sourceTable text, 
+                          id text, 
+                          trainSize double precision)
+RETURNS VOID; 
+</pre>
+
+@param sourceTable Name of source table.
+@param id Name of the id column in the source table.
+@param trainSize Desired proportion of the train set.
+
+@anchor train_test_split_usage
+@usage
+The function creates a test table and a train table based on the trainSize parameter from the sourceTable.
+The output tables have sourceTable prefix followed by _test or _train. 
+
+@anchor train_test_split_example
+@examp
+@verbatim
+--Create sample data
+drop table if exists sample_data;
+CREATE TEMP TABLE sample_data(pid int, points double precision[]);
+
+COPY sample_data (pid, points) FROM stdin DELIMITER '|';
+1 | {14.23, 1.71, 2.43, 15.6, 127, 2.8, 3.0600, 0.2800, 2.29, 5.64, 1.04, 3.92, 1065}
+2 | {13.2, 1.78, 2.14, 11.2, 1, 2.65, 2.76, 0.26, 1.28, 4.38, 1.05, 3.49, 1050}
+3 | {13.16, 2.36,  2.67, 18.6, 101, 2.8,  3.24, 0.3, 2.81, 5.6799, 1.03, 3.17, 1185}
+4 | {14.37, 1.95, 2.5, 16.8, 113, 3.85, 3.49, 0.24, 2.18, 7.8, 0.86, 3.45, 1480}
+5 | {13.24, 2.59, 2.87, 21, 118, 2.8, 2.69, 0.39, 1.82, 4.32, 1.04, 2.93, 735}
+6 | {14.2, 1.76, 2.45, 15.2, 112, 3.27, 3.39, 0.34, 1.97, 6.75, 1.05, 2.85, 1450}
+7 | {14.39, 1.87, 2.45, 14.6, 96, 2.5, 2.52, 0.3, 1.98, 5.25, 1.02, 3.58, 1290}
+8 | {14.06, 2.15, 2.61, 17.6, 121, 2.6, 2.51, 0.31, 1.25, 5.05, 1.06, 3.58, 1295}
+9 | {14.83, 1.64, 2.17, 14, 97, 2.8, 2.98, 0.29, 1.98, 5.2, 1.08, 2.85, 1045}
+10 | {13.86, 1.35, 2.27, 16, 98, 2.98, 3.15, 0.22, 1.8500, 7.2199, 1.01, 3.55, 1045}
+\.
+
+--use the function to create test and train tables
+select train_test_split('sample_data', 'pid' , 0.7);
+
+--Check count in train table   
+select count(*) as count_train
+from sample_data_train
+;
+count_train
+-----------
+          7
+(1 row)
+
+--Check count in test table   
+select count(*) as count_test
+from sample_data_test
+;
+count_test
+-----------
+          3
+(1 row)
+
+@endverbatim
+
+In this example, sample_data_train (7 rows) and sample_data_test(3 rows) tables are 
+created from sample_data table based on trainSize of 0.7.
+
+@prereq
+PL/Pgsql
+
+*/
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.train_test_split(sourceTable text, id text, trainSize double precision)
+    RETURNS void AS 
+$$
+/*
+This function creates a train and test data set. 
+
+*/
+    DECLARE
+
+        rowCount integer;
+        trainCount integer;
+        testCount integer;
+
+    BEGIN
+
+        -- find size of train/test tables given the desired train size
+        EXECUTE 'SELECT count(*) FROM '||sourceTable INTO rowCount;
+        trainCount := round(rowCount*trainSize)::integer;
+        testCount := rowCount - trainCount;
+
+        -- create train table 
+        EXECUTE 'CREATE TABLE '||sourceTable||'_train AS 
+                 SELECT * 
+                 FROM '||sourceTable||' 
+                 ORDER BY random() LIMIT '||trainCount||'
+                 DISTRIBUTED BY ('||id||')';
+
+        -- create test table
+        EXECUTE 'CREATE TABLE '||sourceTable||'_test AS 
+                 SELECT t1.* 
+                 FROM '||sourceTable||' t1
+                 LEFT JOIN '||sourceTable||'_train t2 USING ('||id||')
+                 WHERE t2.'||id||' IS NULL
+                 DISTRIBUTED BY ('||id||')';
+
+    END;
+$$ LANGUAGE 'plpgsql';
+
