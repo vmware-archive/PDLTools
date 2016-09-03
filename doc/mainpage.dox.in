@@ -300,6 +300,25 @@ A collection of machine-learning algorithms.
 
         @defgroup grp_pagerank pagerank
     @}
+
+    @defgroup grp_normalized_cut_alg Normalized Cut
+    @{
+        @brief Normalized cut algorithm
+
+        The module implements the normalized cut algorithm (https://people.eecs.berkeley.edu/~malik/papers/SM-ncut.pdf).
+        It cuts a graph into two disjoint sets by removing edges connecting the two sets. The optimal cut is obtained 
+        by minimizing the normalized cut disassociation measure (see Shi & Malik's paper for technical details). This 
+        module partitions a graph iteratively until the size of each subgraph reaches a user specified threshold. 
+
+        (Written by [Jin Yu](mailto:jyu@pivotal.io), 2 September 2016.)
+
+        @sa Module source file: normalized_cut.sql_in.
+ 
+        @prereq
+        PL/pgSQL, PL/R, MADlib 1.8+
+
+        @defgroup grp_normalized_cut normalized_cut
+    @}
 @}
 
 @defgroup grp_sugar_module SUgAR - Syntactic Upgrades for Analytics Routines

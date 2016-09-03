@@ -27,3 +27,5 @@ modules:
       depends: ['common']
     - name: pagerank
       depends: ['common']
+    - name: normalized_cut
+      depends: ['common']

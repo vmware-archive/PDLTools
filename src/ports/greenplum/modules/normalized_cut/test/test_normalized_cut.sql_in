@@ -1,0 +1,57 @@
+-- File: test_normalized_cut.sql_in
+-- Unit test for normalized_cut.sql_in
+
+
+-- 1. Create test points/nodes.
+CREATE TEMP TABLE ncut_test_data (node INT, feature FLOAT[]) DISTRIBUTED RANDOMLY;
+
+INSERT INTO ncut_test_data VALUES
+(1,ARRAY[0.00513649,0.167166]),
+(2,ARRAY[0.44311,0.127502]),
+(3,ARRAY[0.312811,0.421223]),
+(4,ARRAY[0.373044,0.280389]),
+(5,ARRAY[0.166491,0.123695]),
+(6,ARRAY[1.04216,1.21863]),
+(7,ARRAY[1.06422,1.42166]),
+(8,ARRAY[1.19542,1.44384]),
+(9,ARRAY[1.01775,1.25931]),
+(10,ARRAY[2.81904,3.3038]),
+(11,ARRAY[3.08253,3.2119]),
+(12,ARRAY[3.232,3.11088]),
+(13,ARRAY[3.00462,3.19002]),
+(14,ARRAY[2.95855,2.83753]),
+(15,ARRAY[3.24319,2.85697]);
+
+
+-- 2. Calculate pairwise similarity, i.e., edge weights. Zero weight is given to edges connecting two 
+-- nodes with their similarity < 2e-3. The similarity matrix is therefore generally sparse.
+
+CREATE TEMP TABLE ncut_test_sim AS
+(
+    WITH a AS (
+        SELECT a.node row_id, 
+            b.node col_id,  
+            exp(-madlib.dist_norm2(a.feature, b.feature)/0.5) similarity
+        FROM ncut_test_data a, ncut_test_data b
+    )
+    SELECT * FROM a WHERE similarity >= 2e-3
+) DISTRIBUTED RANDOMLY;
+
+
+-- 3. Use normalized cut to iteratively partition the graph until each subgraph has no more than 6 nodes.
+SELECT pdltools.normalized_cut(
+    'ncut_test_sim', -- Sparse pairwise similarity table
+    'row_id',        -- Row index column
+    'col_id',        -- Column index column
+    'similarity',    -- Similarity column
+    6,               -- Maximum subgraph size
+    'ncut_test_output' -- Output table
+    );
+    
+
+-- 4. Check if the result is correct.
+SELECT pdltools.assert(
+    string_agg(partition_label || ',' || node || ';' ORDER BY partition_label, node), 
+    '0,10;0,11;0,12;0,13;0,14;0,15;10,6;10,7;10,8;10,9;11,1;11,2;11,3;11,4;11,5;'::TEXT
+    )
+FROM ncut_test_output;
