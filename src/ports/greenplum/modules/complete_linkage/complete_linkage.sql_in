@@ -29,7 +29,7 @@ This function implements the commonly used complete-linkage hierarchical cluster
 @anchor complete_linkage_syntax
 @par Syntax
 <pre class="syntax">
-FUNCTION complete_linkage(dist_tab TEXT, id1 TEXT, id2 TEXT, dist TEXT, output TEXT, iter INT) 
+FUNCTION complete_linkage(dist_tab TEXT, id1 TEXT, id2 TEXT, dist TEXT, output TEXT, stop_criterion TEXT, iter NUMERIC) 
 RETURNS VOID;
 </pre>
 
@@ -38,7 +38,10 @@ RETURNS VOID;
 @param id2 ID column of data point 2 in \a dist_tab.
 @param dist Column of pairwise distances. (Missing rows are taken to have 0 distance.)
 @param output Name of the result table, containing the constructed hierarchical clustering tree.
-@param iter Number of maximum iterations. Set to NULL to build the entire clustering tree.
+@param stop_criterion Stopping criterion used to stop the clustering. Use 'max_iter' to stop the clustering after 
+a max number of iterations (NULL to build the entire clustering tree). Use 'threshold' to stop the clustering after
+the max distance between clusters reaches a threshold value. 
+@param iter Value corresponding to the stop_criterion
 
 @sa grp_cut_hclust_tree (for cutting the clustering tree to form flat clusters).
 
@@ -182,14 +185,17 @@ CREATE TYPE PDLTOOLS_SCHEMA.__clink_set_of_nearest_clust_complete AS (
  * @param id2 ID column of data point 2 in dist_tab.
  * @param dist Column of pairwise distances. (Missing rows are taken to be 0 distance.)
  * @param output Name of the result table, containing the constructed hierarchical clustering tree.
- * @param iter Number of maximum iterations. Set to NULL to build the entire clustering tree.
+ * @param stop_criterion Stopping criterion used to stop the clustering. Use 'max_iter' to stop the clustering after 
+ *        a max number of iterations (NULL to build the entire clustering tree). Use 'threshold' to stop the clustering after
+ *        the max distance between clusters reaches a threshold value. 
+ * @param iter Value corresponding to the stop_criterion
  *
  * Sample usage: SELECT complete_linkage('test_dist','id1','id2','dist','test_output',NULL);
  *
  * See also the cut_hclust_tree_complete() function for cutting the clustering tree to form flat clusters.
  *
  */ 
-CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.complete_linkage(dist_tab TEXT, id1 TEXT, id2 TEXT, dist TEXT, output TEXT, iter INT) 
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.complete_linkage(dist_tab TEXT, id1 TEXT, id2 TEXT, dist TEXT, output TEXT, stop_criterion TEXT, iter NUMERIC) 
 RETURNS VOID AS $$
     DECLARE
         sql TEXT; 
@@ -201,6 +207,7 @@ RETURNS VOID AS $$
         clust_id_end INT;
         result RECORD;
         max_iter INT;
+        max_height NUMERIC;
     BEGIN
 
         -- Create a symmetric distance matrix from dist_tab to facilitate 
@@ -255,10 +262,19 @@ RETURNS VOID AS $$
    
         SELECT * FROM PDLTOOLS_SCHEMA.__clink_init_nn_table_complete(dist_mat, output, cluster_activeness) INTO set_of_nn;
         
+        -- Determine stop criterion 
         IF iter IS NULL THEN
             max_iter = n-1;
-        ELSE
+            max_height = 1e16;
+        ELSIF stop_criterion = 'max_iter' THEN 
             max_iter = iter;
+            max_height = 1e16;
+        ELSIF stop_criterion = 'threshold' THEN 
+            max_iter = n-1;
+            max_height = iter;
+        ELSE 
+            max_iter = n-1;
+            max_height = 1e16;
         END IF;
 
         -- Start the main loop. 
@@ -275,7 +291,7 @@ RETURNS VOID AS $$
                     SELECT unnest(cluster_activeness.cluster_id) cluster_id, 
                     unnest(cluster_activeness.active) active
                     ) b ON (nn = b.cluster_id)
-                    WHERE a.height < 1e16
+                    WHERE a.height < max_height
                     ORDER BY a.height, b.active DESC, a.cluster_id 
                     LIMIT 1 INTO result;
 
@@ -676,8 +692,10 @@ id2      - ID column of data point 2 in dist_tab.
 dist     - Column of pairwise distances. (Missing rows are taken to be 0 distance.)
 output   - Name of the result table, containing the constructed hierarchical
            clustering tree.
-iter     - Number of maximum iterations. Set to NULL to build the entire
-           clustering tree.
+stop_criterion     - Stopping criterion used to stop the clustering. Use ''max_iter'' to stop the clustering 
+                    after a max number of iterations. Use ''threshold'' to stop the clustering after the max distance between
+                    clusters reaches a threshold value.
+iter     - Value corresponding to the stop criterion.
 
 See also cut_hclust_tree for cutting the clustering tree to form flat
 clusters.
@@ -839,7 +857,7 @@ INSERT INTO complete_linkage_test_dist VALUES
 
 2. Build a hierarchical clustering tree
 SELECT PDLTOOLS_SCHEMA.complete_linkage(''complete_linkage_test_dist'',
-              ''id1'',''id2'',''dist'',''complete_linkage_test_output'',NULL);
+              ''id1'',''id2'',''dist'',''complete_linkage_test_output'',NULL,NULL);
 
 3. Cut the clustering tree at a certain height  (2 in the example) to obtain
 flat clusters.
