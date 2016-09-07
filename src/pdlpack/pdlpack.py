@@ -34,6 +34,7 @@ py_min_ver = None
 perl_min_ver = 5.008
 perl_max_ver = 6.0
 plr_min_ver = '2.13'
+r_lib_list = ['irlba']
 con_args={}
 verbose=False
 testcase=None
@@ -212,7 +213,7 @@ def init():
     global pdltoolsdir, pdltoolsdir_conf, rev, sugar_rev
     global this, con_args, py_min_ver
     global perl_min_ver,perl_max_ver
-    global plr_min_ver
+    global plr_min_ver,r_lib_list
     global portid_list
     checkPythonVersion()
     pdltoolsdir = os.path.abspath(os.path.dirname(os.path.realpath(__file__)) + "/..")
@@ -502,6 +503,38 @@ def _plr_check(plr_min_ver):
         raise Exception
 
     _info("> PL/R environment OK (version: %s)" % plr_cur_ver, True)
+
+def _r_lib_check(r_lib_list):
+    """
+    Check that all R library dependencies are installed
+        @param r_lib_list list of R library dependencies
+    """
+    _info("Testing R library dependencies...",True)
+
+    # Check if R libraries are installed
+    _raw_run_sql_query("DROP FUNCTION IF EXISTS check_r_lib(text);",False)
+    _raw_run_sql_query("""
+        CREATE OR REPLACE FUNCTION check_r_lib(lib text)
+        RETURNS boolean as 
+        $$
+            return (lib %in% rownames(installed.packages()==TRUE))
+        $$
+        LANGUAGE plr;
+    """,True)
+
+    not_installed = []
+    for i in r_lib_list:
+        rv = _raw_run_sql_query("SELECT check_r_lib('{lib}') as installed;".format(lib=i),False)
+        installed = rv[0]['installed']
+        if installed=='f':
+            not_installed.append(i)
+
+    if len(not_installed)>0:
+        not_installed = ','.join(not_installed)
+        _error("Following R libraries must be installed first: {libs}".format(libs=not_installed),False)
+        raise Exception 
+    else:
+        _info("> R library dependencies OK",True)
 
 
 def _plperl_check(perl_min_ver,perl_max_ver):
@@ -1667,7 +1700,8 @@ def clean_install(schema, platform, sugar_schema, madlib_schema, output=True, se
         '''PL/Perl installer is currently only available for GPDB, so we won't check this for HAWQ'''
         if(platform != 'hawq'):
             _plperl_check(perl_min_ver,perl_max_ver)
-
+        _plr_check(plr_min_ver)
+        _r_lib_check(r_lib_list)
         if _schema_exists(schema, session):
           _error("PDL Tools schema already exists. Cannot proceed with clean installation.", False)
           raise Exception
@@ -2015,6 +2049,10 @@ def install(schema, platform, sugar_schema, madlib_schema):
       '''PL/Perl installer is currently only available for GPDB, so we won't check this for HAWQ'''
       if(platform != 'hawq'):
           _plperl_check(perl_min_ver,perl_max_ver)
+      _plr_check(plr_min_ver)
+
+      # Dependent packages check
+      _r_lib_check(r_lib_list)
 
       # Write permission
       if not _schema_writable(schema, session):
