@@ -302,6 +302,27 @@ A collection of machine-learning algorithms.
         @defgroup grp_pagerank pagerank
     @}
 
+    @defgroup grp_hits_alg HITS
+    @{
+        @brief HITS algorithm
+	
+	This function implements the HITS algorithm (https://en.wikipedia.org/wiki/HITS_algorithm).  
+
+	It measures the relative importance of each node as a Hub and as an Authority in a directed
+	graph based on how it is connected to other nodes. 
+	      - A high Hub score corresponds to being the source node for many links
+	      - A high Authority score corresponds to being the destination node for many links
+        
+        (Written by [Robert Bennett](mailto:rbennett@pivotal.io), 06 September 2016.)
+        
+        @sa Module source file: hits.sql_in.
+  
+        @prereq
+        PL/pgSQL
+
+        @defgroup grp_hits hits
+	@}
+	
     @defgroup grp_normalized_cut_alg Normalized Cut
     @{
         @brief Normalized cut algorithm
