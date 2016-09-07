@@ -1,0 +1,624 @@
+/* ----------------------------------------------------------------------- *//**
+@file normalized_cut.sql_in
+
+@brief Normalized cut algorithm.
+
+@author Written by Jin Yu
+@date 2 September 2016
+
+ *//* ----------------------------------------------------------------------- */
+
+/**
+@addtogroup grp_normalized_cut
+
+@brief Normalized cut for graph partitioning.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#normalized_cut_syntax">Syntax</a>
+<li class="level1"><a href="#normalized_cut_usage">Usage</a>
+<li class="level1"><a href="#normalized_cut_example">Example</a>
+<li class="level1"><a href="#normalized_cut_background">Background</a>
+
+</ul>
+</div>
+
+@about
+The module implements the normalized cut algorithm (https://people.eecs.berkeley.edu/~malik/papers/SM-ncut.pdf).
+It cuts a graph into two disjoint sets by removing edges connecting the two sets. The optimal cut is obtained
+by minimizing the normalized cut disassociation measure (see the above paper for technical details). This
+module partitions a graph iteratively until the size of each subgraph reaches a user specified threshold.
+
+
+@anchor normalized_cut_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION normalized_cut(
+	similarity_tab TEXT, 
+    row_id TEXT, 
+    col_id TEXT, 
+    val TEXT, 
+    max_graph_size INT, 
+    output_tab TEXT
+    )
+RETURNS VOID;
+</pre>
+
+@param similarity_tab Table that contains nonzero entries of a symmetric  
+matrix with each entry being the similarity between two nodes. 
+The diagonal entries are expected to be strictly positive. 
+@param row_id Row index column in the similarity table.
+@param col_id Column index column in the similarity table.
+@param val Value column in the similarity table.
+@param output_tab Table that contains node partitions.
+
+@anchor normalized_cut_usage
+@usage
+
+The input similarity matrix is expected to be symmetric and contain non-negative values. 
+It should be provided in a table of the following structure:
+\n
+\code
+TABLE/VIEW similarity_tab
+(
+    ...
+    row_id TEXT/INT/BIGINT,     -- Row index
+    col_id TEXT/INT/BIGINT,     -- Column index
+    val    FLOAT8               -- Similarity value
+    ...
+)
+\endcode
+
+Zero entries need not be provided in the similarity table. Entries on the diagonal are 
+expected to be strictly positive. A commonly used similarity measure is Gaussian similarity: 
+\f$W_{ij} = exp(-||x_i - x_j||^2/\sigma^2)\f$, where \f$x_i\f$ and \f$x_j\f$ are feature
+vectors associated with node \f$i\f$ and node \f$j\f$.
+
+Node partitions are provided in the user-specified output table:
+\code
+TABLE/VIEW output_tab
+(
+    partition_label TEXT, -- Partition label indicating which partition a node belongs to
+    node            TEXT  -- Node ID, given by the row indices in the similarity table
+)
+\endcode
+
+@anchor normalized_cut_example
+@examp
+
+-# Create test points/nodes.
+\code
+CREATE TEMP TABLE ncut_test_data (node INT, feature FLOAT[]) DISTRIBUTED RANDOMLY;
+INSERT INTO ncut_test_data VALUES
+(1,ARRAY[0.00513649,0.167166]),
+(2,ARRAY[0.44311,0.127502]),
+(3,ARRAY[0.312811,0.421223]),
+(4,ARRAY[0.373044,0.280389]),
+(5,ARRAY[0.166491,0.123695]),
+(6,ARRAY[1.04216,1.21863]),
+(7,ARRAY[1.06422,1.42166]),
+(8,ARRAY[1.19542,1.44384]),
+(9,ARRAY[1.01775,1.25931]),
+(10,ARRAY[2.81904,3.3038]),
+(11,ARRAY[3.08253,3.2119]),
+(12,ARRAY[3.232,3.11088]),
+(13,ARRAY[3.00462,3.19002]),
+(14,ARRAY[2.95855,2.83753]),
+(15,ARRAY[3.24319,2.85697]);
+\endcode
+\n
+
+-# Calculate pairwise similarity, i.e., edge weights. Zero weight is given to edges connecting two 
+nodes with their similarity < 2e-3. The similarity matrix is therefore generally sparse.
+\code
+CREATE TEMP TABLE ncut_test_sim AS
+(
+    WITH a AS (
+        SELECT a.node row_id, 
+            b.node col_id,  
+            exp(-madlib.dist_norm2(a.feature, b.feature)/0.5) similarity
+        FROM ncut_test_data a, ncut_test_data b
+    )
+    SELECT * FROM a WHERE similarity >= 2e-3
+) DISTRIBUTED RANDOMLY;
+
+\endcode
+\n
+
+-# Use normalized cut to iteratively partition the graph until each subgraph has no more than 6 nodes.
+\code
+SELECT pdltools.normalized_cut(
+    'ncut_test_sim',    -- Sparse pairwise similarity table
+    'row_id',           -- Row index column
+    'col_id',           -- Column index column
+    'similarity',       -- Similarity column
+    6,                  -- Maximum subgraph size
+    'ncut_test_output'  -- Output table
+    );
+
+SELECT * FROM ncut_test_output ORDER BY partition_label, node;
+
+ partition_label | node 
+-----------------+------
+ 0               | 10
+ 0               | 11
+ 0               | 12
+ 0               | 13
+ 0               | 14
+ 0               | 15
+ 10              | 6
+ 10              | 7
+ 10              | 8
+ 10              | 9
+ 11              | 1
+ 11              | 2
+ 11              | 3
+ 11              | 4
+ 11              | 5
+\endcode   
+
+@anchor normalized_cut_background
+@par Technical Background
+
+Given a symmetric similarity matrix \f$W\f$ of a connected graph (graph without isolated connected components), 
+the standard implementation of normalized cut solves the eigenvalue system: 
+\f$(D-W)x = \lambda D x\f$, where \f$D\f$ is a diagonal matrix whose ith diagonal entry is the sum of the ith row of \f$W\f$. 
+The eigenvector corresponding to the second smallest eigenvalue is used to partition the graph. Thresholding eigenvector
+entries at 0 partitions nodes into two groups. For graphs with \f$k>1\f$ connected components, 
+the first \f$k\f$ eigenvectors indicate the node membership to each connected component; see Page 15 of the tutorial:
+https://www.cs.cmu.edu/~aarti/Class/10701/slides/Lecture21_2.pdf for more details. 
+
+The general eigenvalue system: 
+\f$(D-W)x = \lambda D x\f$ can be transformed to a standard eigenvector problem: 
+\f$D^{-1/2}WD^{-1/2}x = (1-\lambda)x\f$. The eigenvector with the second smallest eigenvalue of the original system 
+is the eigenvector with the second largest eigenvalue of the transformed eigenvector problem. For computation 
+efficiency, we further transform the eigenvector problem to a singular value decomposition problem. We first 
+shift \f$D^{-1/2}WD^{-1/2}\f$ by a scaled identity matrix (\f$10I\f$ used in the implementation) to ensure matrix 
+non-negativity. In theory, adding \f$I\f$ is sufficient for that purpose. Note that 
+the addition of the scaled identity matrix only shifts eigenvalues, but does not change eigenvectors. Since the 
+shifted matrix is symmetric non-negative, the left (or right) singular vectors of \f$aI + D^{-1/2}WD^{-1/2}\f$ with
+\f$a>=1\f$ are also eigenvectors of \f$D^{-1/2}WD^{-1/2}\f$. In the implementation, we use the irlba package in 
+R (https://cran.r-project.org/package=irlba) for efficient singular vector approximation for large sparse matrices.
+*/
+
+
+
+/**
+ * @brief Normalized cut (https://people.eecs.berkeley.edu/~malik/papers/SM-ncut.pdf) to 
+ * iteratively partition a graph until the size of each subgraph reaches a user specified threshold. 
+ * 
+ * @param similarity_tab Table that contains nonzero entries of a symmetric  
+ * matrix with each entry being the similarity between two nodes. 
+ * The diagonal entries are expected to be strictly positive. 
+ * @param row_id Row index column in the similarity table.
+ * @param col_id Column index column in the similarity table.
+ * @param val Value column in the similarity table.
+ * @param output_tab Table that contains node partitions.
+ */
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.normalized_cut(similarity_tab TEXT, 
+    row_id TEXT, 
+    col_id TEXT, 
+    val TEXT, 
+    max_graph_size INT, 
+    output_tab TEXT)
+RETURNS VOID AS 
+$$
+    DECLARE 
+        sql TEXT;
+        i_plus_negsqrt_d_w_negsqrt_d_tab TEXT;
+        partition_tab TEXT;
+        partition_new_tab TEXT;
+        cut_tab TEXT;
+        num_partition_to_split INT;
+        num_iter INT;
+    BEGIN
+
+        IF max_graph_size <= 2 THEN
+            RAISE NOTICE 'Maximum graph size need to be greater than 2.';
+            RETURN;
+        END IF;
+
+        -- Temporary table names.
+        EXECUTE('SELECT ''__ncut_i_plus_negsqrt_d_w_negsqrt_d'' || PDLTOOLS_SCHEMA.__ncut_random_str(10)') INTO i_plus_negsqrt_d_w_negsqrt_d_tab; 
+        EXECUTE('SELECT ''__ncut_partition'' || PDLTOOLS_SCHEMA.__ncut_random_str(10)') INTO partition_tab; 
+        EXECUTE('SELECT ''__ncut_partition_new'' || PDLTOOLS_SCHEMA.__ncut_random_str(10)') INTO partition_new_tab; 
+        EXECUTE('SELECT ''__ncut_cut'' || PDLTOOLS_SCHEMA.__ncut_random_str(10)') INTO cut_tab; 
+
+        -- Create a table to record node partitions.
+        sql = 'CREATE TABLE '|| partition_tab ||' AS (
+            SELECT ''''::TEXT AS partition_label, node
+            FROM (
+            SELECT distinct ' || row_id ||' node FROM ' || similarity_tab || '
+            ) foo
+            ) DISTRIBUTED BY (partition_label)';
+        EXECUTE sql;
+
+        -- Number of partitions to work on.
+        sql = 'SELECT count(distinct partition_label) FROM ' || partition_tab;
+        EXECUTE sql INTO num_partition_to_split;
+
+        -- Prepare the output table.
+        sql = 'CREATE TABLE ' || output_tab || '( 
+            partition_label TEXT, node TEXT
+            ) DISTRIBUTED BY (partition_label)';
+        EXECUTE sql;
+
+        -- Number of iterations performed.
+        num_iter = 1;
+        
+        WHILE num_partition_to_split > 0 LOOP
+
+            RAISE NOTICE 'Number of iterations: %', num_iter;
+            
+            -- Compute normalized similarity matrix, and shift it by a scaled identity matrix 
+            -- (10*I + D^{-1/2}*W*D^{-1/2}) to ensure matrix positivity.
+            EXECUTE('DROP TABLE IF EXISTS ' || i_plus_negsqrt_d_w_negsqrt_d_tab);
+            PERFORM PDLTOOLS_SCHEMA.__i_plus_negsqrt_d_w_negsqrt_d(similarity_tab, 
+                row_id, 
+                col_id, 
+                val, 
+                partition_tab, 
+                i_plus_negsqrt_d_w_negsqrt_d_tab
+                );
+
+            -- Derive cut for each subgraph in parallel. For a connected subgraph, the cut is given
+            -- by thresholding the second right singular vector (corresponding to the second largest 
+            -- singular value) of the shifted normalized similarity matrix at 0. For a disconnected 
+            -- subgraph (i.e. subgraph with isolated connected components), the cut is given by the 
+            -- signs of the first right singular vector.
+            EXECUTE('DROP TABLE IF EXISTS ' || cut_tab);
+            sql = 'CREATE TABLE '|| cut_tab ||' AS (
+                SELECT partition_label, 
+                PDLTOOLS_SCHEMA.__irlba_cut(array_agg(row_id ORDER BY row_id), 
+                    array_agg(col_id ORDER BY row_id, col_id), 
+                    array_agg(val ORDER BY row_id, col_id)
+                    ) AS cut
+                FROM '|| i_plus_negsqrt_d_w_negsqrt_d_tab ||' 
+                GROUP BY partition_label
+                ) DISTRIBUTED BY (partition_label)';
+            EXECUTE sql;
+            
+            -- Update partition labels.
+            sql = 'DROP TABLE IF EXISTS ' || partition_new_tab;
+            EXECUTE('DROP TABLE IF EXISTS ' || partition_new_tab);
+            sql = 'CREATE TABLE '|| partition_new_tab ||' AS (
+                    WITH a AS (
+                        SELECT partition_label, array_agg(node ORDER BY node) node
+                        FROM '|| partition_tab ||' 
+                        GROUP BY partition_label
+                    ),
+                    b AS (
+                        SELECT a.partition_label, a.node, cut
+                        FROM '|| cut_tab ||' JOIN a USING (partition_label)
+                    ),
+                    c AS (
+                        SELECT partition_label, unnest(node) node, unnest(cut) cut
+                        FROM b
+                    ),
+                    d AS (
+                        SELECT partition_label||cut AS partition_label, node
+                        FROM c
+                    )
+
+                    SELECT *, count(node) OVER (PARTITION BY partition_label) subgraph_size
+                    FROM d
+                ) DISTRIBUTED BY (partition_label)';
+            EXECUTE sql;
+
+            -- Record subgraphs with size no greater than the given maximum graph size.
+            -- These subgraphs are excluded from further processing.
+            sql = 'INSERT INTO ' || output_tab || '
+                SELECT partition_label, node 
+                FROM '|| partition_new_tab ||'
+                WHERE subgraph_size <= ' || CAST(max_graph_size AS TEXT);
+            EXECUTE sql;
+
+            -- Number of remaining subgraphs to further split.
+            sql = 'SELECT count(*) 
+                FROM '|| partition_new_tab ||'
+                WHERE subgraph_size > ' || CAST(max_graph_size AS TEXT);
+            EXECUTE sql INTO num_partition_to_split;
+
+            -- Update the partition table for the remaining subgraphs. 
+            IF num_partition_to_split > 0 THEN
+                EXECUTE('DROP TABLE IF EXISTS ' || partition_tab);
+                sql = 'CREATE TABLE ' || partition_tab || ' AS (
+                    SELECT partition_label, node
+                    FROM '|| partition_new_tab ||'
+                    WHERE subgraph_size > ' || CAST(max_graph_size AS TEXT) || '
+                    ) DISTRIBUTED BY (partition_label)';
+                EXECUTE sql;
+            END IF;
+
+            num_iter = num_iter + 1;
+        END LOOP;
+        
+        -- Clean up temp table.
+        EXECUTE('DROP TABLE IF EXISTS ' || i_plus_negsqrt_d_w_negsqrt_d_tab);
+        EXECUTE('DROP TABLE IF EXISTS ' || cut_tab);
+        EXECUTE('DROP TABLE IF EXISTS ' || partition_tab);
+        EXECUTE('DROP TABLE IF EXISTS ' || partition_new_tab);
+    END;
+
+$$ LANGUAGE PLPGSQL;
+
+
+
+/**
+ * @internal
+ * @brief Compute normalized similarity matrix, and shift it by a scaled identity matrix: 
+ * 10*I + D^{-1/2}*W*D^{-1/2}. The addition of the scaled identity matrix is to 
+ * ensure matrix positivity (i.e., all eigenvalues of the shifted matrix are positive). 
+ * The eigenvalues of D^{-1/2}*W*D^{-1/2} are between -1 and 1. The eigenvalues of the
+ * shifted matrix are between 9 and 11. The eigenvectors remain the same.
+ * 
+ * @param w_tab Table that contains nonzero entries of the symmetric W matrix. The 
+ * diagonal entries of W are expected to be strictly positive.
+ * @param row_id Row index column in w_tab.
+ * @param col_id Column index column in w_tab.
+ * @param val Value column in w_tab.
+ * @param partition_tab Table that contains node partitions. The computation is done
+ * for each partition independently. 
+ * @param output_tab Table that contains the computation result.
+ *
+ */
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__i_plus_negsqrt_d_w_negsqrt_d(w_tab TEXT, row_id TEXT, col_id TEXT, val TEXT, partition_tab TEXT, output_tab TEXT)
+RETURNS VOID AS $$
+	DECLARE
+		sql TEXT;
+	BEGIN             
+        sql = 'CREATE TABLE ' || output_tab || ' AS ( 
+            WITH w AS (
+                SELECT w.' || row_id || ' AS row_id, w.' || col_id || ' AS col_id, w.' || val || ' AS val,
+                    a.partition_label 
+                FROM ' || w_tab ||' w, ' || partition_tab || ' a, ' || partition_tab || ' b 
+                WHERE w.' || row_id || ' = a.node 
+                    AND w.' || col_id ||' = b.node 
+                    AND a.partition_label = b.partition_label
+            ),
+            nodes AS (
+                SELECT partition_label, row_id
+                FROM w
+                GROUP BY partition_label, row_id
+            ),
+            shifted_ids AS (
+                SELECT row_id AS id, (row_number() OVER(PARTITION BY partition_label ORDER BY row_id))::INT shifted_id
+                FROM nodes
+            ),
+            negsqrt_d AS (
+                SELECT row_id AS id, 1.0/sqrt(sum(val)) negsqrt_d
+                FROM w
+                GROUP BY row_id
+            ), 
+            i_plus_negsqrt_d_w_negsqrt_d AS (
+                SELECT w.partition_label, a.id AS row_id, b.id AS col_id, 
+                    CASE WHEN a.id = b.id THEN 10+sum(a.negsqrt_d*w.val*b.negsqrt_d) 
+                    ELSE sum(a.negsqrt_d*w.val*b.negsqrt_d) END AS val
+                FROM w, negsqrt_d a, negsqrt_d b
+                WHERE w.row_id = a.id AND w.col_id = b.id
+                GROUP BY a.id, b.id, w.partition_label
+            )
+
+            SELECT i_plus_negsqrt_d_w_negsqrt_d.partition_label,
+                row.shifted_id AS row_id, 
+                col.shifted_id AS col_id,
+                i_plus_negsqrt_d_w_negsqrt_d.val AS val
+            FROM  i_plus_negsqrt_d_w_negsqrt_d, shifted_ids row, shifted_ids col
+            WHERE i_plus_negsqrt_d_w_negsqrt_d.row_id = row.id AND i_plus_negsqrt_d_w_negsqrt_d.col_id = col.id 
+
+            ) DISTRIBUTED BY (partition_label)';
+            
+        EXECUTE sql;
+
+	END;
+$$ LANGUAGE PLPGSQL;
+
+
+/**
+ * @internal
+ * @brief Use R's irlba package to approximate the first two singular vectors of the shifted 
+ * normalized similarity matrix: 10*I + D^{-1/2}*W*D^{-1/2}. 
+ * 
+ * @param row_id Array of row indices.
+ * @param col_id Array of column indices.
+ * @param val Array of matrix entries.
+ * @return Return the signs of the second right singular vector for a connected graph.
+ * For a disconnected graph (i.e. graph with isolated connected components), return 
+ * the signs of the first right singular vector. Normalized cut will be derived from the
+ * returned signs; cf. Page 15 of the tutorial: 
+ * https://www.cs.cmu.edu/~aarti/Class/10701/slides/Lecture21_2.pdf 
+ * for the discussion of graph Laplacian for connected and disconnected graphs.
+ *
+ */
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__irlba_cut(row_id INT[], col_id INT[], val FLOAT8[])
+RETURNS FLOAT8[] AS 
+$$
+    library(irlba)
+    library(Matrix)
+
+    smat = sparseMatrix(i=row_id, j=col_id, x=as.numeric(val))
+    svd = irlba(smat, nv = 2, right_only=TRUE)
+    svec_sign = sign(svd$v[,1])
+    
+    if (length(unique(svec_sign)) == 1) {
+        svec_sign = sign(svd$v[,2])
+        cut = as.integer(svec_sign==svec_sign[1])
+    } else {
+        cut = as.integer(svec_sign==svec_sign[1])
+    }
+    
+$$ LANGUAGE PLR;
+
+
+
+/**
+ * @internal
+ * @brief Create a random string, e.g. used as temporary table names. (Move 
+ * this function to a common utility module later.)
+ *
+ * @param len Length of the random string.
+ * @return Return a random string of the given length.
+ *
+ * Sample usage: SELECT __ncut_random_str(6);
+ *
+ */ 
+ 
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__ncut_random_str(len INT)
+RETURNS TEXT AS
+$$
+    SELECT string_agg(a)
+    FROM (
+        SELECT chr(ascii('a') + (random() * 25)::integer) a
+        FROM generate_series(1,$1)
+    ) foo
+$$ LANGUAGE SQL;
+
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.normalized_cut() 
+RETURNS TEXT AS $$
+SELECT '
+normalized_cut: Normalized cut for graph partitioning.
+
+This function implements the normalized cut algorithm (https://people.eecs.berkeley.edu/~malik/papers/SM-ncut.pdf).
+The algorithm cuts a graph into two disjoint sets by removing edges connecting the two sets. 
+The optimal cut is obtained by minimizing the normalized cut disassociation measure (see Shi & Malik''s paper for 
+technical details). This function partitions a graph iteratively until the size of each subgraph reaches a user 
+specified threshold. 
+
+For full usage instructions, run "PDLTOOLS_SCHEMA.normalized_cut(''usage'')".
+'::TEXT;
+$$ LANGUAGE SQL;
+
+
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.normalized_cut(TEXT) 
+RETURNS TEXT AS $$
+SELECT CASE WHEN $1!='usage' THEN PDLTOOLS_SCHEMA.normalized_cut() ELSE 
+'normalized_cut: The normalized cut algorithm for graph partitioning.
+
+The module implements the normalized cut algorithm (https://people.eecs.berkeley.edu/~malik/papers/SM-ncut.pdf).
+It cuts a graph into two disjoint sets by removing edges connecting the two sets. The optimal cut is obtained
+by minimizing the normalized cut disassociation measure (see Shi & Malik''s paper for technical details). This
+module partitions a graph iteratively until the size of each subgraph reaches a user specified threshold.
+
+Syntax
+======
+
+FUNCTION normalized_cut(
+	similarity_tab TEXT, 
+    row_id TEXT, 
+    col_id TEXT, 
+    val TEXT, 
+    max_graph_size INT, 
+    output_tab TEXT
+    )
+RETURNS VOID;
+
+similarity_tab     - Table that contains nonzero entries of a symmetric matrix 
+                     with each entry being the similarity between two nodes. 
+                     The diagonal entries are expected to be strictly positive. 
+row_id             - Row index column in the similarity table.
+col_id             - Column index column in the similarity table.
+val                - Value column in the similarity table.
+output_tab         - Table that contains node partitions.
+ 
+
+Usage
+=====
+
+The input similarity matrix is expected to be symmetric and contain non-negative values. 
+It should be provided in a table of the following structure:
+
+TABLE/VIEW similarity_tab
+(
+    ...
+    row_id TEXT/INT/BIGINT,     -- Row index
+    col_id TEXT/INT/BIGINT,     -- Column index
+    val    FLOAT8               -- Similarity value
+    ...
+)
+
+Zero entries need not be provided in the similarity table. Entries on the diagonal are 
+expected to be strictly positive. A commonly used similarity measure is Gaussian similarity: 
+W_ij = exp(-||x_i - x_j||^2/\sigma^2), where x_i and x_j are feature vectors associated with 
+node i and node j.
+
+Node partitions are provided in the user-specified output table:
+
+TABLE/VIEW output_tab
+(
+    partition_label TEXT, -- Partition label indicating which partition a node belongs to
+    node            TEXT  -- Node ID, given by the row index of the similarity table
+)
+
+
+Example
+=======
+
+1. Create test points/nodes.
+
+CREATE TEMP TABLE ncut_test_data (node INT, feature FLOAT[]) DISTRIBUTED RANDOMLY;
+INSERT INTO ncut_test_data VALUES
+(1,ARRAY[0.00513649,0.167166]),
+(2,ARRAY[0.44311,0.127502]),
+(3,ARRAY[0.312811,0.421223]),
+(4,ARRAY[0.373044,0.280389]),
+(5,ARRAY[0.166491,0.123695]),
+(6,ARRAY[1.04216,1.21863]),
+(7,ARRAY[1.06422,1.42166]),
+(8,ARRAY[1.19542,1.44384]),
+(9,ARRAY[1.01775,1.25931]),
+(10,ARRAY[2.81904,3.3038]),
+(11,ARRAY[3.08253,3.2119]),
+(12,ARRAY[3.232,3.11088]),
+(13,ARRAY[3.00462,3.19002]),
+(14,ARRAY[2.95855,2.83753]),
+(15,ARRAY[3.24319,2.85697]);
+
+2. Calculate pairwise similarity, i.e., edge weights. Zero weight is given to edges connecting two 
+nodes with their similarity < 2e-3. The similarity matrix is therefore generally sparse.
+
+CREATE TEMP TABLE ncut_test_sim AS
+(
+    WITH a AS (
+        SELECT a.node row_id, 
+            b.node col_id,  
+            exp(-madlib.dist_norm2(a.feature, b.feature)/0.5) similarity
+        FROM ncut_test_data a, ncut_test_data b
+    )
+    SELECT * FROM a WHERE similarity >= 2e-3
+) DISTRIBUTED RANDOMLY;
+
+
+3. Use normalized cut to iteratively partition the graph until each subgraph has no more than 6 nodes.
+
+SELECT pdltools.normalized_cut(
+    ''ncut_test_sim'',   -- Sparse pairwise similarity table
+    ''row_id'',          -- Row index column
+    ''col_id'',          -- Column index column
+    ''similarity'',      -- Similarity column
+    6,                   -- Maximum subgraph size
+    ''ncut_test_output'' -- Output table
+    );
+
+SELECT * FROM ncut_test_output ORDER BY partition_label, node;
+ partition_label | node 
+-----------------+------
+ 0               | 10
+ 0               | 11
+ 0               | 12
+ 0               | 13
+ 0               | 14
+ 0               | 15
+ 10              | 6
+ 10              | 7
+ 10              | 8
+ 10              | 9
+ 11              | 1
+ 11              | 2
+ 11              | 3
+ 11              | 4
+ 11              | 5
+
+'END;
+$$ LANGUAGE SQL;
