@@ -1,0 +1,62 @@
+-- File: test_hits.sql_in
+-- Unit test for hits.sql_in
+
+
+-- Create a test dataset. 
+
+
+CREATE TEMP TABLE hits_test_data (source TEXT, dest TEXT, groups TEXT) DISTRIBUTED RANDOMLY;                                              
+INSERT INTO hits_test_data VALUES                                                                                                                                                  ('02', '12', '1'),                                                                                          
+ ('03', '07', '1'),                                                                                                                  
+ ('01', '07', '1'),                                                                                                                  
+ ('01', '10', '1'),                                                                                                                  
+ ('02', '12', '1'),                                                                                                                  
+ ('05', '07', '1'),                                                                                                                  
+ ('08', '05', '1'),                                                                                                                  
+ ('05', '05', '1'),                                                                                                                  
+ ('06', '09', '1'),                                                                                                                  
+ ('04', '12', '1'),                                                                                                                  
+ ('02', '06', '1'),                                                                                                                  
+ ('05', '12', '1'),                                                                                                                  
+ ('07', '12', '1'),                                                                                                                  
+ ('02', '12', '1'),                                                                                                                  
+ ('02', '07', '1'),                                                                                                                  
+ ('01', '10', '1'),                                                                                                                  
+ ('02', '06', '1'),                                                                                                                  
+ ('02', '12', '1'),                                                                                                                
+ ('00', '09', '1'),                                                                                                                 
+ ('00', '07', '1'),                                                                                                                  
+ ('A', 'B', '2'),                                                                                                                   
+ ('A', 'C', '2'),                                                                                                                   
+ ('A', 'D', '2'),                                                                                                                   
+ ('A', 'E', '2'),                                                                                                                   
+ ('B', 'A', '3'),                                                                                                                   
+ ('C', 'A', '3'),                                                                                                                   
+ ('D', 'A', '3'),                                                                                                                   
+ ('E', 'A', '3');          
+
+
+-- Calculate authority and hub scores for each node.
+SELECT PDLTOOLS_SCHEMA.hits('hits_test_data', 'source', 'dest', 'groups', 'hits_test_output', 50, 1e-4);
+
+
+-- Check if the resulting authority score is is correct.
+SELECT PDLTOOLS_SCHEMA.assert(
+    array_to_string(array_agg(round(auth_score::NUMERIC,3) ORDER BY node),','),
+    '0.000,0.000,0.000,0.000,0.000,0.120,0.101,0.372,0.000,0.068,0.058,0.280,0.000,0.250,0.250,0.250,0.250,1.000,0.000,0.000,0.000,0.000')
+FROM hits_test_output;
+
+-- Check if the resulting hub score is correct
+SELECT PDLTOOLS_SCHEMA.assert(
+    array_to_string(array_agg(round(hub_score::NUMERIC,3) ORDER BY node),','),
+    '0.125,0.122,0.214,0.106,0.080,0.220,0.019,0.080,0.034,0.000,0.000,0.000,1.000,0.000,0.000,0.000,0.000,0.000,0.250,0.250,0.250,0.250'
+FROM hits_test_output;
+
+
+
+
+
+-- Clean up temp tables.
+DROP TABLE hits_test_data;
+DROP TABLE hits_test_output;
+
