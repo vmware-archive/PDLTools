@@ -6,9 +6,10 @@
 
 
 CREATE TEMP TABLE hits_test_data (source TEXT, dest TEXT, groups TEXT) DISTRIBUTED RANDOMLY;                                              
-INSERT INTO hits_test_data VALUES                                                                                                                                                  ('02', '12', '1'),                                                                                          
- ('03', '07', '1'),                                                                                                                  
- ('01', '07', '1'),                                                                                                                  
+INSERT INTO hits_test_data VALUES
+ ('02', '12', '1'),
+ ('03', '07', '1'),
+ ('01', '07', '1'),
  ('01', '10', '1'),                                                                                                                  
  ('02', '12', '1'),                                                                                                                  
  ('05', '07', '1'),                                                                                                                  
@@ -42,14 +43,14 @@ SELECT PDLTOOLS_SCHEMA.hits('hits_test_data', 'source', 'dest', 'groups', 'hits_
 
 -- Check if the resulting authority score is is correct.
 SELECT PDLTOOLS_SCHEMA.assert(
-    array_to_string(array_agg(round(auth_score::NUMERIC,3) ORDER BY node),','),
-    '0.000,0.000,0.000,0.000,0.000,0.120,0.101,0.372,0.000,0.068,0.058,0.280,0.000,0.250,0.250,0.250,0.250,1.000,0.000,0.000,0.000,0.000')
+    array_to_string(array_agg(round(auth_score::NUMERIC,3) ORDER BY graph_id, node),','),
+    '0.000,0.000,0.000,0.000,0.000,0.120,0.101,0.372,0.000,0.068,0.058,0.281,0.000,0.250,0.250,0.250,0.250,1.000,0.000,0.000,0.000,0.000')
 FROM hits_test_output;
 
 -- Check if the resulting hub score is correct
 SELECT PDLTOOLS_SCHEMA.assert(
-    array_to_string(array_agg(round(hub_score::NUMERIC,3) ORDER BY node),','),
-    '0.125,0.122,0.214,0.106,0.080,0.220,0.019,0.080,0.034,0.000,0.000,0.000,1.000,0.000,0.000,0.000,0.000,0.000,0.250,0.250,0.250,0.250'
+    array_to_string(array_agg(round(hub_score::NUMERIC,3) ORDER BY graph_id, node),','),
+    '0.125,0.122,0.214,0.106,0.080,0.220,0.019,0.080,0.034,0.000,0.000,0.000,1.000,0.000,0.000,0.000,0.000,0.000,0.250,0.250,0.250,0.250')
 FROM hits_test_output;
 
 
