@@ -151,6 +151,18 @@ E    | 0			   |	0.25000000000000000000	|	3
 \endcode 
 */
 
+/* Helper function to avoid internal table clashes */ 
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__random_str(len integer)
+  RETURNS text AS
+$BODY$
+    SELECT string_agg(a)
+    FROM (
+        SELECT chr(ascii('a') + (random() * 25)::integer) a
+        FROM generate_series(1,$1)
+    ) foo
+$BODY$
+  LANGUAGE sql VOLATILE;
 
 
 /**
@@ -164,9 +176,6 @@ E    | 0			   |	0.25000000000000000000	|	3
  * @param max_iter Maximum number of iterations to run the algorithm.                                                         
  * @param epsilon Convergence threshold. The function terminates if the L_1 difference of HITS values between two iterations falls below epsilon.                           
  */
-
-
-
 
 create or replace function PDLTOOLS_SCHEMA.hits(input_tab text, source_node text, dest_node text, graph_id text, result_tab text, max_iter int, epsilon numeric)
 returns void as
@@ -189,7 +198,7 @@ $$
 
 
 	-- Create table of unique nodes
-	execute('select ''hits_temp_node_tab_'' || PDLTOOLS_SCHEMA.__pagerank_random_str(10)') into hits_temp_node_tab;
+	execute('select ''hits_temp_node_tab_'' || PDLTOOLS_SCHEMA.__random_str(10)') into hits_temp_node_tab;
 	execute('drop table if exists '|| hits_temp_node_tab);
 
 	execute('create table '|| hits_temp_node_tab ||' 
@@ -202,23 +211,14 @@ $$
 		select '|| source_node ||'::text as node
 		, '|| graph_id ||'::text as graph_id
 		from '|| input_tab ||'
-		group by '|| source_node ||', '|| graph_id);
-
-	execute ('insert into '|| hits_temp_node_tab ||'
-		(node, graph_id)
+		group by '|| source_node ||', '|| graph_id ||' 
+		union
 		select '|| dest_node ||'::text as node, '|| graph_id ||'::text as graph_id
 		from '|| input_tab ||' 
-		where '||dest_node ||'::text || '|| graph_id ||'::text 
-		not in (
-			select '|| source_node ||'::text || '|| graph_id ||'::text
-			from '|| input_tab ||'
-			group by '|| source_node ||', '|| graph_id ||'
-			) 
 		group by '|| dest_node ||', '|| graph_id);
 
-
 	-- Create sparse adjacency matrix for the directed graph
-	execute('select ''hits_sparse_adj_matrix_'' || PDLTOOLS_SCHEMA.__pagerank_random_str(10)') into hits_sparse_adj_matrix;
+	execute('select ''hits_sparse_adj_matrix_'' || PDLTOOLS_SCHEMA.__random_str(10)') into hits_sparse_adj_matrix;
 
 	execute('drop table if exists '|| hits_sparse_adj_matrix);
 	execute('create table '|| hits_sparse_adj_matrix ||' as
@@ -229,7 +229,7 @@ $$
 
 
 	-- Create sparse Authority matrix 
-	execute('select ''hits_sparse_auth_matrix_'' || PDLTOOLS_SCHEMA.__pagerank_random_str(10)') into hits_sparse_auth_matrix;
+	execute('select ''hits_sparse_auth_matrix_'' || PDLTOOLS_SCHEMA.__random_str(10)') into hits_sparse_auth_matrix;
 	execute('drop table if exists '|| hits_sparse_auth_matrix);
 
 	-- Sparse matrix multiplication 
@@ -245,7 +245,7 @@ $$
 		distributed by (graph_id)');
 	
 	-- Count number of distinct nodes per group
-	execute('select ''hits_temp_stat_tab_'' || PDLTOOLS_SCHEMA.__pagerank_random_str(10)') into hits_temp_stat_tab;
+	execute('select ''hits_temp_stat_tab_'' || PDLTOOLS_SCHEMA.__random_str(10)') into hits_temp_stat_tab;
 	execute('drop table if exists '|| hits_temp_stat_tab);
 	execute('create table '|| hits_temp_stat_tab ||'
 		as (
@@ -256,7 +256,7 @@ $$
 		distributed by (graph_id)');
 
 	-- Initial Authority Score Array
-	execute('select ''hits_iter_tab_'' || PDLTOOLS_SCHEMA.__pagerank_random_str(10)') into hits_iter_tab;
+	execute('select ''hits_iter_tab_'' || PDLTOOLS_SCHEMA.__random_str(10)') into hits_iter_tab;
 	execute('drop table if exists '|| hits_iter_tab);
 
 	execute('create table '|| hits_iter_tab ||' as
@@ -270,8 +270,8 @@ $$
 		distributed by (graph_id)');
 
 	-- Initialize tables uses inside loop	
-	execute('select ''hits_current_tab_'' || PDLTOOLS_SCHEMA.__pagerank_random_str(10)') into hits_current_tab;
-	execute('select ''hits_iter_tab_scaled_'' || PDLTOOLS_SCHEMA.__pagerank_random_str(10)') into hits_iter_tab_scaled;
+	execute('select ''hits_current_tab_'' || PDLTOOLS_SCHEMA.__random_str(10)') into hits_current_tab;
+	execute('select ''hits_iter_tab_scaled_'' || PDLTOOLS_SCHEMA.__random_str(10)') into hits_iter_tab_scaled;
 
 ------------------------------------------------------
 	for i in 1..max_iter loop
@@ -335,10 +335,10 @@ $$
 	   end if;
 	end loop;
 	
-	 execute('select ''hub_score_tab_'' || PDLTOOLS_SCHEMA.__pagerank_random_str(10)') into hub_score_tab;
-	 execute('select ''hub_score_tab_norm_'' || PDLTOOLS_SCHEMA.__pagerank_random_str(10)') into hub_score_tab_norm;
-	 execute('select ''auth_score_tab_'' || PDLTOOLS_SCHEMA.__pagerank_random_str(10)') into auth_score_tab;
-	 execute('select ''auth_score_tab_norm_'' || PDLTOOLS_SCHEMA.__pagerank_random_str(10)') into auth_score_tab_norm;
+	 execute('select ''hub_score_tab_'' || PDLTOOLS_SCHEMA.__random_str(10)') into hub_score_tab;
+	 execute('select ''hub_score_tab_norm_'' || PDLTOOLS_SCHEMA.__random_str(10)') into hub_score_tab_norm;
+	 execute('select ''auth_score_tab_'' || PDLTOOLS_SCHEMA.__random_str(10)') into auth_score_tab;
+	 execute('select ''auth_score_tab_norm_'' || PDLTOOLS_SCHEMA.__random_str(10)') into auth_score_tab_norm;
 	 -- Calculate Hub Scores
 	 /* Hub = AdjM * Auth */
 	 execute('drop table if exists '|| hub_score_tab);

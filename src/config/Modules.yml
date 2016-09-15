@@ -35,6 +35,8 @@ modules:
       depends: ['common']
     - name: pagerank
       depends: ['common']
+    - name: hits
+      depends: ['common']
     - name: normalized_cut
       depends: ['common']
 #    - name: plr_placeholder
