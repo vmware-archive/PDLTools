@@ -26,7 +26,8 @@
 @about                                                                                                                                                                          
 This function implements the HITS algorithm (https://en.wikipedia.org/wiki/HITS_algorithm).                                                                                       
 It measures the relative importance of each node as a Hub and as an Authority in a directed 
-graph based on how it is connected to other nodes.                                                                                                                                A high Hub score corresponds to being the source node for many links
+graph based on how it is connected to other nodes.
+A high Hub score corresponds to being the source node for many links
 A high Authority score corresponds to being the destination node for many links 
                                                                                                                                                                                 
 For full usage instructions, run "PDLTOOLS_SCHEMA.hits(''usage'')".                                                                                                                                                                                                                                                                                         
@@ -81,8 +82,7 @@ TABLE/VIEW directed_graph
 -# Create a test graph of 28 nodes with 3 distinct graphs.
 -#   The graph in Group 1 was randomly generaged
 -#   The graph in Group 2 has 5 nodes (A .. E) A is the only source and points to all other nodes
--#   The graph in Group 3 has 5 nodes (A .. E) A is the only destination nodes and all other nodes
--#   point to A                                                                                                                                            
+-#   The graph in Group 3 has 5 nodes (A .. E) A is the only destination nodes and all other nodes point to A                                                                                                                                            
 
 \code
 CREATE TEMP TABLE hits_test_data (source TEXT, dest TEXT, groups TEXT) DISTRIBUTED RANDOMLY; 
@@ -119,34 +119,35 @@ INSERT INTO hits_test_data VALUES
 \n
 
 -# Use HITS to calculate the Authority and Hub scores for each node with maximum iteration number to 50, and tolerance threshold to 1e-3.                                     
-\code                                                                                                                                                                             SELECT pdltools.hits(''hits_test_data'', ''source'', ''dest'', ''groups'', ''hits_test_output'', 50, 1e-3);                                                               
-                                                                                                                                                                                
+\code                                                                                                                                                                             
+
+SELECT pdltools.hits(''hits_test_data'', ''source'', ''dest'', ''groups'', ''hits_test_output'', 50, 1e-3);
 SELECT * FROM hits_test_output ORDER BY graph_id, node;                                                                                                                           
 
-node |			auth_score |		hub_score	| graph_id
+node |                  auth_score |                 hub_score  | graph_id
 -----+-----------------------------+----------------------------+---------
-00   | 0	    		   |	0.12521980588474892303	|	1
-01   | 0	    		   |	0.12219535557575501829	|	1
-02   | 0	    		   |	0.21427999500813425759	|	1
-03   | 0	   		   |	0.10577097101958970168	|	1
-04   | 0	    		   |	0.07971544342450081202	|	1
-05   | 0.11991351678760373024	   |	0.21957028262085088386	|	1
-06   | 0.10130128095894597547	   |	0.01944883486515922136	|	1		
-07   | 0.37212234958843970036	   |	0.07971544342450081202	|	1	
-08   | 0			   |	0.03408386817676037016	|	1
-09   | 0.06842469211557294832	   |	0			|	1
-10   | 0.05778410193901261112	   |	0			|	1
-12   | 0.28045405861042503450	   |	0			|	1
-A    | 0			   |	1.00000000000000000000	|	2
-B    | 0.25000000000000000000	   |	0			|	2
-C    | 0.25000000000000000000	   |	0			|	2
-D    | 0.25000000000000000000	   |	0			|	2
-E    | 0.25000000000000000000	   |	0			|	2
-A    | 1.00000000000000000000	   |	0			|	3
-B    | 0			   |	0.25000000000000000000	|	3
-C    | 0			   |	0.25000000000000000000	|	3
-D    | 0			   |	0.25000000000000000000	|	3
-E    | 0			   |	0.25000000000000000000	|	3
+00   | 0                           |    0.12521980588474892303  |       1
+01   | 0                           |    0.12219535557575501829  |       1
+02   | 0                           |    0.21427999500813425759  |       1
+03   | 0                           |    0.10577097101958970168  |       1
+04   | 0                           |    0.07971544342450081202  |       1
+05   | 0.11991351678760373024      |    0.21957028262085088386  |       1
+06   | 0.10130128095894597547      |    0.01944883486515922136  |       1		
+07   | 0.37212234958843970036      |    0.07971544342450081202  |       1	
+08   | 0                           |    0.03408386817676037016  |       1
+09   | 0.06842469211557294832      |    0                       |       1
+10   | 0.05778410193901261112      |    0                       |       1
+12   | 0.28045405861042503450      |    0                       |       1
+A    | 0                           |    1.00000000000000000000  |       2
+B    | 0.25000000000000000000      |    0                       |       2
+C    | 0.25000000000000000000      |    0                       |       2
+D    | 0.25000000000000000000      |    0                       |       2
+E    | 0.25000000000000000000      |    0                       |       2
+A    | 1.00000000000000000000      |    0                       |       3
+B    | 0                           |    0.25000000000000000000  |       3
+C    | 0                           |    0.25000000000000000000  |       3
+D    | 0                           |    0.25000000000000000000  |       3
+E    | 0                           |    0.25000000000000000000  |       3
 
 \endcode 
 */
@@ -410,7 +411,8 @@ graph using the power iteration method.
                                                                                                                                                                                 
 This function implements the HITS algorithm (https://en.wikipedia.org/wiki/HITS_algorithm).                                                                                       
 It measures the relative importance of each node as a Hub and as an Authority in a directed 
-graph based on how it is connected to other nodes.                                                                                                                                A high Hub score corresponds to being the source node for many links
+graph based on how it is connected to other nodes.  
+A high Hub score corresponds to being the source node for many links
 A high Authority score corresponds to being the destination node for many links 
                                                                                                                                                                                 
 For full usage instructions, run "PDLTOOLS_SCHEMA.hits(''usage'')".                                                                                                         

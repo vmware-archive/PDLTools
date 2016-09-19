@@ -6,9 +6,10 @@
 
 
 CREATE TEMP TABLE hits_test_data (source TEXT, dest TEXT, groups TEXT) DISTRIBUTED RANDOMLY;                                              
-INSERT INTO hits_test_data VALUES                                                                                                                                                  ('02', '12', '1'),                                                                                          
- ('03', '07', '1'),                                                                                                                  
- ('01', '07', '1'),                                                                                                                  
+INSERT INTO hits_test_data VALUES
+ ('02', '12', '1'),
+ ('03', '07', '1'),
+ ('01', '07', '1'),
  ('01', '10', '1'),                                                                                                                  
  ('02', '12', '1'),                                                                                                                  
  ('05', '07', '1'),                                                                                                                  
