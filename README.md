@@ -53,7 +53,7 @@ From either the Greenplum or HAWQ master node, follow these steps as the `gpadmi
      cmake .. -DRPM_INSTALL_PREFIX=$GPHOME
      curl -L -o third_party/downloads/uriparser-0.7.9.tar.bz2 https://sourceforge.net/projects/uriparser/files/uriparser-0.7.9.tar.bz2
      curl -L -o third_party/downloads/cpptest-1.1.2.tar.gz https://sourceforge.net/projects/cpptest/files/cpptest-1.1.2.tar.gz
-     make -j5 package 2> /dev/null
+     make 2> /dev/null
 
 Generating Doxygen User Docs
 =============================
