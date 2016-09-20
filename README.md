@@ -44,7 +44,7 @@ For CentOS or Red Hat Enterprise Linux, install the pre-requisite tools:
 
 From either the Greenplum or HAWQ master node, follow these steps as the `gpadmin` user:
 
-     ```bash
+```bash
      curl -L -o pdltools-1.7.zip https://github.com/pivotalsoftware/PDLTools/archive/v1.7.zip
  
      unzip  pdltools-1.7.zip ; cd PDLTools-1.7
@@ -58,7 +58,7 @@ From either the Greenplum or HAWQ master node, follow these steps as the `gpadmi
      curl -L -o third_party/downloads/cpptest-1.1.2.tar.gz https://sourceforge.net/projects/cpptest/files/cpptest-1.1.2.tar.gz
  
      make -j5 package 2> /dev/null
-     ```
+```
 
 Generating Doxygen User Docs
 =============================
