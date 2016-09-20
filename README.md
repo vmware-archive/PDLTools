@@ -40,37 +40,37 @@ Building
 
 For CentOS or Red Hat Enterprise Linux, install the pre-requisite tools:
 
-`sudo yum install cmake gcc gcc-c++ flex bison rpm-build`
+     sudo yum install cmake gcc gcc-c++ flex bison rpm-build
 
 From either the Greenplum or HAWQ master node, follow these steps as the `gpadmin` user:
 
-```bash
-curl -L -o pdltools-1.7.zip https://github.com/pivotalsoftware/PDLTools/archive/v1.7.zip
-
-unzip  pdltools-1.7.zip ; cd PDLTools-1.7
-
-source /usr/local/hawq/greenplum_path.sh
-
-mkdir build ; cd build ; cmake .. -DRPM_INSTALL_PREFIX=$GPHOME
-
-curl -L -o third_party/downloads/uriparser-0.7.9.tar.bz2 https://sourceforge.net/projects/uriparser/files/uriparser-0.7.9.tar.bz2
-
-curl -L -o third_party/downloads/cpptest-1.1.2.tar.gz https://sourceforge.net/projects/cpptest/files/cpptest-1.1.2.tar.gz
-
-make -j5 package 2> /dev/null
-```
+     ```bash
+     curl -L -o pdltools-1.7.zip https://github.com/pivotalsoftware/PDLTools/archive/v1.7.zip
+ 
+     unzip  pdltools-1.7.zip ; cd PDLTools-1.7
+ 
+     source /usr/local/hawq/greenplum_path.sh
+ 
+     mkdir build ; cd build ; cmake .. -DRPM_INSTALL_PREFIX=$GPHOME
+ 
+     curl -L -o third_party/downloads/uriparser-0.7.9.tar.bz2 https://sourceforge.net/projects/uriparser/files/uriparser-0.7.9.tar.bz2
+ 
+     curl -L -o third_party/downloads/cpptest-1.1.2.tar.gz https://sourceforge.net/projects/cpptest/files/cpptest-1.1.2.tar.gz
+ 
+     make -j5 package 2> /dev/null
+     ```
 
 Generating Doxygen User Docs
 =============================
 
 You can generate Doxygen docs for the project as follows:
 
-    make doc
+     make doc
 
 This will create the user docs under $BUILD/doc/user/html. 
 You can also generate a PDF of the user doc by running
 
-    cd build/doc/user/latex && make pdf
+     cd build/doc/user/latex && make pdf
 
 This will generate a PDF titled `refman.pdf` in $PDLTOOLS/build/doc/user/latex
 
@@ -80,11 +80,11 @@ Packaging
 
 To create an rpm package which you can ship for installation into other machines, run the following (from the build directory):
 
-    make package
+     make package
 
 To create a gppkg installer, run the following (from the build directory):
 
-    make gppkg
+     make gppkg
 
 Installation
 =============
@@ -99,11 +99,11 @@ Next, you will have to install the SQL UDFs in the target database.
 
 To install pdltools into a database of your choice, run the following (consider adding `pdlpack` in your PATH):
 
-    $GPHOME/pdltools/bin/pdlpack install [-s <schema name>] [-S <SUgAR schema name>] [-M <MADlib schema name>] -c <username>@<hostname>:<port>/<database name>
+     $GPHOME/pdltools/bin/pdlpack install [-s <schema name>] [-S <SUgAR schema name>] [-M <MADlib schema name>] -c <username>@<hostname>:<port>/<database name>
 
 For example:
 
-    $GPHOME/pdltools/bin/pdlpack install -s pdltools -c gpadmin@mdw:5432/testdb
+     $GPHOME/pdltools/bin/pdlpack install -s pdltools -c gpadmin@mdw:5432/testdb
 
 The default schemas are `pdltools` for the main schema, `sugarlib` for SUgAR and `madlib` to search for MADlib objects.
 
@@ -112,7 +112,7 @@ Running Install Check Tests
     
 Post installation, you can run the unit tests in PDL Tools with the install-check command like so:
 
-    $GPHOME/pdltools/bin/pdlpack install-check -s pdltools -c gpadmin@mdw:5432/testdb
+     $GPHOME/pdltools/bin/pdlpack install-check -s pdltools -c gpadmin@mdw:5432/testdb
 
 Parameters for `install-check` are the same as parameters for `install`.
 If any of the tests fail, you will see an error message displayed on your console.
