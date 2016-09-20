@@ -44,19 +44,24 @@ For CentOS or Red Hat Enterprise Linux, install the pre-requisite tools:
 
 From either the Greenplum or HAWQ master node, follow these steps as the `gpadmin` user:
 
-     curl -L -o pdltools-1.7.zip https://github.com/pivotalsoftware/PDLTools/archive/v1.7.zip
+     1. curl -L -o pdltools-1.7.zip https://github.com/pivotalsoftware/PDLTools/archive/v1.7.zip
  
-     unzip  pdltools-1.7.zip ; cd PDLTools-1.7
+     2. unzip  pdltools-1.7.zip 
+
+     3. cd PDLTools-1.7
  
-     source /usr/local/hawq/greenplum_path.sh
+     4. source /usr/local/hawq/greenplum_path.sh
  
-     mkdir build ; cd build ; cmake .. -DRPM_INSTALL_PREFIX=$GPHOME
+     5. mkdir build
+     6. cd build
+
+     7. cmake .. -DRPM_INSTALL_PREFIX=$GPHOME
  
-     curl -L -o third_party/downloads/uriparser-0.7.9.tar.bz2 https://sourceforge.net/projects/uriparser/files/uriparser-0.7.9.tar.bz2
+     8. curl -L -o third_party/downloads/uriparser-0.7.9.tar.bz2 https://sourceforge.net/projects/uriparser/files/uriparser-0.7.9.tar.bz2
  
-     curl -L -o third_party/downloads/cpptest-1.1.2.tar.gz https://sourceforge.net/projects/cpptest/files/cpptest-1.1.2.tar.gz
+     9. curl -L -o third_party/downloads/cpptest-1.1.2.tar.gz https://sourceforge.net/projects/cpptest/files/cpptest-1.1.2.tar.gz
  
-     make -j5 package 2> /dev/null
+     10. make -j5 package 2> /dev/null
 
 Generating Doxygen User Docs
 =============================
@@ -80,7 +85,7 @@ To create an rpm package which you can ship for installation into other machines
 
      make package
 
-To create a gppkg installer, run the following (from the build directory):
+When installing on a cluster, it is best to create a gppkg installer. Run the following (from the build directory):
 
      make gppkg
 
@@ -91,6 +96,10 @@ Installation is a two-step process. First, you will have to install MADlib _and_
 To do this, you will run the following:
     
      gppkg -i <pdltools gppkg file>
+
+For example, run the following (from the build directory):
+
+     gppkg -i deploy/gppkg/2.0/pdltools-1.7-hawq2.0-rhel5-x86_64.gppkg
 
 This will place all the relevant binaries & SQL files at the appropriate location (usually `$GPHOME/pdltools`).
 Next, you will have to install the SQL UDFs in the target database.
