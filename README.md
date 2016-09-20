@@ -19,39 +19,53 @@ Binaries (Pivotal internal)
 Pre-requisites
 ===============
 
-The following are the pre-requisites for building the pdltools package:
+The following are the pre-requisites for building PDLTools:
 
-    1. The cmake compiler. (We recommend getting latest version (3.5) as older version don't seem to handle URL redirects, you can download the binary for Linux from here: https://cmake.org/files/v3.5/cmake-3.5.0-Linux-x86_64.tar.gz).
-    2. g++, Flex (>= 2.5.33), Bison (>=2.4), Doxygen (1.8.7 recommended, needed only for generating docs), Latex (needed only for generating PDF docs). On CentOS this would be:
+Required:
+* Pivotal Greenplum or Apache HAWQ ([GPDB sandbox](https://network.pivotal.io/products/pivotal-gpdb), [HAWQ sandbox](https://network.pivotal.io/products/pivotal-hdb))
+* Apache MADlib ([Download](http://madlib.incubator.apache.org/download.html))
+* cmake (3.5 recommended)
+* GNU C and C++ compilers (gcc, g++)
+* Flex (>= 2.5.33)
+* Bison (>= 2.4)
+* rpmbuild
 
-        sudo yum install gcc-c++
-        sudo yum install flex
-        sudo yum install bison 
-        sudo yum install doxygen (we recommend version 1.8.7, follow instructions at https://www.stack.nl/~dimitri/doxygen/download.html to download and install the appropriate binaries ex: http://ftp.stack.nl/pub/users/dimitri/doxygen-1.8.7.linux.bin.tar.gz).
-        sudo yum install texlive-latex
+Optional:
+* Doxygen (1.8.7 recommended, if generating HTML docs), 
+* LaTeX (if generating PDF docs)
 
-    3. Greenplum Database (GPDB 4.2 or higher) and/or HAWQ (1.2.x and higher)
-    4. rpmbuild package if you want to create rpm packages of the installer (`sudo yum install rpm-build`)
 
 Building
 =========
 
-To build outside the source tree, follow these steps:
+For CentOS or Red Hat Enterprise Linux, install the pre-requisite tools:
 
-    1. mkdir build
-    2. cd build
-    3. cmake ..
-    4. make
+`sudo yum install cmake gcc gcc-c++ flex bison rpm-build`
+
+From either the Greenplum or HAWQ master node, follow these steps as the `gpadmin` user:
+
+```bash
+curl -L -o pdltools-1.7.zip https://github.com/pivotalsoftware/PDLTools/archive/v1.7.zip
+
+unzip  pdltools-1.7.zip ; cd PDLTools-1.7
+
+source /usr/local/hawq/greenplum_path.sh
+
+mkdir build ; cd build ; cmake .. -DRPM_INSTALL_PREFIX=$GPHOME
+
+curl -L -o third_party/downloads/uriparser-0.7.9.tar.bz2 https://sourceforge.net/projects/uriparser/files/uriparser-0.7.9.tar.bz2
+
+curl -L -o third_party/downloads/cpptest-1.1.2.tar.gz https://sourceforge.net/projects/cpptest/files/cpptest-1.1.2.tar.gz
+
+make -j5 package 2> /dev/null
+```
 
 Generating Doxygen User Docs
 =============================
 
 You can generate Doxygen docs for the project as follows:
 
-    1. cd build
-    2. cmake ..
-    3. make
-    4. make doc
+    make doc
 
 This will create the user docs under $BUILD/doc/user/html. 
 You can also generate a PDF of the user doc by running
@@ -75,7 +89,7 @@ To create a gppkg installer, run the following (from the build directory):
 Installation
 =============
 
-Installation is a two-step process. First, you will have to install PDL Tools on the target machine where GPDB is running.
+Installation is a two-step process. First, you will have to install MADlib _and_ PDL Tools on either the Greenplum or HAWQ master node.
 To do this, you will run the following:
     
      gppkg -i <pdltools gppkg file>
