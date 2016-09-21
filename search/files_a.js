@@ -1,6 +1,4 @@
 var searchData=
 [
-  ['sampling_2esql_5fin',['sampling.sql_in',['../sampling_8sql__in.html',1,'']]],
-  ['session_2esql_5fin',['session.sql_in',['../session_8sql__in.html',1,'']]],
-  ['sugar_2esql_5fin',['sugar.sql_in',['../sugar_8sql__in.html',1,'']]]
+  ['one_5fvs_5frest_5fdata_5fprep_2esql_5fin',['one_vs_rest_data_prep.sql_in',['../one__vs__rest__data__prep_8sql__in.html',1,'']]]
 ];

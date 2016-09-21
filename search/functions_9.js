@@ -1,5 +1,7 @@
 var searchData=
 [
-  ['kd_5ftree',['kd_tree',['../kd__tree_8sql__in.html#abc41f0515aee51bb4802ea2db37484ae',1,'kd_tree(text data_tab, text id, text dimension, text val, int subtree_size, text output_tab):&#160;kd_tree.sql_in'],['../kd__tree_8sql__in.html#a904f6c25d6124f91d141828e3d6220fa',1,'kd_tree():&#160;kd_tree.sql_in'],['../kd__tree_8sql__in.html#a49b24ef211111e76a34d5fc1c0b1b465',1,'kd_tree(text):&#160;kd_tree.sql_in']]],
-  ['kdtree_5fknn',['kdtree_knn',['../kd__tree_8sql__in.html#a1eb360a69c89b41621ae23de1805b0b5',1,'kdtree_knn(text training_data_tab, text id, text dimension, text val, text kdtree_tab, float8[] query_point, int k):&#160;kd_tree.sql_in'],['../kd__tree_8sql__in.html#add4b4a01d1f20db36b1edc24394ea3a9',1,'kdtree_knn(text training_data_tab, text id, text dimension, text val, text kdtree_tab, text query_tab, text query_id, text query_point, int k, text result_tab):&#160;kd_tree.sql_in'],['../kd__tree_8sql__in.html#ab4758507182911b9bf703a9c22e46d4e',1,'kdtree_knn():&#160;kd_tree.sql_in'],['../kd__tree_8sql__in.html#afd876454cb2e9ce2a3dec4ca4db2fae9',1,'kdtree_knn(text):&#160;kd_tree.sql_in']]]
+  ['im',['im',['../complex__type_8sql__in.html#ae0aa7d3d6c1089531b50926b7dcbfc59',1,'complex_type.sql_in']]],
+  ['int22complex',['int22complex',['../complex__type_8sql__in.html#a4771e6dfdd753742b39d32a267278c58',1,'complex_type.sql_in']]],
+  ['int42complex',['int42complex',['../complex__type_8sql__in.html#aac5842af6f47d847905a6c794561e3e0',1,'complex_type.sql_in']]],
+  ['int82complex',['int82complex',['../complex__type_8sql__in.html#a91e9e2b48b5f81cd9d7d68191084dd1d',1,'complex_type.sql_in']]]
 ];

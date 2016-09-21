@@ -40,7 +40,7 @@
   <td id="projectlogo"><img alt="Logo" src="pdl.png"/></td>
   <td style="padding-left: 0.5em;">
    <div id="projectname">PDL Tools
-   &#160;<span id="projectnumber">1.7</span>
+   &#160;<span id="projectnumber">1.8</span>
    </div>
    <div id="projectbrief">User Documentation</div>
   </td>
@@ -104,29 +104,29 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <h3>Prerequisites</h3>
 <p>PDL Tools can be installed on either a GPDB 4.2 or 4.3. It requires <code>PL/pgSQL</code>, <code>PL/C</code>, <code>PL/Python</code> and <code>PL/Perl</code>. The <code>Python</code> version should be at least 2.6, and the <code>Perl</code> version should be at least 5.008 but lower than 6.0. PDLTools for HAWQ does not have a dependency on PL/Perl as currently PL/Perl is not available as a gppkg for HAWQ.</p>
 <pre class="example">
-gppkg -i pdltools-1.7-gpdb4.3-rhel5-x86_64.gppkg
+gppkg -i pdltools-1.8-gpdb4.3-rhel5-x86_64.gppkg
 </pre><p>For GPDB 4.3 or the equivalent for GPDB 4.2. Run this as gpadmin.</p>
-<pre class="fragment">$ gppkg -i pdltools-1.7-gpdb4.3-rhel5-x86_64.gppkg
+<pre class="fragment">$ gppkg -i pdltools-1.8-gpdb4.3-rhel5-x86_64.gppkg
 20140826:07:05:22:015733 gppkg:localhost:gpadmin-[INFO]:-Starting gppkg with arg
-s: -i pdltools-1.7-gpdb4.3-rhel5-x86_64.gppkg
+s: -i pdltools-1.8-gpdb4.3-rhel5-x86_64.gppkg
 20140826:07:05:22:015733 gppkg:localhost:gpadmin-[INFO]:-Installing package pdlt
-ools-1.7-gpdb4.3-rhel5-x86_64.gppkg
+ools-1.8-gpdb4.3-rhel5-x86_64.gppkg
 20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-Validating rpm installa
-tion cmdStr='rpm --test -i /usr/local/greenplum-db-4.3.0.0/.tmp/pdltools-1.7-1
+tion cmdStr='rpm --test -i /usr/local/greenplum-db-4.3.0.0/.tmp/pdltools-1.8-1
 .x86_64.rpm --dbpath /usr/local/greenplum-db-4.3.0.0/share/packages/database --p
 refix /usr/local/greenplum-db-4.3.0.0'
 20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-Installing pdltools-
-1.7-gpdb4.3-rhel5-x86_64.gppkg locally
+1.8-gpdb4.3-rhel5-x86_64.gppkg locally
 20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-Validating rpm installa
-tion cmdStr='rpm --test -i /usr/local/greenplum-db-4.3.0.0/.tmp/pdltools-1.7-1
+tion cmdStr='rpm --test -i /usr/local/greenplum-db-4.3.0.0/.tmp/pdltools-1.8-1
 .x86_64.rpm --dbpath /usr/local/greenplum-db-4.3.0.0/share/packages/database --p
 refix /usr/local/greenplum-db-4.3.0.0'
 20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-Installing rpms cmdStr=
-'rpm -i /usr/local/greenplum-db-4.3.0.0/.tmp/pdltools-1.7-1.x86_64.rpm --dbpat
+'rpm -i /usr/local/greenplum-db-4.3.0.0/.tmp/pdltools-1.8-1.x86_64.rpm --dbpat
 h /usr/local/greenplum-db-4.3.0.0/share/packages/database --prefix=/usr/local/gr
 eenplum-db-4.3.0.0'
 20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-Completed local install
-ation of pdltools-1.7-gpdb4.3-rhel5-x86_64.gppkg.
+ation of pdltools-1.8-gpdb4.3-rhel5-x86_64.gppkg.
 20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-Please run the followin
 g command to deploy PDL Tools
 usage:  pdlpack install [-s schema_name] -p greenplum [-S sugar_schema_name]
@@ -149,7 +149,7 @@ Release notes and additional documentation can be found at
 https://sites.google.com/a/pivotal.io/global-data-science/pdl-tools,
 as well as on http://pdl-tools.pa.pivotal.io/
 accessible through the Pivotal VPN.
-20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-pdltools-1.7-gpdb4.3-
+20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-pdltools-1.8-gpdb4.3-
 rhel5-x86_64.gppkg successfully installed.
 </pre><h3>Installing PDL Tools onto a target database as 'gpadmin'</h3>
 <p>Use these instructions to install PDL Tools onto a target database if you are able to log in as 'gpadmin'. If not, refer to the next section.</p>
@@ -191,7 +191,7 @@ pdlpack.py : INFO : &gt; - complete_linkage
 pdlpack.py : INFO : &gt; - prediction_metrics
 pdlpack.py : INFO : &gt; - balance_dataset
 pdlpack.py : INFO : &gt; - one_vs_rest
-PDL Tools 1.7 installed successfully in PDLTOOLS schema.
+PDL Tools 1.8 installed successfully in PDLTOOLS schema.
 pdlpack.py : INFO : SUgAR 1.0 installed successfully in SUGARLIB schema.
 pdlpack.py : INFO : Installation completed successfully.
 </pre><p>Note that this installation may be interactive, asking yes/no questions.</p>
@@ -257,35 +257,35 @@ DROP SCHEMA IF EXISTS sugarlib CASCADE;
 </pre><p>However, it is preferable to a brute-force drop in that it first checks whether there are any dependencies that would break or non-library objects to which the drop will be cascaded. If such exist, uninstallation will halt and report the discovered issues, rather than perform the potentially very damaging drop.</p>
 <p>After erasing the library objects from the database, uninstall the library from your computer using the following command.</p>
 <pre class="example">
-gppkg -r pdltools-1.7
+gppkg -r pdltools-1.8
 </pre><hr/>
 <h2>Installing PDL Tools on HAWQ</h2>
 <p>PDL Tools is available as a gppkg for HAWQ 1.2.1 and up (including 1.3), and as an rpm for HAWQ 1.2.0 (which does not support GPPKG installation). Currently only a subset of the modules supported on GPDB are available for PDL Tools on HAWQ. The complex numbers modules is unavailable due to lack of support for User Defined Types (UDTs) yet on HAWQ. The sessionization and sampling modules are unsupported because of the unavailability of a PL/Perl gppkg for HAWQ. Complete Linkage is unsupported due to the lack of an ability to UPDATE tables.</p>
 <p>The gppkg installation instructions for HAWQ are similar to those for GPDB. Change the '-p greenplum' directive to '-p hawq' to set the platform properly. We've provided a simple Python based installer for PDL Tools for HAWQ 1.2.0. You can download the install here: <a href="scripts/hawq_install">PDL Tools HAWQ Install Script</a>.</p>
 <p>You can install PDL Tools on HAWQ 1.2.0 then like so: </p><pre class="example">
-./hawq_install pdltools-1.7-Linux.rpm $HOME/hostfile
+./hawq_install pdltools-1.8-Linux.rpm $HOME/hostfile
 </pre><p>Here's a sample installation log on a 4 node cluster, with the <code>hostfile</code> containing the entries <code>mdw</code>, <code>sdw1-3</code></p>
-<pre class="fragment">[gpadmin@mdw]$ ./hawq_install pdltools-1.7-Linux.rpm ../hostfile
-Querying mdw for any existing installation of pdltools-1.7-Linux.rpm
-package pdltools-1.7 is not installed
-Querying sdw-1  for any existing installation of pdltools-1.7-Linux.rpm
-package pdltools-1.7 is not installed
-Querying sdw-2  for any existing installation of pdltools-1.7-Linux.rpm
-package pdltools-1.7 is not installed
-Querying sdw-3 for any existing installation of pdltools-1.7-Linux.rpm
-package pdltools-1.7 is not installed
-Copying pdltools-1.7-Linux.rpm to all hosts
-gpscp -f ../hostfile pdltools-1.7-Linux.rpm =:/usr/local/hawq/.
-Installing pdltools-1.7-Linux.rpm on all hosts
-gpssh -f ../hostfile rpm -v -i /usr/local/hawq/./pdltools-1.7-Linux.rpm --nodeps --dbpath /usr/local/hawq/./share/packages/database --prefix /usr/local/hawq/.
+<pre class="fragment">[gpadmin@mdw]$ ./hawq_install pdltools-1.8-Linux.rpm ../hostfile
+Querying mdw for any existing installation of pdltools-1.8-Linux.rpm
+package pdltools-1.8 is not installed
+Querying sdw-1  for any existing installation of pdltools-1.8-Linux.rpm
+package pdltools-1.8 is not installed
+Querying sdw-2  for any existing installation of pdltools-1.8-Linux.rpm
+package pdltools-1.8 is not installed
+Querying sdw-3 for any existing installation of pdltools-1.8-Linux.rpm
+package pdltools-1.8 is not installed
+Copying pdltools-1.8-Linux.rpm to all hosts
+gpscp -f ../hostfile pdltools-1.8-Linux.rpm =:/usr/local/hawq/.
+Installing pdltools-1.8-Linux.rpm on all hosts
+gpssh -f ../hostfile rpm -v -i /usr/local/hawq/./pdltools-1.8-Linux.rpm --nodeps --dbpath /usr/local/hawq/./share/packages/database --prefix /usr/local/hawq/.
                     
 [sdw-3]
 [sdw-2] Preparing packages for installation...
-[sdw-2] pdltools-1.7-1
+[sdw-2] pdltools-1.8-1
 [sdw-1] Preparing packages for installation...
-[sdw-1] pdltools-1.7-1
+[sdw-1] pdltools-1.8-1
 [mdw] Preparing packages for installation...
-[mdw] pdltools-1.7-1
+[mdw] pdltools-1.8-1
 Successfully installed PDL Tools on all nodes under /usr/local/hawq/./pdltools
 </pre><p>Once the rpm has been installed, you can then install the PDL Tools schema in your target database as listed in the sections above. Here is a sample installation log and install-check log</p>
 <h3>Installing PDL Tools for HAWQ in a target database</h3>

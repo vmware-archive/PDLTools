@@ -40,7 +40,7 @@
   <td id="projectlogo"><img alt="Logo" src="pdl.png"/></td>
   <td style="padding-left: 0.5em;">
    <div id="projectname">PDL Tools
-   &#160;<span id="projectnumber">1.7</span>
+   &#160;<span id="projectnumber">1.8</span>
    </div>
    <div id="projectbrief">User Documentation</div>
   </td>
@@ -110,23 +110,20 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ac52c0c24bfbea54d49059689a5d6cb6d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="complete__linkage_8sql__in.html#ac52c0c24bfbea54d49059689a5d6cb6d">complete_linkage</a> (text dist_tab, text id1, text id2, text dist, text output, int iter)</td></tr>
-<tr class="memdesc:ac52c0c24bfbea54d49059689a5d6cb6d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Build a complete-linkage hierarchical clustering tree.  <a href="#ac52c0c24bfbea54d49059689a5d6cb6d">More...</a><br /></td></tr>
-<tr class="separator:ac52c0c24bfbea54d49059689a5d6cb6d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a194227719a4d2a2e7ff18d208b087c90"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="complete__linkage_8sql__in.html#a194227719a4d2a2e7ff18d208b087c90">complete_linkage</a> (text dist_tab, text id1, text id2, text dist, text output, text stop_criterion, numeric iter)</td></tr>
+<tr class="memdesc:a194227719a4d2a2e7ff18d208b087c90"><td class="mdescLeft">&#160;</td><td class="mdescRight">Build a complete-linkage hierarchical clustering tree.  <a href="#a194227719a4d2a2e7ff18d208b087c90">More...</a><br /></td></tr>
+<tr class="separator:a194227719a4d2a2e7ff18d208b087c90"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac98a033b3b15df99f2879a8bd6707b9b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="complete__linkage_8sql__in.html#ac98a033b3b15df99f2879a8bd6707b9b">cut_hclust_tree</a> (text dist_tab, text id1, text id2, text dist, text hclust_tree_tab, float height, text output)</td></tr>
-<tr class="memdesc:ac98a033b3b15df99f2879a8bd6707b9b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cut the clustering tree produced by the <a class="el" href="complete__linkage_8sql__in.html#ac52c0c24bfbea54d49059689a5d6cb6d" title="Build a complete-linkage hierarchical clustering tree. ">complete_linkage()</a> function at a certain height, and find the exemplar of each cluster. An exemplar is the data point which has the shortest average distance to its peers in the cluster.  <a href="#ac98a033b3b15df99f2879a8bd6707b9b">More...</a><br /></td></tr>
+<tr class="memdesc:ac98a033b3b15df99f2879a8bd6707b9b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cut the clustering tree produced by the <a class="el" href="complete__linkage_8sql__in.html#a194227719a4d2a2e7ff18d208b087c90" title="Build a complete-linkage hierarchical clustering tree. ">complete_linkage()</a> function at a certain height, and find the exemplar of each cluster. An exemplar is the data point which has the shortest average distance to its peers in the cluster.  <a href="#ac98a033b3b15df99f2879a8bd6707b9b">More...</a><br /></td></tr>
 <tr class="separator:ac98a033b3b15df99f2879a8bd6707b9b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4a4b04d1f9bbd569924cd40e81eaf809"><td class="memItemLeft" align="right" valign="top">set<br class="typebreak" />
-&lt; __clink_nearest_clust_complete &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="complete__linkage_8sql__in.html#a4a4b04d1f9bbd569924cd40e81eaf809">__clink_find_nn_complete</a> (text dist_tab, text clust_tab, int[] clusta_id)</td></tr>
-<tr class="separator:a4a4b04d1f9bbd569924cd40e81eaf809"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9381b45b76fe1b511bfde584d00868c0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="complete__linkage_8sql__in.html#a9381b45b76fe1b511bfde584d00868c0">__clink_init_nn_table_complete</a> (text dist_tab, text clust_tab, text nn_tab)</td></tr>
-<tr class="separator:a9381b45b76fe1b511bfde584d00868c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a50a729f619747a4217e3faa4f01c3bfe"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="complete__linkage_8sql__in.html#a50a729f619747a4217e3faa4f01c3bfe">__clink_update_nn_table_complete</a> (text dist_tab, text clust_tab, text nn_tab, int clust_id)</td></tr>
-<tr class="separator:a50a729f619747a4217e3faa4f01c3bfe"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a08ad5196613aa6e52796290e6c0e82d7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="complete__linkage_8sql__in.html#a08ad5196613aa6e52796290e6c0e82d7">__clink_expand_nn_table_complete</a> (text dist_tab, text clust_tab, text nn_tab, int new_clust_id)</td></tr>
-<tr class="separator:a08ad5196613aa6e52796290e6c0e82d7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad873c6eb1afdab197dffad92276cd04e"><td class="memItemLeft" align="right" valign="top">text&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="complete__linkage_8sql__in.html#ad873c6eb1afdab197dffad92276cd04e">__clink_random_str</a> (int len)</td></tr>
-<tr class="separator:ad873c6eb1afdab197dffad92276cd04e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abf6643b02fd670f9e27c3a6e297fb566"><td class="memItemLeft" align="right" valign="top">__clink_set_of_nearest_clust_complete&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="complete__linkage_8sql__in.html#abf6643b02fd670f9e27c3a6e297fb566">__clink_find_nn_complete</a> (text dist_tab, text clust_tab, int[] clusta_id, __clink_cluster_activeness cluster_activeness)</td></tr>
+<tr class="separator:abf6643b02fd670f9e27c3a6e297fb566"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a394aca2e3ce1180b70625df80386b91b"><td class="memItemLeft" align="right" valign="top">__clink_set_of_nearest_clust_complete&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="complete__linkage_8sql__in.html#a394aca2e3ce1180b70625df80386b91b">__clink_init_nn_table_complete</a> (text dist_tab, text clust_tab, __clink_cluster_activeness cluster_activeness)</td></tr>
+<tr class="separator:a394aca2e3ce1180b70625df80386b91b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aacee36c6883c3f45457351a4019b3902"><td class="memItemLeft" align="right" valign="top">__clink_set_of_nearest_clust_complete&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="complete__linkage_8sql__in.html#aacee36c6883c3f45457351a4019b3902">__clink_update_nn_table_complete</a> (text dist_tab, text clust_tab, int clust_id, __clink_cluster_activeness cluster_activeness)</td></tr>
+<tr class="separator:aacee36c6883c3f45457351a4019b3902"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a50f643d6b0e91f786bfa77f8e325f1b2"><td class="memItemLeft" align="right" valign="top">__clink_set_of_nearest_clust_complete&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="complete__linkage_8sql__in.html#a50f643d6b0e91f786bfa77f8e325f1b2">__clink_expand_nn_table_complete</a> (text dist_tab, text clust_tab, int new_clust_id, __clink_cluster_activeness cluster_activeness)</td></tr>
+<tr class="separator:a50f643d6b0e91f786bfa77f8e325f1b2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1fdb6c7c3f81a5671fc6afcc412dec81"><td class="memItemLeft" align="right" valign="top">text&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="complete__linkage_8sql__in.html#a1fdb6c7c3f81a5671fc6afcc412dec81">complete_linkage</a> ()</td></tr>
 <tr class="separator:a1fdb6c7c3f81a5671fc6afcc412dec81"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5bdc74c6cd7019ef545a570c19f6dc95"><td class="memItemLeft" align="right" valign="top">text&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="complete__linkage_8sql__in.html#a5bdc74c6cd7019ef545a570c19f6dc95">complete_linkage</a> (text)</td></tr>
@@ -140,12 +137,12 @@ Functions</h2></td></tr>
 <div class="textblock"><dl class="section author"><dt>Author</dt><dd>Written by Jin Yu </dd></dl>
 <dl class="section date"><dt>Date</dt><dd>22 September 2014 </dd></dl>
 </div><h2 class="groupheader">Function Documentation</h2>
-<a class="anchor" id="a08ad5196613aa6e52796290e6c0e82d7"></a>
+<a class="anchor" id="a50f643d6b0e91f786bfa77f8e325f1b2"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void __clink_expand_nn_table_complete </td>
+          <td class="memname">__clink_set_of_nearest_clust_complete __clink_expand_nn_table_complete </td>
           <td>(</td>
           <td class="paramtype">text&#160;</td>
           <td class="paramname"><em>dist_tab</em>, </td>
@@ -159,14 +156,14 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">text&#160;</td>
-          <td class="paramname"><em>nn_tab</em>, </td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>new_clust_id</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>new_clust_id</em>&#160;</td>
+          <td class="paramtype">__clink_cluster_activeness&#160;</td>
+          <td class="paramname"><em>cluster_activeness</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -178,12 +175,12 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="a4a4b04d1f9bbd569924cd40e81eaf809"></a>
+<a class="anchor" id="abf6643b02fd670f9e27c3a6e297fb566"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">set&lt;__clink_nearest_clust_complete&gt; __clink_find_nn_complete </td>
+          <td class="memname">__clink_set_of_nearest_clust_complete __clink_find_nn_complete </td>
           <td>(</td>
           <td class="paramtype">text&#160;</td>
           <td class="paramname"><em>dist_tab</em>, </td>
@@ -198,7 +195,13 @@ Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">int[]&#160;</td>
-          <td class="paramname"><em>clusta_id</em>&#160;</td>
+          <td class="paramname"><em>clusta_id</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">__clink_cluster_activeness&#160;</td>
+          <td class="paramname"><em>cluster_activeness</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -210,12 +213,12 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="a9381b45b76fe1b511bfde584d00868c0"></a>
+<a class="anchor" id="a394aca2e3ce1180b70625df80386b91b"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void __clink_init_nn_table_complete </td>
+          <td class="memname">__clink_set_of_nearest_clust_complete __clink_init_nn_table_complete </td>
           <td>(</td>
           <td class="paramtype">text&#160;</td>
           <td class="paramname"><em>dist_tab</em>, </td>
@@ -229,8 +232,8 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">text&#160;</td>
-          <td class="paramname"><em>nn_tab</em>&#160;</td>
+          <td class="paramtype">__clink_cluster_activeness&#160;</td>
+          <td class="paramname"><em>cluster_activeness</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -242,28 +245,12 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="ad873c6eb1afdab197dffad92276cd04e"></a>
+<a class="anchor" id="aacee36c6883c3f45457351a4019b3902"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">text __clink_random_str </td>
-          <td>(</td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>len</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a class="anchor" id="a50a729f619747a4217e3faa4f01c3bfe"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void __clink_update_nn_table_complete </td>
+          <td class="memname">__clink_set_of_nearest_clust_complete __clink_update_nn_table_complete </td>
           <td>(</td>
           <td class="paramtype">text&#160;</td>
           <td class="paramname"><em>dist_tab</em>, </td>
@@ -277,14 +264,14 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">text&#160;</td>
-          <td class="paramname"><em>nn_tab</em>, </td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>clust_id</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>clust_id</em>&#160;</td>
+          <td class="paramtype">__clink_cluster_activeness&#160;</td>
+          <td class="paramname"><em>cluster_activeness</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -296,7 +283,7 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="ac52c0c24bfbea54d49059689a5d6cb6d"></a>
+<a class="anchor" id="a194227719a4d2a2e7ff18d208b087c90"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
@@ -333,7 +320,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
+          <td class="paramtype">text&#160;</td>
+          <td class="paramname"><em>stop_criterion</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">numeric&#160;</td>
           <td class="paramname"><em>iter</em>&#160;</td>
         </tr>
         <tr>
@@ -350,7 +343,8 @@ Functions</h2></td></tr>
     <tr><td class="paramname">id2</td><td>ID column of data point 2 in dist_tab. </td></tr>
     <tr><td class="paramname">dist</td><td>Column of pairwise distances. (Missing rows are taken to be 0 distance.) </td></tr>
     <tr><td class="paramname">output</td><td>Name of the result table, containing the constructed hierarchical clustering tree. </td></tr>
-    <tr><td class="paramname">iter</td><td>Number of maximum iterations. Set to NULL to build the entire clustering tree.</td></tr>
+    <tr><td class="paramname">stop_criterion</td><td>Stopping criterion used to stop the clustering. Use 'max_iter' to stop the clustering after a max number of iterations (NULL to build the entire clustering tree). Use 'threshold' to stop the clustering after the max distance between clusters reaches a threshold value. </td></tr>
+    <tr><td class="paramname">iter</td><td>Value corresponding to the stop_criterion</td></tr>
   </table>
   </dd>
 </dl>
@@ -449,7 +443,7 @@ Functions</h2></td></tr>
     <tr><td class="paramname">id1</td><td>ID column of data point 1 in dist_tab. </td></tr>
     <tr><td class="paramname">id2</td><td>ID column of data point 2 in dist_tab. </td></tr>
     <tr><td class="paramname">dist</td><td>Column of pairwise distance. (Missing rows are taken to be 0 distance.) </td></tr>
-    <tr><td class="paramname">hclust_tree_tab</td><td>Table that contains the clustering tree produced by <a class="el" href="complete__linkage_8sql__in.html#ac52c0c24bfbea54d49059689a5d6cb6d" title="Build a complete-linkage hierarchical clustering tree. ">complete_linkage()</a>. </td></tr>
+    <tr><td class="paramname">hclust_tree_tab</td><td>Table that contains the clustering tree produced by <a class="el" href="complete__linkage_8sql__in.html#a194227719a4d2a2e7ff18d208b087c90" title="Build a complete-linkage hierarchical clustering tree. ">complete_linkage()</a>. </td></tr>
     <tr><td class="paramname">height</td><td>Height to cut the tree. </td></tr>
     <tr><td class="paramname">output</td><td>Output table containing cluster IDs, members of clusters, heights (complete-linkage distances) of clusters, and exemplars.</td></tr>
   </table>

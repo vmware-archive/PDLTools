@@ -1,7 +1,4 @@
 var searchData=
 [
-  ['im',['im',['../complex__type_8sql__in.html#ae0aa7d3d6c1089531b50926b7dcbfc59',1,'complex_type.sql_in']]],
-  ['int22complex',['int22complex',['../complex__type_8sql__in.html#a4771e6dfdd753742b39d32a267278c58',1,'complex_type.sql_in']]],
-  ['int42complex',['int42complex',['../complex__type_8sql__in.html#aac5842af6f47d847905a6c794561e3e0',1,'complex_type.sql_in']]],
-  ['int82complex',['int82complex',['../complex__type_8sql__in.html#a91e9e2b48b5f81cd9d7d68191084dd1d',1,'complex_type.sql_in']]]
+  ['hits',['hits',['../hits_8sql__in.html#a6bb03168db7250b31d925af04102150e',1,'hits(text input_tab, text source_node, text dest_node, text graph_id, text result_tab, int max_iter, numeric epsilon):&#160;hits.sql_in'],['../hits_8sql__in.html#ad7d69682694040836d7a894c74583903',1,'hits():&#160;hits.sql_in'],['../hits_8sql__in.html#a651a4c54b47805cf5197ebb8ecbfc6ed',1,'hits(text):&#160;hits.sql_in']]]
 ];

@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['stratified_20sampling',['Stratified Sampling',['../group__grp__sampling.html',1,'']]],
+  ['sampling',['Sampling',['../group__grp__sampling.html',1,'']]],
   ['session_5fsplit',['session_split',['../group__grp__session__split.html',1,'']]],
   ['sessionization',['Sessionization',['../group__grp__sessionization.html',1,'']]],
   ['stem_5ftoken',['stem_token',['../group__grp__stem__token.html',1,'']]],

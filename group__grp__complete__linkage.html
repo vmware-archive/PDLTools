@@ -40,7 +40,7 @@
   <td id="projectlogo"><img alt="Logo" src="pdl.png"/></td>
   <td style="padding-left: 0.5em;">
    <div id="projectname">PDL Tools
-   &#160;<span id="projectnumber">1.7</span>
+   &#160;<span id="projectnumber">1.8</span>
    </div>
    <div id="projectbrief">User Documentation</div>
   </td>
@@ -108,7 +108,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </ul>
 </div><dl class="section user"><dt>About</dt><dd>This function implements the commonly used complete-linkage hierarchical clustering algorithm. It constructs a hierarchical clustering tree from bottom up by merging closest clusters. Complete-linkage clustering defines the distance between two clusters as the distance between the farthest pair of data points in the two clusters (<a href="http://en.wikipedia.org/wiki/Complete-linkage_clustering">http://en.wikipedia.org/wiki/Complete-linkage_clustering</a>). Given a hierarchical clustering tree, one can cut the tree at a certain height to obtain flat clusters of data points (cf. <a class="el" href="group__grp__cut__hclust__tree.html">cut_hclust_tree</a>).</dd></dl>
 <p><a class="anchor" id="complete_linkage_syntax"></a></p><dl class="section user"><dt>Syntax</dt><dd><pre class="syntax">
-FUNCTION complete_linkage(dist_tab TEXT, id1 TEXT, id2 TEXT, dist TEXT, output TEXT, iter INT) 
+FUNCTION complete_linkage(dist_tab TEXT, id1 TEXT, id2 TEXT, dist TEXT, output TEXT, stop_criterion TEXT, iter NUMERIC) 
 RETURNS VOID;
 </pre></dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
@@ -118,7 +118,8 @@ RETURNS VOID;
     <tr><td class="paramname">id2</td><td>ID column of data point 2 in <em>dist_tab</em>. </td></tr>
     <tr><td class="paramname">dist</td><td>Column of pairwise distances. (Missing rows are taken to have 0 distance.) </td></tr>
     <tr><td class="paramname">output</td><td>Name of the result table, containing the constructed hierarchical clustering tree. </td></tr>
-    <tr><td class="paramname">iter</td><td>Number of maximum iterations. Set to NULL to build the entire clustering tree.</td></tr>
+    <tr><td class="paramname">stop_criterion</td><td>Stopping criterion used to stop the clustering. Use 'max_iter' to stop the clustering after a max number of iterations (NULL to build the entire clustering tree). Use 'threshold' to stop the clustering after the max distance between clusters reaches a threshold value. </td></tr>
+    <tr><td class="paramname">iter</td><td>Value corresponding to the stop_criterion</td></tr>
   </table>
   </dd>
 </dl>
@@ -149,10 +150,10 @@ RETURNS VOID;
 <div class="line">(3,4,3);</div>
 </div><!-- fragment --> <br />
 </li>
-<li>Build a hierarchical clustering tree <div class="fragment"><div class="line">SELECT <a class="code" href="complete__linkage_8sql__in.html#ac52c0c24bfbea54d49059689a5d6cb6d">complete_linkage</a>(<span class="stringliteral">&#39;complete_linkage_test_dist&#39;</span>,<span class="stringliteral">&#39;id1&#39;</span>,<span class="stringliteral">&#39;id2&#39;</span>,<span class="stringliteral">&#39;dist&#39;</span>,<span class="stringliteral">&#39;complete_linkage_test_output&#39;</span>,NULL);</div>
+<li>Build a hierarchical clustering tree <div class="fragment"><div class="line">SELECT pdltools.complete_linkage(<span class="stringliteral">&#39;complete_linkage_test_dist&#39;</span>,<span class="stringliteral">&#39;id1&#39;</span>,<span class="stringliteral">&#39;id2&#39;</span>,<span class="stringliteral">&#39;dist&#39;</span>,<span class="stringliteral">&#39;complete_linkage_test_output&#39;</span>,NULL);</div>
 </div><!-- fragment --> <br />
 </li>
-<li>Cut the clustering tree at a certain height (2 in the example) to obtain flat clusters (see <a class="el" href="group__grp__cut__hclust__tree.html">cut_hclust_tree</a> for the usage of the <a class="el" href="complete__linkage_8sql__in.html#ac98a033b3b15df99f2879a8bd6707b9b" title="Cut the clustering tree produced by the complete_linkage() function at a certain height, and find the exemplar of each cluster. An exemplar is the data point which has the shortest average distance to its peers in the cluster. ">cut_hclust_tree()</a> function) <div class="fragment"><div class="line">SELECT <a class="code" href="complete__linkage_8sql__in.html#ac98a033b3b15df99f2879a8bd6707b9b">cut_hclust_tree</a>(<span class="stringliteral">&#39;complete_linkage_test_dist&#39;</span>,<span class="stringliteral">&#39;id1&#39;</span>,<span class="stringliteral">&#39;id2&#39;</span>,<span class="stringliteral">&#39;dist&#39;</span>,<span class="stringliteral">&#39;complete_linkage_test_output&#39;</span>,2,<span class="stringliteral">&#39;complete_linkage_test_cluster&#39;</span>);</div>
+<li>Cut the clustering tree at a certain height (2 in the example) to obtain flat clusters (see <a class="el" href="group__grp__cut__hclust__tree.html">cut_hclust_tree</a> for the usage of the <a class="el" href="complete__linkage_8sql__in.html#ac98a033b3b15df99f2879a8bd6707b9b" title="Cut the clustering tree produced by the complete_linkage() function at a certain height, and find the exemplar of each cluster. An exemplar is the data point which has the shortest average distance to its peers in the cluster. ">cut_hclust_tree()</a> function) <div class="fragment"><div class="line">SELECT pdltools.cut_hclust_tree(<span class="stringliteral">&#39;complete_linkage_test_dist&#39;</span>,<span class="stringliteral">&#39;id1&#39;</span>,<span class="stringliteral">&#39;id2&#39;</span>,<span class="stringliteral">&#39;dist&#39;</span>,<span class="stringliteral">&#39;complete_linkage_test_output&#39;</span>,2,<span class="stringliteral">&#39;complete_linkage_test_cluster&#39;</span>);</div>
 </div><!-- fragment --> The <em>cluster_id</em> column in the output table <em>complete_linkage_test_cluster</em> indicates data assignment. <div class="fragment"><div class="line">SELECT * FROM complete_linkage_test_cluster;</div>
 <div class="line"></div>
 <div class="line"> cluster_id | member  | height | exemplar </div>
