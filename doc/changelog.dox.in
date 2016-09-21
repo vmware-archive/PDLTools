@@ -3,10 +3,14 @@
 @page changelog
 
 ## PDL Tools Revision History
-### PDL Tools 1.8dev (packaged with SUgAR 1.0) 
+### PDL Tools 1.8 (packaged with SUgAR 1.0) -- Current version 
 - Add function for splitting data into train/test sets.
+- Add module for normalized cuts.
+- Add module for HITS algorithm.
+- Modified complete_linkage to support HAWQ. 
+- Fixed auc function to handle division by zero errors. 
 
-### PDL Tools 1.7 (packaged with SUgAR 1.0) -- Current version
+### PDL Tools 1.7 (packaged with SUgAR 1.0) 
 - Add module kd_tree for KD-tree and its application to k-nearest neighbour search.
 - Add module pagerank.
 - Add grid search function for elastic net in grid_search module.
