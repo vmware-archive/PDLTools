@@ -152,18 +152,6 @@ E    | 0                           |    0.25000000000000000000  |       3
 \endcode 
 */
 
-/* Helper function to avoid internal table clashes */ 
-
-CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__random_str(len integer)
-  RETURNS text AS
-$BODY$
-    SELECT string_agg(a)
-    FROM (
-        SELECT chr(ascii('a') + (random() * 25)::integer) a
-        FROM generate_series(1,$1)
-    ) foo
-$BODY$
-  LANGUAGE sql VOLATILE;
 
 
 /**

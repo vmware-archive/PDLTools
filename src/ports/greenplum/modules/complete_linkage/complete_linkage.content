@@ -5,7 +5,6 @@ UDF: FUNCTION PDLTOOLS_SCHEMA.__clink_find_nn_complete(pg_catalog.text, pg_catal
 UDF: FUNCTION PDLTOOLS_SCHEMA.complete_linkage(pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.numeric)
 UDF: FUNCTION PDLTOOLS_SCHEMA.complete_linkage()
 UDF: FUNCTION PDLTOOLS_SCHEMA.__clink_expand_nn_table_complete(pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.int4, PDLTOOLS_SCHEMA.__clink_cluster_activeness)
-UDF: FUNCTION PDLTOOLS_SCHEMA.__clink_random_str(pg_catalog.int4)
 UDF: FUNCTION PDLTOOLS_SCHEMA.cut_hclust_tree(pg_catalog.text)
 UDF: FUNCTION PDLTOOLS_SCHEMA.cut_hclust_tree(pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.float8, pg_catalog.text)
 UDF: FUNCTION PDLTOOLS_SCHEMA.complete_linkage(pg_catalog.text)

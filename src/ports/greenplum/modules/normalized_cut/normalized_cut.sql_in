@@ -219,10 +219,10 @@ $$
         END IF;
 
         -- Temporary table names.
-        EXECUTE('SELECT ''__ncut_i_plus_negsqrt_d_w_negsqrt_d'' || PDLTOOLS_SCHEMA.__ncut_random_str(10)') INTO i_plus_negsqrt_d_w_negsqrt_d_tab; 
-        EXECUTE('SELECT ''__ncut_partition'' || PDLTOOLS_SCHEMA.__ncut_random_str(10)') INTO partition_tab; 
-        EXECUTE('SELECT ''__ncut_partition_new'' || PDLTOOLS_SCHEMA.__ncut_random_str(10)') INTO partition_new_tab; 
-        EXECUTE('SELECT ''__ncut_cut'' || PDLTOOLS_SCHEMA.__ncut_random_str(10)') INTO cut_tab; 
+        EXECUTE('SELECT ''__ncut_i_plus_negsqrt_d_w_negsqrt_d'' || PDLTOOLS_SCHEMA.__random_str(10)') INTO i_plus_negsqrt_d_w_negsqrt_d_tab; 
+        EXECUTE('SELECT ''__ncut_partition'' || PDLTOOLS_SCHEMA.__random_str(10)') INTO partition_tab; 
+        EXECUTE('SELECT ''__ncut_partition_new'' || PDLTOOLS_SCHEMA.__random_str(10)') INTO partition_new_tab; 
+        EXECUTE('SELECT ''__ncut_cut'' || PDLTOOLS_SCHEMA.__random_str(10)') INTO cut_tab; 
 
         -- Create a table to record node partitions.
         sql = 'CREATE TABLE '|| partition_tab ||' AS (
@@ -459,11 +459,11 @@ $$ LANGUAGE PLR;
  * @param len Length of the random string.
  * @return Return a random string of the given length.
  *
- * Sample usage: SELECT __ncut_random_str(6);
+ * Sample usage: SELECT __random_str(6);
  *
  */ 
  
-CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__ncut_random_str(len INT)
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__random_str(len INT)
 RETURNS TEXT AS
 $$
     SELECT string_agg(a)

@@ -1,2 +1,1 @@
 UDF: FUNCTION PDLTOOLS_SCHEMA.hits(pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.int4, pg_catalog.float)
-UDF: FUNCITON PDLTOOLS_SCHEMA.__random_str(pg_catalog.int4)

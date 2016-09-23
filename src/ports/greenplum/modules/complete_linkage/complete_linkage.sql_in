@@ -212,7 +212,7 @@ RETURNS VOID AS $$
 
         -- Create a symmetric distance matrix from dist_tab to facilitate 
         -- the process of finding the nearest neighbor.
-        EXECUTE('SELECT ''__complete_linkage_'' || PDLTOOLS_SCHEMA.__clink_random_str(10)') INTO dist_mat;
+        EXECUTE('SELECT ''__complete_linkage_'' || PDLTOOLS_SCHEMA.__random_str(10)') INTO dist_mat;
       
         sql = 'CREATE TABLE '|| dist_mat ||' (i INT, j INT, dist FLOAT8) DISTRIBUTED RANDOMLY';
         EXECUTE sql;
@@ -383,9 +383,9 @@ RETURNS VOID AS $$
         temp_tab TEXT;
         temp_unnest_tab TEXT;
     BEGIN
-        EXECUTE('SELECT ''__complete_linkage_'' || PDLTOOLS_SCHEMA.__clink_random_str(10)') INTO temp_tab;
+        EXECUTE('SELECT ''__complete_linkage_'' || PDLTOOLS_SCHEMA.__random_str(10)') INTO temp_tab;
         -- EXECUTE('DROP TABLE IF EXISTS ' || temp_tab);
-        EXECUTE('SELECT ''__complete_linkage_'' || PDLTOOLS_SCHEMA.__clink_random_str(10)') INTO temp_unnest_tab;
+        EXECUTE('SELECT ''__complete_linkage_'' || PDLTOOLS_SCHEMA.__random_str(10)') INTO temp_unnest_tab;
 
         -- Cut the clustering tree at the given height.
         sql = 'CREATE TABLE '|| temp_tab || ' AS (
@@ -633,16 +633,6 @@ $$ LANGUAGE PLPGSQL;
  *
  */ 
  
-CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__clink_random_str(len INT)
-RETURNS TEXT AS
-$$
-    SELECT string_agg(a)
-    FROM (
-        SELECT chr(ascii('a') + (random() * 25)::integer) a
-        FROM generate_series(1,$1)
-    ) foo
-$$ LANGUAGE SQL;
-
 
 
 CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.complete_linkage() 
