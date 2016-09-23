@@ -98,9 +98,9 @@ PL/Perl
         @defgroup grp_session_split session_split
     @}
 
-    @defgroup grp_sampling Stratified Sampling
+    @defgroup grp_sampling Sampling
     @{
-        @brief A stratified sampling utility.
+        @brief A sampling utility.
 
 Utility to perform stratified, randomized, proportional sampling and labeling.
 
