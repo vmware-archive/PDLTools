@@ -4,6 +4,9 @@
 
 ## PDL Tools Revision History
 
+### PDL Tools 1.9
+- Add module data_imputation with functions to impute missing values
+
 ### PDL Tools 1.7 (packaged with SUgAR 1.0) -- Current version
 - Add module kd_tree for KD-tree and its application to k-nearest neighbour search.
 - Add module pagerank.
