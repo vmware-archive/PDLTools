@@ -279,7 +279,6 @@ $$
             EXECUTE sql;
             
             -- Update partition labels.
-            sql = 'DROP TABLE IF EXISTS ' || partition_new_tab;
             EXECUTE('DROP TABLE IF EXISTS ' || partition_new_tab);
             sql = 'CREATE TABLE '|| partition_new_tab ||' AS (
                     WITH a AS (
@@ -381,10 +380,6 @@ RETURNS VOID AS $$
                 FROM w
                 GROUP BY partition_label, row_id
             ),
-            shifted_ids AS (
-                SELECT row_id AS id, (row_number() OVER(PARTITION BY partition_label ORDER BY row_id))::INT shifted_id
-                FROM nodes
-            ),
             negsqrt_d AS (
                 SELECT row_id AS id, 1.0/sqrt(sum(val)) negsqrt_d
                 FROM w
@@ -400,11 +395,10 @@ RETURNS VOID AS $$
             )
 
             SELECT i_plus_negsqrt_d_w_negsqrt_d.partition_label,
-                row.shifted_id AS row_id, 
-                col.shifted_id AS col_id,
+                (dense_rank() OVER(PARTITION BY partition_label ORDER BY row_id))::INT AS row_id, 
+                (dense_rank() OVER(PARTITION BY partition_label ORDER BY col_id))::INT AS col_id,
                 i_plus_negsqrt_d_w_negsqrt_d.val AS val
-            FROM  i_plus_negsqrt_d_w_negsqrt_d, shifted_ids row, shifted_ids col
-            WHERE i_plus_negsqrt_d_w_negsqrt_d.row_id = row.id AND i_plus_negsqrt_d_w_negsqrt_d.col_id = col.id 
+            FROM  i_plus_negsqrt_d_w_negsqrt_d
 
             ) DISTRIBUTED BY (partition_label)';
             
