@@ -48,3 +48,9 @@ $BODY$
 SELECT E'PDL Tools: PDLTOOLS_VERSION\nSUgAR: SUGAR_VERSION'::VARCHAR;
 $BODY$ LANGUAGE SQL IMMUTABLE;
 
+
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.assert(actual double precision[], expected double precision[])
+  RETURNS boolean AS
+$BODY$
+  return actual==expected
+$BODY$ LANGUAGE plpythonu;
