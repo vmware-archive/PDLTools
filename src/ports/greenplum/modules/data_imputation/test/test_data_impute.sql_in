@@ -26,9 +26,68 @@ INSERT INTO PDLTOOLS_SCHEMA.test_impute_demo VALUES
 
 -- count number of records in the output table
 
-select assert(count(*), 1)  from PDLTOOLS_SCHEMA.impute_missing_values('PDLTOOLS_SCHEMA.test_impute_demo',ARRAY['id'],'id','label',FALSE,'PDLTOOLS_SCHEMA.out_imputed_data');
+ select assert(count(*), 1)  from PDLTOOLS_SCHEMA.impute_missing_values('PDLTOOLS_SCHEMA.test_impute_demo',ARRAY['id'],'id','label',FALSE,'PDLTOOLS_SCHEMA.out_imputed_data');
+
+
+
+with expected as (
+select 
+   id
+   ,array[(coalesce(v1,avg(v1) over ())-avg(v1) over ())/stddev(v1) over (), (coalesce(v2,avg(v2) over ())-avg(v2) over ())/stddev(v2) over ()] as feat_vect_normalized
+from 
+   test_impute_demo
+)
+select 
+   assert(act.feat_vect_normalized, exp.feat_vect_normalized)
+from (
+   select 
+       feat_vect_normalized
+   from 
+       expected order by id
+   ) exp,
+   (
+   select
+       feat_vect_normalized
+   from 
+       out_imputed_data order by id
+   ) act
+;
+
+
+
+-- Second Function Test
+
+select * from PDLTOOLS_SCHEMA.impute_missing_values('PDLTOOLS_SCHEMA.test_impute_demo','id',ARRAY['id','label'],'PDLTOOLS_SCHEMA.out_imputed_data_2');
+
+
+with expected_res as (
+select 
+   id
+   ,array[(coalesce(v1,avg(v1) over ())-avg(v1) over ())/stddev(v1) over ()] as v1_norm,  array[(coalesce(v2,avg(v2) over ())-avg(v2) over ())/stddev(v2) over ()] as v2_norm
+from 
+   test_impute_demo
+)
+select 
+   assert(act_res.v1_norm, exp_res.v1_norm),
+    assert(act_res.v2_norm, exp_res.v2_norm)
+
+from (
+   select 
+       v1_norm, v2_norm
+   from 
+       expected_res order by id
+   ) exp_res,
+   (
+   select
+        array[v1_normalized] as v1_norm,  array[v2_normalized]  as v2_norm
+   from 
+       out_imputed_data_2 order by id
+   ) act_res
+;
+
 
 
 -- Clean up tables.
 DROP TABLE  if exists PDLTOOLS_SCHEMA.test_impute_demo;
 DROP TABLE  if exists PDLTOOLS_SCHEMA.out_imputed_data;
+DROP TABLE  if exists PDLTOOLS_SCHEMA.out_imputed_data_2;

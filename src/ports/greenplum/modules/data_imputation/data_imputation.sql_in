@@ -49,7 +49,7 @@ returns text;
 @param schema_table_name Name of table(schemaName.tableName) to impute missing data and normalize. 
 @param exclude_features Array of columns to be excluded from imputation. 
 @param id_column ID column of the table.
-@param label_column Label Column 
+@param label_column  Label Column (optional)
 @param include_constant_term Boolean value which tells weather to include the constant term or not.
 @param output_table Output table that stores imputed and normalized data. 
 
@@ -128,7 +128,7 @@ select * from imputed_data ;
 * Data Imputation
 =============================================================================*/
 -- 1) Define UDF for feature imputation
-drop function if exists pdltools.impute_missing_values(
+drop function if exists PDLTOOLS_SCHEMA.impute_missing_values(
     text, 
     text[], 
     text, 
@@ -137,7 +137,7 @@ drop function if exists pdltools.impute_missing_values(
     text
 ) cascade;
 
-create or replace function pdltools.impute_missing_values(
+create or replace function PDLTOOLS_SCHEMA.impute_missing_values(
     schema_table_name text, 
     exclude_features text[], 
     id_column text,
@@ -156,10 +156,17 @@ $$
     #If label column is specified, don't include it in the list of values to normalize/impute
     excluded_columns = tuple(exclude_features) if not label_column else tuple(exclude_features + [label_column])
  
-    strArray = schema_table_name.split(".")
-    table_schema = strArray[0]		
-    table_name   = strArray[1]
- 	
+    #parse the schema and table from user input_table
+    strArray = schema_table_name
+    if '.' in schema_table_name:
+        strArray = schema_table_name.split(".")
+        table_schema = strArray[0]		
+        table_name   = strArray[1]
+    else: 
+        table_schema = 'public'
+        table_name   = schema_table_name
+   
+	
     #1) Collect list of column names corresponding to the features.
     sql = """
         select 
@@ -445,8 +452,7 @@ drop function if exists PDLTOOLS_SCHEMA.impute_missing_values(
 );
 
 create or replace function PDLTOOLS_SCHEMA.impute_missing_values(
-    table_schema text,
-    table_name text,
+   schema_table_name text,
     id_column text,
     exclude_columns text[],
     output_table text
@@ -458,6 +464,15 @@ $$
     import uuid
     #Obtain unique identifier for temp tables
     UNIQUE_IDENTIFIER = str(uuid.uuid4()).replace('-','_')[:20]    
+    
+    if '.' in schema_table_name:
+        strArray = schema_table_name.split(".")
+        table_schema = strArray[0]              
+        table_name   = strArray[1]
+    else: 
+        table_schema = 'public'
+        table_name   = schema_table_name
+
     sql = """
         drop table if exists mean_stddev_{UUID};
         create temp table mean_stddev_{UUID}
@@ -487,7 +502,7 @@ $$
             column_name not in (
                 '{id_column}'
             ) and
-            column_name not in '{exclude_columns}'
+            column_name not in {exclude_columns}
         group by column_name, data_type
         order by column_name;        
     """.format(
