@@ -9,7 +9,7 @@
 
  *//* ----------------------------------------------------------------------- */
 
- /**data_imputation_syntax
+ /**
 @addtogroup grp_data_imputation
 
 @brief Data imputation function.
@@ -27,9 +27,8 @@ A function that imputes missing data and normalizes it and saves the result in a
 
 @anchor data_imputation_syntax
 @par Syntax
-The impute_missing_values function can be invoked in two ways, depending on the source of the initial set of data:<ul>
+The impute_missing_values function can be invoked in two ways, depending on the source of the initial set of data:
 
-<li>Invoke imputation UDF when input table<br>
 <pre class="syntax">
 FUNCTION impute_missing_values( 
                       schema_table_name text,
@@ -41,10 +40,17 @@ FUNCTION impute_missing_values(
                     )
 returns text;
 </pre>
-</li>
 
+<pre class = "syntax">
+FUNCTION impute_missing_values(
+ 		     schema_table_name text,
+   		     id_column text,
+   		     exclude_columns text[],
+   		     output_table text
+		    )
+returns text;
+</pre>
 
-</ul>
 
 @param schema_table_name Name of table(schemaName.tableName) to impute missing data and normalize. 
 @param exclude_features Array of columns to be excluded from imputation. 
@@ -85,7 +91,7 @@ INSERT INTO PDLTOOLS_SCHEMA.test_impute_demo VALUES
 
 @endverbatim
 
-Run data imputation
+Run data imputation with optional parameter -  label
 @verbatim
 -- run data imputation++
 select impute_missing_values('public.test_impute_demo',ARRAY['id'],'id','label',FALSE,'imputed_data');
@@ -115,6 +121,40 @@ select * from imputed_data ;
 
 
 @endverbatim
+
+Run data imputation without the optional parameters.
+
+@verbatim
+
+-- run data imputation
+select impute_missing_values('public.test_impute_demo',ARRAY['id'],'id','out_impiuted_data);
+
+        	      impute_missing_values         
+---------------------------------------------------------------
+	       out_imputed_data created successfully
+
+-- view model results
+
+select * from out_imputed_data;
+
+
+  id |   v1_normalized    |    v2_normalized    
+----+--------------------+---------------------
+  1 | -0.543125446596932 |   0.365446817468717
+  5 |  0.841844442218319 |                   0
+  9 |                  0 |   -1.43568392575709
+  4 |                  0 |    1.61840733449537
+  8 |   -0.4616566296078 |  -0.104413376416277
+  3 |  -1.52075125046652 | -0.0261033441021115
+  7 |                  0 |                   0
+  2 |                  0 |   -0.41765350567294
+  6 |  0.678906808240055 |                   0
+ 10 |   1.00478207619658 |                   0
+(10 rows)
+
+
+@endverbatim 
+
 
 
 
@@ -444,7 +484,6 @@ $$language plpythonu;
 
 --b)When input is a table of columns and the columns have to be imputed, normalized
 drop function if exists PDLTOOLS_SCHEMA.impute_missing_values(
-        text,
         text,
         text,
         text[],
