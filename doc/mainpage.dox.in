@@ -211,6 +211,7 @@ A set of grid search functions for various algorithms.
 PL/Python, PL/pgSQL, MADlib 1.8+
         @defgroup grp_kmeans k-Means
         @defgroup grp_elastic_net elastic_net
+        @defgroup grp_lda_grid_search lda_grid_search
     @}
 
    @defgroup data_imputation Data Imputation

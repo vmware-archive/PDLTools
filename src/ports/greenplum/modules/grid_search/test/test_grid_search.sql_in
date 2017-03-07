@@ -210,13 +210,48 @@ select assert(
 
 
 
+/*=================================================================
+*   test LDA grid search 
+==================================================================*/
+-- Prepare a training dataset for LDA
+
+
+drop table if exists PDLTOOLS_SCHEMA.documents;
+
+CREATE TABLE PDLTOOLS_SCHEMA.documents(docid INT4, contents TEXT);
+INSERT INTO PDLTOOLS_SCHEMA.documents VALUES
+(0, 'Statistical topic models are a class of Bayesian latent variable models, originally developed for analyzing the semantic content of large document corpora.'),
+(1, 'By the late 1960s, the balance between pitching and hitting had swung in favor of the pitchers. In 1968 Carl Yastrzemski won the American League batting title with an average of just .301, the lowest in history.'),
+(2, 'Machine learning is closely related to and often overlaps with computational statistics; a discipline that also specializes in prediction-making. It has strong ties to mathematical optimization, which deliver methods, theory and application domains to the field.'),
+(3, 'California''s diverse geography ranges from the Sierra Nevada in the east to the Pacific Coast in the west, from the Redwood–Douglas fir forests of the northwest, to the Mojave Desert areas in the southeast. The center of the state is dominated by the Central Valley, a major agricultural area. ');
+
+-- Build a word count table by extracting the words and building a histogram for each document using the madlib's term_frequency function
+
+-- Convert a string to a list of words
+ALTER TABLE documents ADD COLUMN words TEXT[];
+UPDATE documents SET words = regexp_split_to_array(lower(contents), E'[\\s+\\.\\,]');
+
+-- Create the term frequency table
+DROP TABLE IF EXISTS PDLTOOLS_SCHEMA.docs_training;
+SELECT madlib.term_frequency('documents', 'docid', 'words', 'lda_input_training', TRUE);
+SELECT * FROM lda_input_training order by docid limit 20;
+
+-- Invoke the grid search
+
+select assert(
+        lda_gridsearch(
+            ARRAY[0.05, 0.10, 0.20], --alphas (smaller the value, sparser the distribution
+            ARRAY[0.05, 0.10, 0.20], --betas (smaller the value, sparser the distribution
+            ARRAY[60, 40, 20], -- num_topics array,
+            'lda_input_training', -- LDA input table
+            'lda_mdl', -- LDA model table
+            '_lda_gridsearch_results' --output table
+        ),'Grid search results written to _lda_gridsearch_results');
 
 
 
-
-
-
-
+select assert ( 
+       
 
 
 

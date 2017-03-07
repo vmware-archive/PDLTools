@@ -436,6 +436,143 @@ select * from houses_en;
  */
 
 
+/**
+@addtogroup grp_lda_grid_search
+
+@brief A function for LDA grid search.
+
+<div class="toc"><b>Contents</b>
+<ul>
+<li class="level1"><a href="#lda_grid_syntax">Syntax</a>
+<li class="level1"><a href="#lda_grid_usage">Usage</a>
+<li class="level1"><a href="#lda_grid_example">Example</a>
+</ul>
+</div>
+
+@about
+Latent Dirichlet Allocation (LDA) is an interesting generative probabilistic model for natural texts. The LDA model posits that each document is associated with a mixture of various topics (e.g. a document is related to Topic 1 with probability 0.7, and Topic 2 with probability 0.3), and that each word in the document is attributable to one of the document's topics. Refer to <A HREF="https://madlib.incubator.apache.org/docs/latest/group__grp__lda.html"> MADLib LDA </A> for more information. 
+
+
+@anchor lda_grid_syntax
+@par Syntax
+<pre class="syntax">
+FUNCTION lda_gridsearch(
+    alphas float8[],
+    betas float8[],
+    num_topic_arr int[],
+    input_table text,
+    mdl_table text,
+    output_table text,
+)
+returns text;
+</pre>
+
+
+@param alphas array for the per-doc topic multinomial
+@param betas array for the per-topic word multinomial 
+@param topics number of topics array
+@param input LDA Input table 
+@param model LDA model table
+@param output LDA Output table
+
+
+@returns Name of table in which grid search results are saved.
+
+@anchor lda_grid_usage
+@usage
+Given an array of alphas and betas, the function runs the LDA grid search on the input table and provides the model and outout of the grid search.
+
+@anchor lda_grid_example
+@examp
+Create sample data.
+@verbatim
+DROP TABLE IF EXISTS documents;
+CREATE TABLE houses_sample ( docId INT,
+                      contents TEXT,
+                    );
+INSERT INTO documents VALUES
+(0, 'Statistical topic models are a class of Bayesian latent variable models, originally developed for analyzing the semantic content of large document corpora.'),
+(1, 'By the late 1960s, the balance between pitching and hitting had swung in favor of the pitchers. In 1968 Carl Yastrzemski won the American League batting title with an average of just .301, the lowest in history.'),
+(2, 'Machine learning is closely related to and often overlaps with computational statistics; a discipline that also specializes in prediction-making. It has strong ties to mathematical optimization, which deliver methods, theory and application domains to the field.'),
+(3, 'California''s diverse geography ranges from the Sierra Nevada in the east to the Pacific Coast in the west, from the Redwood–Douglas fir forests of the northwest, to the Mojave Desert areas in the southeast. The center of the state is dominated by the Central Valley, a major agricultural area. ')
+@endverbatim
+
+Convert String to a list of words
+
+@verbatim
+ALTER TABLE documents ADD COLUMN words TEXT[];
+UPDATE documents SET words = regexp_split_to_array(lower(contents), E'[\\s+\\.\\,]');
+@endverbatim
+
+
+Create Term Frequency Table 
+@verbatim
+DROP TABLE IF EXISTS training;
+SELECT madlib.term_frequency('documents', 'docid', 'words', 'training', TRUE);
+
+@endverbatim
+
+Run grid search with some different alphas and lambdas. 
+@verbatim
+  
+
+ select
+        lda_gridsearch(
+            ARRAY[0.05, 0.10, 0.20], --alphas (smaller the value, sparser the distribution
+            ARRAY[0.05, 0.10, 0.20], --betas (smaller the value, sparser the distribution
+            ARRAY[60, 40, 20], -- num_topics array,
+            'training', -- LDA input table
+            'twenty_news_groups_lda_mdl', -- LDA model table
+            'twenty_news_groups_lda_gridsearch_results' --output table
+        ); 
+
+
+                                 lda_gridsearch                                  
+---------------------------------------------------------------------------------
+ Grid search results written to twenty_news_groups_lda_gridsearch_results
+
+
+@endverbatim
+
+View results.
+@verbatim
+select  topic_num,   alpha,  beta, lda_get_perplexity as perplexity  from   kaggle.twenty_news_groups_lda_gridsearch_results order by lda_get_perp;
+ topic_num | alpha | beta |  perplexity   
+-----------+-------+------+---------------
+        20 |  0.05 | 0.05 |  42.974155139
+        20 |   0.1 | 0.05 | 47.5286308135
+        40 |  0.05 | 0.05 | 47.8441436384
+        60 |  0.05 | 0.05 | 49.0871729058
+        40 |  0.05 |  0.1 | 49.3048227706
+        20 |  0.05 |  0.1 | 49.5827040155
+        20 |   0.2 | 0.05 | 51.0495079723
+        20 |   0.2 |  0.1 | 52.0790791152
+        40 |   0.1 | 0.05 | 52.4788076556
+        20 |   0.1 |  0.1 | 52.6573694225
+        60 |   0.1 | 0.05 | 53.8439078734
+        60 |  0.05 |  0.1 | 54.3546251907
+        40 |  0.05 |  0.2 | 56.6177604318
+        20 |  0.05 |  0.2 | 56.7466389605
+        40 |   0.2 | 0.05 | 57.1590080682
+        60 |  0.05 |  0.2 |  58.047604261
+        20 |   0.1 |  0.2 | 60.3628285358
+        60 |   0.1 |  0.1 | 60.7553194771
+        60 |   0.2 | 0.05 | 61.0020140338
+        40 |   0.1 |  0.1 | 61.6111169233
+        60 |   0.2 |  0.1 | 62.3893799651
+        40 |   0.1 |  0.2 | 62.9618429362
+        40 |   0.2 |  0.1 | 63.8145476584
+        20 |   0.2 |  0.2 | 65.1425615058
+        40 |   0.2 |  0.2 | 66.5310001286
+        60 |   0.1 |  0.2 | 66.5315782492
+        60 |   0.2 |  0.2 | 71.8479999652
+
+
+
+
+@endverbatim
+
+ */
  ------------------------------------------------------------------------
  -- base kmeans function
 drop function if exists PDLTOOLS_SCHEMA.grid_search_kmeans_all(
@@ -1527,3 +1664,127 @@ $$
         return ret;
     end;
 $$ language plpgsql;
+
+
+
+
+drop function if exists PDLTOOLS_SCHEMA.lda_gridsearch(
+        alphas float8[], 
+        betas float8[], 
+        num_topics_arr int[],
+        input_table text,
+        mdl_table text,
+        output_table text
+    );
+    create or replace function PDLTOOLS_SCHEMA.lda_gridsearch(
+        alphas float8[],
+        betas float8[],
+        num_topics_arr int[],
+        input_table text,
+        mdl_table text,
+        output_table text
+    )
+    returns text
+    as
+    $$
+        import plpy
+        from itertools import product
+        #Get vocabulary size
+        voc_size = plpy.execute(
+            """
+                select 
+                    count(distinct wordid) as voc_size 
+                from 
+                    {input_table}
+            """.format(
+                input_table=input_table
+            )
+        )[0]['voc_size']
+        
+        mdl = """
+            drop table if exists {mdl_table} cascade;
+            drop table if exists {mdl_table}_results cascade;
+            select 
+                madlib.lda_train(
+                    '{input_table}', -- data_table',
+                    '{mdl_table}', -- model_table',
+                    '{mdl_table}_results', -- output_data_table',
+                    {voc_size}, -- voc_size,
+                    {num_topics}, -- topic_num,
+                    50, -- iter_num,
+                    {alpha}, -- alpha (recommended = 50/topic_num),
+                    {beta} -- beta
+                );
+        """
+        first_step = True
+        iter = 0
+        for alpha, beta, num_topics in product(alphas, betas, num_topics_arr):
+            plpy.info('Iteration {0} of {1}'.format(iter, len(list(product(alphas, betas, num_topics_arr)))))
+            plpy.info('alpha:{0}, beta:{1}, num_topics: {2}'.format(alpha, beta, num_topics))
+            plpy.execute(
+                mdl.format(
+                    voc_size=voc_size,
+                    alpha=alpha,
+                    beta=beta,
+                    num_topics=num_topics,
+                    input_table=input_table,
+                    mdl_table=mdl_table
+                )
+            )
+            if(first_step):
+                output_tbl_ctas_sql = """
+                    drop table if exists {output_table};
+                    create table {output_table}
+                    as
+                    (
+                        select 
+                            t1.*,
+                            t2.*
+                        from
+                            {mdl_table} t1,
+                            --Perplexity
+                            (
+                                select
+                                    madlib.lda_get_perplexity(
+                                        '{mdl_table}',
+                                        '{mdl_table}_results'
+                                    )
+                                
+                            ) t2
+                    ) distributed randomly;
+                """
+                plpy.execute(
+                    output_tbl_ctas_sql.format(
+                        output_table=output_table,
+                        mdl_table=mdl_table
+                    )
+                )
+                first_step = False
+            else:
+                output_tbl_insert_sql = """
+                    insert into {output_table}
+                    select 
+                        t1.*,
+                        t2.*
+                    from
+                        {mdl_table} t1,
+                        --Perplexity
+                        (
+                            select
+                                madlib.lda_get_perplexity(
+                                    '{mdl_table}',
+                                    '{mdl_table}_results'
+                                )
+
+                        ) t2
+                """
+                plpy.execute(
+                    output_tbl_insert_sql.format(
+                        output_table=output_table,
+                        mdl_table=mdl_table
+                    )
+                )
+                
+            iter += 1
+        return 'Grid search results written to {output_table}'.format(output_table=output_table)  
+    $$language plpythonu;

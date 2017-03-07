@@ -4,6 +4,9 @@
 
 ## PDL Tools Revision History
 
+### PDL Tools 1.10
+- Added function lda_gridsearch in grid_searh module
+
 ### PDL Tools 1.9
 - Add module data_imputation with functions to impute missing values
 
