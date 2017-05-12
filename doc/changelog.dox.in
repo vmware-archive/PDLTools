@@ -3,6 +3,10 @@
 @page changelog
 
 ## PDL Tools Revision History
+
+### PDL Tools 1.9dev
+- Add module data_imputation with functions to impute missing values
+
 ### PDL Tools 1.8 (packaged with SUgAR 1.0) -- Current version 
 - Add function for splitting data into train/test sets.
 - Add module for normalized cuts.

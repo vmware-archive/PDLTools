@@ -34,11 +34,13 @@ modules:
     - name: kd_tree
       depends: ['common']
     - name: pagerank
-      depends: ['common']
+      depends: ['common'] 
     - name: hits
       depends: ['common']
     - name: normalized_cut
       depends: ['common']
+    - name: data_imputation
+      depends: ['common']   
 #    - name: plr_placeholder
 #      depends: ['common']
 #  PL/R package disabled until PL/R will be part of Continuous Integration tool.

@@ -214,6 +214,19 @@ PL/Python, PL/pgSQL, MADlib 1.8+
         @defgroup grp_elastic_net elastic_net
     @}
 
+   @defgroup data_imputation Data Imputation
+   @{
+	@brief A set of Data Imputation Functions
+      A set of Data Imputation Functions
+
+(Written by [Himanshu Pandey](mailto:hpandey@pivotal.io), 29 Sep 2016.)
+
+@sa Module source file: data_imputation.sql_in
+@prereq
+PL/Python
+	@defgroup grp_data_imputation data_imputation
+  @}	 	
+ 
   @defgroup grp_genutils Generic Utilities
   @{
       @brief Collection of miscellaneous utility functions
