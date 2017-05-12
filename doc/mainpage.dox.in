@@ -98,9 +98,9 @@ PL/Perl
         @defgroup grp_session_split session_split
     @}
 
-    @defgroup grp_sampling Stratified Sampling
+    @defgroup grp_sampling Sampling
     @{
-        @brief A stratified sampling utility.
+        @brief A sampling utility.
 
 Utility to perform stratified, randomized, proportional sampling and labeling.
 
@@ -113,6 +113,7 @@ PL/Perl
 
         @defgroup grp_strat_partition strat_partition
         @defgroup grp_strat_sampling strat_sampling
+        @defgroup grp_train_test_split train_test_split
     @}
 
     @defgroup grp_complexnumbers Complex Numbers
@@ -312,6 +313,46 @@ A collection of machine-learning algorithms.
         PL/pgSQL
 
         @defgroup grp_pagerank pagerank
+    @}
+
+    @defgroup grp_hits_alg HITS
+    @{
+	@brief HITS algorithm
+
+	This function implements the HITS algorithm (https://en.wikipedia.org/wiki/HITS_algorithm).
+
+	It measures the relative importance of each node as a Hub and as an Authority in a directed
+        graph based on how it is connected to other nodes.
+              - A high Hub score corresponds to being the source node for many links
+              - A high Authority score corresponds to being the destination node for many links
+
+        (Written by [Robert Bennett](mailto:rbennett@pivotal.io), 06 September 2016.)
+
+        @sa Module source file: hits.sql_in.
+
+        @prereq
+	PL/pgSQL
+
+        @defgroup grp_hits hits
+     @}
+
+    @defgroup grp_normalized_cut_alg Normalized Cut
+    @{
+        @brief Normalized cut algorithm
+
+        The module implements the normalized cut algorithm (https://people.eecs.berkeley.edu/~malik/papers/SM-ncut.pdf).
+        It cuts a graph into two disjoint sets by removing edges connecting the two sets. The optimal cut is obtained 
+        by minimizing the normalized cut disassociation measure (see Shi & Malik's paper for technical details). This 
+        module partitions a graph iteratively until the size of each subgraph reaches a user specified threshold. 
+
+        (Written by [Jin Yu](mailto:jyu@pivotal.io), 2 September 2016.)
+
+        @sa Module source file: normalized_cut.sql_in.
+ 
+        @prereq
+        PL/pgSQL, PL/R, MADlib 1.8+
+
+        @defgroup grp_normalized_cut normalized_cut
     @}
 @}
 

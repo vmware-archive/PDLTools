@@ -54,3 +54,17 @@ CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.assert(actual double precision[], exp
 $BODY$
   return actual==expected
 $BODY$ LANGUAGE plpythonu;
+
+
+/* Helper function to avoid internal table clashes */ 
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__random_str(len integer)
+  RETURNS text AS
+$BODY$
+    SELECT string_agg(a)
+    FROM (
+        SELECT chr(ascii('a') + (random() * 25)::integer) a
+        FROM generate_series(1,$1)
+    ) foo
+$BODY$
+  LANGUAGE sql VOLATILE;
+

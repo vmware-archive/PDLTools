@@ -1,4 +1,3 @@
-
 /* ----------------------------------------------------------------------- *//**
 
 @file complete_linkage.sql_in
@@ -30,7 +29,7 @@ This function implements the commonly used complete-linkage hierarchical cluster
 @anchor complete_linkage_syntax
 @par Syntax
 <pre class="syntax">
-FUNCTION complete_linkage(dist_tab TEXT, id1 TEXT, id2 TEXT, dist TEXT, output TEXT, iter INT) 
+FUNCTION complete_linkage(dist_tab TEXT, id1 TEXT, id2 TEXT, dist TEXT, output TEXT, stop_criterion TEXT, iter NUMERIC) 
 RETURNS VOID;
 </pre>
 
@@ -39,7 +38,10 @@ RETURNS VOID;
 @param id2 ID column of data point 2 in \a dist_tab.
 @param dist Column of pairwise distances. (Missing rows are taken to have 0 distance.)
 @param output Name of the result table, containing the constructed hierarchical clustering tree.
-@param iter Number of maximum iterations. Set to NULL to build the entire clustering tree.
+@param stop_criterion Stopping criterion used to stop the clustering. Use 'max_iter' to stop the clustering after 
+a max number of iterations (NULL to build the entire clustering tree). Use 'threshold' to stop the clustering after
+the max distance between clusters reaches a threshold value. 
+@param iter Value corresponding to the stop_criterion
 
 @sa grp_cut_hclust_tree (for cutting the clustering tree to form flat clusters).
 
@@ -88,12 +90,12 @@ INSERT INTO complete_linkage_test_dist VALUES
 \n
 -# Build a hierarchical clustering tree
 \code
-SELECT complete_linkage('complete_linkage_test_dist','id1','id2','dist','complete_linkage_test_output',NULL);
+SELECT pdltools.complete_linkage('complete_linkage_test_dist','id1','id2','dist','complete_linkage_test_output',NULL);
 \endcode
 \n
 -# Cut the clustering tree at a certain height  (2 in the example) to obtain flat clusters (see \ref grp_cut_hclust_tree for the usage of the cut_hclust_tree() function)
 \code
-SELECT cut_hclust_tree('complete_linkage_test_dist','id1','id2','dist','complete_linkage_test_output',2,'complete_linkage_test_cluster');
+SELECT pdltools.cut_hclust_tree('complete_linkage_test_dist','id1','id2','dist','complete_linkage_test_output',2,'complete_linkage_test_cluster');
 \endcode
 The \a cluster_id column in the output table \a complete_linkage_test_cluster indicates data assignment.
 \code
@@ -151,6 +153,28 @@ See \ref grp_complete_linkage for a usage example.
 
 
 
+/**
+ * @internal
+ * @brief Data type to indicate if a cluster is already merged into other cluster (inactive) or not.
+*/
+CREATE TYPE PDLTOOLS_SCHEMA.__clink_cluster_activeness AS (
+    cluster_id INT[],
+    active INT[]
+);
+
+
+/**
+ * @internal
+ * @brief Data type to represent the nearest neighbors of all the clusters.
+*/
+CREATE TYPE PDLTOOLS_SCHEMA.__clink_set_of_nearest_clust_complete AS (
+    cluster_id INT[],
+    nn INT[],
+    member TEXT[],
+    height FLOAT8[]
+);
+
+
 
 /**
  * @brief Build a complete-linkage hierarchical clustering tree.
@@ -161,37 +185,50 @@ See \ref grp_complete_linkage for a usage example.
  * @param id2 ID column of data point 2 in dist_tab.
  * @param dist Column of pairwise distances. (Missing rows are taken to be 0 distance.)
  * @param output Name of the result table, containing the constructed hierarchical clustering tree.
- * @param iter Number of maximum iterations. Set to NULL to build the entire clustering tree.
+ * @param stop_criterion Stopping criterion used to stop the clustering. Use 'max_iter' to stop the clustering after 
+ *        a max number of iterations (NULL to build the entire clustering tree). Use 'threshold' to stop the clustering after
+ *        the max distance between clusters reaches a threshold value. 
+ * @param iter Value corresponding to the stop_criterion
  *
  * Sample usage: SELECT complete_linkage('test_dist','id1','id2','dist','test_output',NULL);
  *
  * See also the cut_hclust_tree_complete() function for cutting the clustering tree to form flat clusters.
  *
  */ 
-
-
-CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.complete_linkage(dist_tab TEXT, id1 TEXT, id2 TEXT, dist TEXT, output TEXT, iter INT) 
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.complete_linkage(dist_tab TEXT, id1 TEXT, id2 TEXT, dist TEXT, output TEXT, stop_criterion TEXT, iter NUMERIC) 
 RETURNS VOID AS $$
     DECLARE
         sql TEXT; 
         dist_mat TEXT;
-        nn_tab TEXT;
+        set_of_nn PDLTOOLS_SCHEMA.__clink_set_of_nearest_clust_complete;
+        new_nn PDLTOOLS_SCHEMA.__clink_set_of_nearest_clust_complete;
+        cluster_activeness PDLTOOLS_SCHEMA.__clink_cluster_activeness;
         n INT;
         clust_id_end INT;
-        nn RECORD;
+        result RECORD;
         max_iter INT;
+        max_height NUMERIC;
     BEGIN
 
         -- Create a symmetric distance matrix from dist_tab to facilitate 
         -- the process of finding the nearest neighbor.
-        EXECUTE('SELECT ''__complete_linkage_'' || PDLTOOLS_SCHEMA.__clink_random_str(10)') INTO dist_mat;
-        -- EXECUTE('DROP TABLE IF EXISTS ' || dist_mat);
+        EXECUTE('SELECT ''__complete_linkage_'' || PDLTOOLS_SCHEMA.__random_str(10)') INTO dist_mat;
+      
+        sql = 'CREATE TABLE '|| dist_mat ||' (i INT, j INT, dist FLOAT8) DISTRIBUTED RANDOMLY';
+        EXECUTE sql;
 
-        sql = 'CREATE TABLE '|| dist_mat ||' AS (
-            SELECT '|| id1 ||' i,'|| id2 ||' j,'|| dist ||' dist FROM '|| dist_tab || ' 
-            UNION 
-            SELECT '|| id2 ||' i,'|| id1 ||' j,'|| dist ||' dist FROM '|| dist_tab || '
-            ) DISTRIBUTED BY (i)';
+        sql = 'INSERT INTO ' || dist_mat ||' 
+            SELECT ' || id1 || ',' || id2 || ',' || dist || ' 
+            FROM ' || dist_tab || ' 
+            WHERE ' || id1 || '<>' || id2 || ' 
+            GROUP BY ' || id1 || ',' || id2 || ',' || dist;
+        EXECUTE sql;
+
+        sql = 'INSERT INTO ' || dist_mat ||' 
+            SELECT ' || id2 || ',' || id1 || ',' || dist || ' 
+            FROM ' || dist_tab || ' 
+            WHERE ' || id1 || '<>' || id2 || ' 
+            GROUP BY ' || id1 || ',' || id2 || ',' || dist;
         EXECUTE sql;
 
         -- Analyze the distance table so that the database
@@ -200,14 +237,11 @@ RETURNS VOID AS $$
         
         -- Prepare the output table. It will be expanded as
         -- clusters are merged.
-        -- EXECUTE('DROP TABLE IF EXISTS ' || output);
         sql = 'CREATE TABLE '|| output ||' AS (
             SELECT (row_number() OVER(ORDER BY id))::INT cluster_id, 
-            array[id] member, NULL::INT[] children, 0.0::FLOAT8 height, 1 active
+            array[id] member, NULL::INT[] children, 0.0::FLOAT8 height
             FROM (
-            (SELECT '|| id1 ||' id FROM '|| dist_tab ||') 
-            UNION 
-            (SELECT '|| id2 || ' id FROM '|| dist_tab ||')
+            SELECT DISTINCT i id FROM ' || dist_mat || '
             ) foo 
             ) DISTRIBUTED BY (cluster_id)';
         EXECUTE sql;
@@ -219,84 +253,97 @@ RETURNS VOID AS $$
         -- Number of data to cluster.
         EXECUTE('SELECT count(distinct i)::INT FROM ' || dist_mat) INTO n;
 
+        -- Keep track of cluster activeness. A cluster is de-activated when merged.
+        SELECT array_agg(i::INT) cluster_id, array_agg(1::INT) active FROM generate_series(1,n) i INTO cluster_activeness;
+
         -- Largest cluster id so far. It will be incremented by 1 
         -- each time when two clusters are merged.
         clust_id_end = n;
-
-        -- Table to save nearest neighbors.
-        EXECUTE('SELECT ''__complete_linkage_'' || PDLTOOLS_SCHEMA.__clink_random_str(10)') INTO nn_tab;
-    
-        -- EXECUTE('DROP TABLE IF EXISTS ' || nn_tab);
-
-        PERFORM PDLTOOLS_SCHEMA.__clink_init_nn_table_complete(dist_mat, output, nn_tab);
+   
+        SELECT * FROM PDLTOOLS_SCHEMA.__clink_init_nn_table_complete(dist_mat, output, cluster_activeness) INTO set_of_nn;
         
-        -- It's essential to analyze the nearest neighbor table so that 
-        -- the database can collect some statistics for query optimization.
-        EXECUTE('ANALYZE ' || nn_tab);
-
+        -- Determine stop criterion 
         IF iter IS NULL THEN
             max_iter = n-1;
-        ELSE
+            max_height = 1e16;
+        ELSIF stop_criterion = 'max_iter' THEN 
             max_iter = iter;
+            max_height = 1e16;
+        ELSIF stop_criterion = 'threshold' THEN 
+            max_iter = n-1;
+            max_height = iter;
+        ELSE 
+            max_iter = n-1;
+            max_height = 1e16;
         END IF;
 
         -- Start the main loop. 
         FOR i IN 1..least(max_iter, (n-1)) LOOP
             LOOP 
                 -- Find the pair of clusters with the shortest distance between them.
-                sql = 'SELECT a.*, b.active nn_active
-                    FROM ' || nn_tab || ' a JOIN '|| output ||' b
-                    ON (nn = b.cluster_id)
-                    WHERE a.height < 1e16
+                SELECT a.*, b.active nn_active
+                    FROM (
+                    SELECT unnest(set_of_nn.cluster_id) cluster_id,
+                    unnest(set_of_nn.nn) nn,
+                    unnest(set_of_nn.member) member,
+                    unnest(set_of_nn.height) height
+                    ) a JOIN (
+                    SELECT unnest(cluster_activeness.cluster_id) cluster_id, 
+                    unnest(cluster_activeness.active) active
+                    ) b ON (nn = b.cluster_id)
+                    WHERE a.height < max_height
                     ORDER BY a.height, b.active DESC, a.cluster_id 
-                    LIMIT 1';
-                EXECUTE sql INTO nn;
+                    LIMIT 1 INTO result;
 
-                EXIT WHEN nn IS NULL; 
+                EXIT WHEN result IS NULL; 
                 
-                EXIT WHEN nn.nn_active = 1;
+                EXIT WHEN result.nn_active = 1;
 
                 -- When the found nearest neighbor (NN) is not "active" 
                 -- (i.e., already been merged to another cluster), update the 
                 -- nearest neighbor table. 
-                PERFORM PDLTOOLS_SCHEMA.__clink_update_nn_table_complete(dist_mat, output, nn_tab, nn.cluster_id);
+                SELECT * FROM PDLTOOLS_SCHEMA.__clink_update_nn_table_complete(dist_mat, output, result.cluster_id, cluster_activeness) INTO new_nn;
+                set_of_nn.nn[result.cluster_id] = new_nn.nn[1];
+                set_of_nn.member[result.cluster_id] = new_nn.member[1];
+                set_of_nn.height[result.cluster_id] = new_nn.height[1];              
                 
             END LOOP;
 
             -- Exit the main loop when all pairs of clusters with finite 
             -- inter-cluster distances have been merged.
-            EXIT WHEN nn IS NULL;
+            EXIT WHEN result IS NULL;
 
             -- "De-activate" the found NNs in the output table.
-            sql = 'UPDATE ' || output || ' 
-                SET active = 0
-                WHERE cluster_id IN (' || 
-                CAST(nn.cluster_id AS TEXT) || ',' || 
-                CAST(nn.nn AS TEXT) || ')';
-            EXECUTE sql;
+            cluster_activeness.active[result.cluster_id] = 0;
+            cluster_activeness.active[result.nn] = 0;
 
 
-            -- Delete the found NNs from the nearest neighbor table.
-            sql = 'DELETE FROM ' || nn_tab || ' 
-                WHERE cluster_id IN (' || 
-                CAST(nn.cluster_id AS TEXT) || ',' || 
-                CAST(nn.nn AS TEXT) || ')';
-            EXECUTE sql;
+            -- Exclude the found NNs from future process, by setting 
+            -- their heights to the pre-specified maximum height.
+            set_of_nn.height[result.cluster_id] = 1e16;
+            set_of_nn.height[result.nn] = 1e16;
 
 
             -- Add the newly merged cluster to the output table.
             clust_id_end = clust_id_end + 1;
             sql = 'INSERT INTO ' || output || ' 
                 VALUES (' || CAST(clust_id_end AS TEXT) || ',
-                array[' || array_to_string(nn.member,',') || '],
-                array[' || CAST(nn.cluster_id AS TEXT) || ',' || CAST(nn.nn AS TEXT) || '],' ||
-                CAST(nn.height AS TEXT) || ',
-                1)';
+                regexp_split_to_array(' || quote_literal(result.member) || ',' || quote_literal(E'\\s+') || ')::INT[],
+                array[' || CAST(result.cluster_id AS TEXT) || ',' || CAST(result.nn AS TEXT) || '],' ||
+                CAST(result.height AS TEXT) || ')';
             EXECUTE sql;
+
+            -- Set the activeness of the new cluster.
+            cluster_activeness.cluster_id = cluster_activeness.cluster_id || array[clust_id_end];
+            cluster_activeness.active = cluster_activeness.active || array[1::INT];
 
             -- Expand the nearest neighbor table to include the newly formed cluster.
             IF i < (n-1) THEN
-                PERFORM PDLTOOLS_SCHEMA.__clink_expand_nn_table_complete(dist_mat, output, nn_tab, clust_id_end);
+                SELECT * FROM PDLTOOLS_SCHEMA.__clink_expand_nn_table_complete(dist_mat, output, clust_id_end, cluster_activeness) INTO new_nn;
+                set_of_nn.cluster_id = set_of_nn.cluster_id || array[clust_id_end];
+                set_of_nn.nn = set_of_nn.nn || new_nn.nn;
+                set_of_nn.member = set_of_nn.member || new_nn.member;
+                set_of_nn.height =  set_of_nn.height || new_nn.height;
 
             END IF;
 
@@ -304,7 +351,6 @@ RETURNS VOID AS $$
 
         -- Clean up temporary tables.
         EXECUTE('DROP TABLE '|| dist_mat);
-        EXECUTE('DROP TABLE '|| nn_tab);
 
     END
 $$ LANGUAGE PLPGSQL; 
@@ -337,9 +383,9 @@ RETURNS VOID AS $$
         temp_tab TEXT;
         temp_unnest_tab TEXT;
     BEGIN
-        EXECUTE('SELECT ''__complete_linkage_'' || PDLTOOLS_SCHEMA.__clink_random_str(10)') INTO temp_tab;
+        EXECUTE('SELECT ''__complete_linkage_'' || PDLTOOLS_SCHEMA.__random_str(10)') INTO temp_tab;
         -- EXECUTE('DROP TABLE IF EXISTS ' || temp_tab);
-        EXECUTE('SELECT ''__complete_linkage_'' || PDLTOOLS_SCHEMA.__clink_random_str(10)') INTO temp_unnest_tab;
+        EXECUTE('SELECT ''__complete_linkage_'' || PDLTOOLS_SCHEMA.__random_str(10)') INTO temp_unnest_tab;
 
         -- Cut the clustering tree at the given height.
         sql = 'CREATE TABLE '|| temp_tab || ' AS (
@@ -402,17 +448,6 @@ RETURNS VOID AS $$
 $$ LANGUAGE PLPGSQL;
 
 
-/**
- * @internal
- * @brief Data type to represent the nearest neighbor of a cluster.
-*/
--- DROP TYPE IF EXISTS PDLTOOLS_SCHEMA.__clink_nearest_clust_complete CASCADE; 
-CREATE TYPE PDLTOOLS_SCHEMA.__clink_nearest_clust_complete AS (
-    cluster_id INT,
-    nn INT,
-    member INT[],
-    height FLOAT8
-);
 
 
 
@@ -430,13 +465,16 @@ CREATE TYPE PDLTOOLS_SCHEMA.__clink_nearest_clust_complete AS (
  *
  */
   
-CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__clink_find_nn_complete(dist_tab TEXT, clust_tab TEXT, clusta_id INT[])
-RETURNS SETOF PDLTOOLS_SCHEMA.__clink_nearest_clust_complete AS $$
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__clink_find_nn_complete(dist_tab TEXT, clust_tab TEXT, clusta_id INT[], cluster_activeness PDLTOOLS_SCHEMA.__clink_cluster_activeness)
+RETURNS PDLTOOLS_SCHEMA.__clink_set_of_nearest_clust_complete AS $$
     DECLARE 
         sql TEXT; 
-        nn PDLTOOLS_SCHEMA.__clink_nearest_clust_complete;   
+        nn PDLTOOLS_SCHEMA.__clink_set_of_nearest_clust_complete;   
     BEGIN      
-        sql = 'SELECT q.cluster_id, p.nn, (a.member || b.member) member, coalesce(p.height, 1e16) height
+        sql = 'SELECT array_agg(q.cluster_id ORDER BY q.cluster_id) cluster_id, 
+            array_agg(p.nn ORDER BY q.cluster_id) nn, 
+            array_agg(array_to_string(a.member || b.member, ' || quote_literal(' ') || ') ORDER BY q.cluster_id) member, 
+            array_agg(coalesce(p.height, 1e16) ORDER BY q.cluster_id) height
             FROM
             (SELECT *
             FROM (
@@ -451,13 +489,24 @@ RETURNS SETOF PDLTOOLS_SCHEMA.__clink_nearest_clust_complete AS $$
             dist_tab || ' dist_tab JOIN 
             (SELECT cluster_id clusta, unnest(member) clusta_member_i, member clusta_member, height clusta_height, array_upper(member,1) clusta_size
             FROM '|| clust_tab ||' 
-            WHERE active = 1 
+            JOIN (
+            SELECT unnest(array[' || array_to_string(cluster_activeness.cluster_id,',')|| ']::INT[]) cluster_id, 
+            unnest(array[' || array_to_string(cluster_activeness.active,',') || ']::INT[]) active
+            ) foo
+            USING (cluster_id)
+            WHERE foo.active = 1
             AND cluster_id IN (' || array_to_string(clusta_id, ',') || ')
             ) a ON (i = clusta_member_i)
             JOIN 
             (SELECT cluster_id clustb, unnest(member) clustb_member_i, member clustb_member, height clustb_height, array_upper(member,1) clustb_size
             FROM '|| clust_tab ||'  
-            WHERE active = 1) b
+             JOIN (
+            SELECT unnest(array[' || array_to_string(cluster_activeness.cluster_id,',')|| ']::INT[]) cluster_id, 
+            unnest(array[' || array_to_string(cluster_activeness.active,',') || ']::INT[]) active
+            ) foo
+            USING (cluster_id)
+            WHERE foo.active = 1
+            ) b
             ON (j = clustb_member_i AND clusta <> clustb)
             GROUP BY clusta, clustb
             ) foo
@@ -470,11 +519,9 @@ RETURNS SETOF PDLTOOLS_SCHEMA.__clink_nearest_clust_complete AS $$
             LEFT JOIN '|| clust_tab ||' a ON (q.cluster_id = a.cluster_id)
             LEFT JOIN '|| clust_tab ||' b ON (p.nn = b.cluster_id)';
 
-        FOR nn IN EXECUTE sql LOOP
-            RETURN NEXT nn;
-        END LOOP;
+        EXECUTE sql INTO nn;
 
-        RETURN;
+        RETURN nn;
         
     END;   
 $$ LANGUAGE PLPGSQL;
@@ -495,35 +542,20 @@ $$ LANGUAGE PLPGSQL;
  *
  */
  
-CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__clink_init_nn_table_complete(dist_tab TEXT, clust_tab TEXT, nn_tab TEXT)
-RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__clink_init_nn_table_complete(dist_tab TEXT, clust_tab TEXT, cluster_activeness PDLTOOLS_SCHEMA.__clink_cluster_activeness)
+RETURNS PDLTOOLS_SCHEMA.__clink_set_of_nearest_clust_complete AS $$
 
     DECLARE 
         sql TEXT;
         all_clust INT[];
-        nn RECORD; 
+        nn PDLTOOLS_SCHEMA.__clink_set_of_nearest_clust_complete;          
     BEGIN
         sql = 'SELECT array_agg(cluster_id) FROM '|| clust_tab;
         EXECUTE sql INTO all_clust;
 
-        -- EXECUTE('DROP TABLE IF EXISTS ' || nn_tab);
-        sql = 'CREATE TABLE ' || nn_tab || ' (
-            cluster_id INT, 
-            nn INT, 
-            member INT[], 
-            height FLOAT8
-            ) DISTRIBUTED BY (cluster_id)';
-         EXECUTE sql;
-        
-        FOR nn IN SELECT * FROM PDLTOOLS_SCHEMA.__clink_find_nn_complete(dist_tab, clust_tab, all_clust) LOOP 
-            sql = 'INSERT INTO ' || nn_tab || ' 
-                VALUES (' || 
-                CAST(nn.cluster_id AS TEXT) || ',' || 
-                CAST(nn.nn AS TEXT) || ',
-                array[' || array_to_string(nn.member,',') || '],' ||
-                CAST(nn.height AS TEXT) || ')';
-            EXECUTE sql;  
-        END LOOP; 
+        SELECT * FROM PDLTOOLS_SCHEMA.__clink_find_nn_complete(dist_tab, clust_tab, all_clust, cluster_activeness) INTO nn;
+
+        return nn;       
     END;
 $$ LANGUAGE PLPGSQL;
 
@@ -543,23 +575,17 @@ $$ LANGUAGE PLPGSQL;
  *
  */
 
-CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__clink_update_nn_table_complete(dist_tab TEXT, clust_tab TEXT, nn_tab TEXT, clust_id INT)
-RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__clink_update_nn_table_complete(dist_tab TEXT, clust_tab TEXT, clust_id INT, cluster_activeness PDLTOOLS_SCHEMA.__clink_cluster_activeness)
+RETURNS PDLTOOLS_SCHEMA.__clink_set_of_nearest_clust_complete AS $$
 
     DECLARE 
         sql TEXT;
-        nn RECORD;     
+        nn PDLTOOLS_SCHEMA.__clink_set_of_nearest_clust_complete;   
     BEGIN       
                 
-        SELECT * FROM PDLTOOLS_SCHEMA.__clink_find_nn_complete(dist_tab, clust_tab, array[clust_id]) INTO nn;     
+        SELECT * FROM PDLTOOLS_SCHEMA.__clink_find_nn_complete(dist_tab, clust_tab, array[clust_id], cluster_activeness) INTO nn;     
+        RETURN nn;
           
-        sql = 'UPDATE ' || nn_tab || '
-            SET nn = '|| CAST(nn.nn AS TEXT) ||',
-            member = array[' || array_to_string(nn.member,',') || '],
-            height = ' || CAST(nn.height AS TEXT) || '
-            WHERE cluster_id = ' || CAST(nn.cluster_id AS TEXT);
-        EXECUTE sql;  
- 
     END;
 $$ LANGUAGE PLPGSQL;
 
@@ -578,25 +604,17 @@ $$ LANGUAGE PLPGSQL;
  * This function is called by complete_linkage().
  *
  */
-CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__clink_expand_nn_table_complete(dist_tab TEXT, clust_tab TEXT, nn_tab TEXT, new_clust_id INT)
-RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__clink_expand_nn_table_complete(dist_tab TEXT, clust_tab TEXT, new_clust_id INT, cluster_activeness PDLTOOLS_SCHEMA.__clink_cluster_activeness)
+RETURNS PDLTOOLS_SCHEMA.__clink_set_of_nearest_clust_complete AS $$
 
     DECLARE 
         sql TEXT;
-        nn RECORD;     
+        nn PDLTOOLS_SCHEMA.__clink_set_of_nearest_clust_complete;     
     BEGIN       
 
-        SELECT * FROM PDLTOOLS_SCHEMA.__clink_find_nn_complete(dist_tab, clust_tab, array[new_clust_id]) INTO nn;     
+        SELECT * FROM PDLTOOLS_SCHEMA.__clink_find_nn_complete(dist_tab, clust_tab, array[new_clust_id], cluster_activeness) INTO nn;     
 
-        IF nn.nn IS NOT NULL THEN  
-            sql = 'INSERT INTO ' || nn_tab || ' 
-                VALUES (' || 
-                CAST(nn.cluster_id AS TEXT) || ',' || 
-                CAST(nn.nn AS TEXT) || ',
-                array[' || array_to_string(nn.member,',') || '],' ||
-                CAST(nn.height AS TEXT) || ')';
-            EXECUTE sql;  
-        END IF;
+        RETURN nn;
  
     END;
 $$ LANGUAGE PLPGSQL;
@@ -615,16 +633,6 @@ $$ LANGUAGE PLPGSQL;
  *
  */ 
  
-CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.__clink_random_str(len INT)
-RETURNS TEXT AS
-$$
-    SELECT string_agg(a)
-    FROM (
-        SELECT chr(ascii('a') + (random() * 25)::integer) a
-        FROM generate_series(1,$1)
-    ) foo
-$$ LANGUAGE SQL;
-
 
 
 CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.complete_linkage() 
@@ -674,8 +682,10 @@ id2      - ID column of data point 2 in dist_tab.
 dist     - Column of pairwise distances. (Missing rows are taken to be 0 distance.)
 output   - Name of the result table, containing the constructed hierarchical
            clustering tree.
-iter     - Number of maximum iterations. Set to NULL to build the entire
-           clustering tree.
+stop_criterion     - Stopping criterion used to stop the clustering. Use ''max_iter'' to stop the clustering 
+                    after a max number of iterations. Use ''threshold'' to stop the clustering after the max distance between
+                    clusters reaches a threshold value.
+iter     - Value corresponding to the stop criterion.
 
 See also cut_hclust_tree for cutting the clustering tree to form flat
 clusters.
@@ -837,7 +847,7 @@ INSERT INTO complete_linkage_test_dist VALUES
 
 2. Build a hierarchical clustering tree
 SELECT PDLTOOLS_SCHEMA.complete_linkage(''complete_linkage_test_dist'',
-              ''id1'',''id2'',''dist'',''complete_linkage_test_output'',NULL);
+              ''id1'',''id2'',''dist'',''complete_linkage_test_output'',NULL,NULL);
 
 3. Cut the clustering tree at a certain height  (2 in the example) to obtain
 flat clusters.
