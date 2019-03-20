@@ -247,7 +247,7 @@ FLOATING_POINT_LITERAL ([[:digit:]]+"."[[:digit:]]*|"."[[:digit:]]+){EXPONENT}?|
     }
     {DOLLARQUOTE} {
         /* String literals in dollar quotes, see
-        http://www.postgresql.org/docs/current/static/sql-syntax-lexical.html#SQL-SYNTAX-DOLLAR-QUOTING */
+        https://www.postgresql.org/docs/current/static/sql-syntax-lexical.html#SQL-SYNTAX-DOLLAR-QUOTING */
         stringLiteralQuotation = static_cast<char *>( malloc(yyleng - 1) );
         strncpy(stringLiteralQuotation, yytext + 1, yyleng - 1);
         yy_push_state(sDOLLAR_STRING_LITERAL);
