@@ -8,7 +8,7 @@ PDL Tools
 Usage docs
 ============
 
-http://pivotalsoftware.github.io/PDLTools/
+https://pivotalsoftware.github.io/PDLTools/
 
 Binaries (Pivotal internal)
 ============================
@@ -23,7 +23,7 @@ The following are the pre-requisites for building PDLTools:
 
 Required:
 * Pivotal Greenplum or Apache HAWQ ([GPDB sandbox](https://network.pivotal.io/products/pivotal-gpdb), [HAWQ sandbox](https://network.pivotal.io/products/pivotal-hdb))
-* Apache MADlib ([Download](http://madlib.incubator.apache.org/download.html))
+* Apache MADlib ([Download](https://madlib.incubator.apache.org/download.html))
 * cmake (3.5 recommended)
 * GNU C and C++ compilers (gcc, g++)
 * Flex (>= 2.5.33)
