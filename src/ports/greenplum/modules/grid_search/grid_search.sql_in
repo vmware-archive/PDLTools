@@ -23,7 +23,7 @@
 </div>
 
 @about
-A function that run's MADlib's k-Means function with varying values for k and saves the model outputs into one table. See the <A HREF="http://madlib.incubator.apache.org/docs/v1.8/group__grp__kmeans.html">MADlib's documentation</A> for more details. 
+A function that run's MADlib's k-Means function with varying values for k and saves the model outputs into one table. See the <A HREF="https://madlib.incubator.apache.org/docs/v1.8/group__grp__kmeans.html">MADlib's documentation</A> for more details. 
 
 @anchor kmeans_syntax
 @par Syntax
@@ -79,7 +79,7 @@ performance reasons.])</li>
 <li><b>squared_dist_norm2</b>: squared Euclidean distance (element-wise mean)</li>
 <li><b>dist_angle</b>: angle (element-wise mean of normalized points)</li>
 <li><b>dist_tanimoto</b>: tanimoto (element-wise mean of normalized points)</li>
-<li><b>user defined function</b> with signature <tt>DOUBLE PRECISION[] x, DOUBLE PRECISION[] y -> DOUBLE PRECISION</tt></li></ul><br>See the <a href="http://madlib.incubator.apache.org/docs/v1.8/group__grp__kmeans.html">MADlib's documentation</a> for more details. 
+<li><b>user defined function</b> with signature <tt>DOUBLE PRECISION[] x, DOUBLE PRECISION[] y -> DOUBLE PRECISION</tt></li></ul><br>See the <a href="https://madlib.incubator.apache.org/docs/v1.8/group__grp__kmeans.html">MADlib's documentation</a> for more details. 
 @param agg_centroid (optional)  The name of the aggregate function used to determine centroids. Default: 'avg'.<br><br>The following aggregate functions can be used:<ul>
  <li><b>avg</b>: average (Default)</li>
  <li><b>normalized_avg</b>: normalized average</li></ul>
@@ -368,7 +368,7 @@ $$
             (
                 select 
                     num_clusters,
-                    --Refer: http://en.wikipedia.org/wiki/Silhouette_(clustering)
+                    --Refer: https://en.wikipedia.org/wiki/Silhouette_(clustering)
                     avg(
                         CASE  WHEN distances[2] = 0 THEN 0
                           ELSE (distances[2] - distances[1]) / distances[2]

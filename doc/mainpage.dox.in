@@ -248,7 +248,7 @@ algorithm. It constructs a hierarchical clustering tree from bottom up by
 merging closest clusters. Complete-linkage clustering defines the distance
 between two clusters as the distance between the farthest pair of data points
 in the two clusters
-(See http://en.wikipedia.org/wiki/Complete-linkage_clustering).
+(See https://en.wikipedia.org/wiki/Complete-linkage_clustering).
 
 (Written by [Jin Yu](mailto:jyu@pivotal.io), 22 Sep 2014.)
 

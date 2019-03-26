@@ -6,7 +6,7 @@
 
 @author PL/C Wrapper written by Srivatsan Ramanujam<sramanujam@pivotal.io> 
         porting original inventor Martin Porter's code 
-        from http://tartarus.org/martin/PorterStemmer/c_thread_safe.txt
+        from https://tartarus.org/martin/PorterStemmer/c_thread_safe.txt
 @date 12 Aug 2014
 
  *//* ----------------------------------------------------------------------- */
