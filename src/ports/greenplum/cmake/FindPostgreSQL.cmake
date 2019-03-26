@@ -40,7 +40,7 @@
 # Distributed under the BSD-License.
 
 # According to
-# http://www.cmake.org/files/v2.8/CMakeChangeLog-2.8.3
+# https://www.cmake.org/files/v2.8/CMakeChangeLog-2.8.3
 # the form of find_package_handle_standard_args we are using requires
 # cmake >= 2.8.3
 cmake_minimum_required(VERSION 2.8.3 FATAL_ERROR)

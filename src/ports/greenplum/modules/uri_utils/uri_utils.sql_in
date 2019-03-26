@@ -195,7 +195,7 @@ affected by the question of whether \c "normalize" is true or false.
 @verbatim
 user=# \x
 Expanded display is on.
-user=# SELECT * FROM parse_uri('http://myself:password@www.Pivotal.io:80/%7ehello/to/you/index.html?who=I&whom=me#here',true,true);
+user=# SELECT * FROM parse_uri('https://myself:password@www.Pivotal.io:80/%7ehello/to/you/index.html?who=I&whom=me#here',true,true);
 -[ RECORD 1 ]+---------------------------
 scheme       | http
 userinfo     | myself:password
@@ -269,7 +269,7 @@ Example
 =======
 user=# \x
 Expanded display is on.
-user=# SELECT * FROM PDLTOOLS_SCHEMA.parse_uri('http://myself:password@www.Pivotal.io:80/%7ehello/to/you/index.html?who=I&whom=me#here',true,true);
+user=# SELECT * FROM PDLTOOLS_SCHEMA.parse_uri('https://myself:password@www.Pivotal.io:80/%7ehello/to/you/index.html?who=I&whom=me#here',true,true);
 -[ RECORD 1 ]+---------------------------
 scheme       | http
 userinfo     | myself:password

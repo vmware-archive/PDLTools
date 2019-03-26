@@ -23,7 +23,7 @@
 </div>
 
 @about
-A function that run's MADlib's k-Means function with varying values for k and saves the model outputs into one table. See the <A HREF="http://madlib.incubator.apache.org/docs/v1.8/group__grp__kmeans.html">MADlib's documentation</A> for more details. 
+A function that run's MADlib's k-Means function with varying values for k and saves the model outputs into one table. See the <A HREF="https://madlib.incubator.apache.org/docs/v1.8/group__grp__kmeans.html">MADlib's documentation</A> for more details. 
 
 @anchor kmeans_syntax
 @par Syntax
@@ -79,7 +79,7 @@ performance reasons.])</li>
 <li><b>squared_dist_norm2</b>: squared Euclidean distance (element-wise mean)</li>
 <li><b>dist_angle</b>: angle (element-wise mean of normalized points)</li>
 <li><b>dist_tanimoto</b>: tanimoto (element-wise mean of normalized points)</li>
-<li><b>user defined function</b> with signature <tt>DOUBLE PRECISION[] x, DOUBLE PRECISION[] y -> DOUBLE PRECISION</tt></li></ul><br>See the <a href="http://madlib.incubator.apache.org/docs/v1.8/group__grp__kmeans.html">MADlib's documentation</a> for more details. 
+<li><b>user defined function</b> with signature <tt>DOUBLE PRECISION[] x, DOUBLE PRECISION[] y -> DOUBLE PRECISION</tt></li></ul><br>See the <a href="https://madlib.incubator.apache.org/docs/v1.8/group__grp__kmeans.html">MADlib's documentation</a> for more details. 
 @param agg_centroid (optional)  The name of the aggregate function used to determine centroids. Default: 'avg'.<br><br>The following aggregate functions can be used:<ul>
  <li><b>avg</b>: average (Default)</li>
  <li><b>normalized_avg</b>: normalized average</li></ul>
@@ -309,7 +309,7 @@ simple_silhouette | 0.877815152206439
 </div>
 
 @about
-Elastic Nets combine the the benefits of L1 and L2 regularizations with regression models. L1 regularization results in very sparse features, while L2 regularization results in features whose coefficients are closer to zero. By adjusting the alpha and lambda parameters, we can achieve the benefits of both L1 and L2 regularization. Refer to <A HREF="http://madlib.incubator.apache.org/docs/latest/group__grp__elasticnet.html">MADlib Elastic Net Regression</A> for more information.
+Elastic Nets combine the the benefits of L1 and L2 regularizations with regression models. L1 regularization results in very sparse features, while L2 regularization results in features whose coefficients are closer to zero. By adjusting the alpha and lambda parameters, we can achieve the benefits of both L1 and L2 regularization. Refer to <A HREF="https://madlib.incubator.apache.org/docs/latest/group__grp__elasticnet.html">MADlib Elastic Net Regression</A> for more information.
 
 @anchor elasticnet_syntax
 @par Syntax
@@ -357,7 +357,7 @@ returns text;
 
 @anchor elasticnet_usage
 @usage
-Given an array of alphas and lambdas, the function runs MADlib's Elastic Net Regularization with k-fold cross-validation. The resulting table contains the AUC values for each model iteration. Refer to <A HREF="http://madlib.incubator.apache.org/docs/latest/group__grp__elasticnet.html">MADlib Elastic Net Regression</A> for more information.
+Given an array of alphas and lambdas, the function runs MADlib's Elastic Net Regularization with k-fold cross-validation. The resulting table contains the AUC values for each model iteration. Refer to <A HREF="https://madlib.incubator.apache.org/docs/latest/group__grp__elasticnet.html">MADlib Elastic Net Regression</A> for more information.
 
 @anchor elasticnet_example
 @examp
@@ -510,7 +510,7 @@ $$
             (
                 select 
                     num_clusters,
-                    --Refer: http://en.wikipedia.org/wiki/Silhouette_(clustering)
+                    --Refer: https://en.wikipedia.org/wiki/Silhouette_(clustering)
                     avg(
                         CASE  WHEN distances[2] = 0 THEN 0
                           ELSE (distances[2] - distances[1]) / distances[2]
