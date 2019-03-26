@@ -9,7 +9,7 @@ as
 	select (t).*
 	from
 	(
-	       select parse_uri($BODY$http://myself:password@www.Pivotal.io:80/%7ehello/to/you/index.html?who=I&whom=me&more=a%20%22''%5E%5e%41#here$BODY$,false,false) as t
+	       select parse_uri($BODY$https://myself:password@www.Pivotal.io:80/%7ehello/to/you/index.html?who=I&whom=me&more=a%20%22''%5E%5e%41#here$BODY$,false,false) as t
 	)test
 )
 select (

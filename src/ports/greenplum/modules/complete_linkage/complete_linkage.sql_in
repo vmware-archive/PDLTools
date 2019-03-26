@@ -24,7 +24,7 @@
 </div>
 
 @about
-This function implements the commonly used complete-linkage hierarchical clustering algorithm. It constructs a hierarchical clustering tree from bottom up by merging closest clusters. Complete-linkage clustering defines the distance between two clusters as the distance between the farthest pair of data points in the two clusters (http://en.wikipedia.org/wiki/Complete-linkage_clustering). Given a hierarchical clustering tree, one can cut the tree at a certain height to obtain flat clusters of data points (cf. \ref grp_cut_hclust_tree).
+This function implements the commonly used complete-linkage hierarchical clustering algorithm. It constructs a hierarchical clustering tree from bottom up by merging closest clusters. Complete-linkage clustering defines the distance between two clusters as the distance between the farthest pair of data points in the two clusters (https://en.wikipedia.org/wiki/Complete-linkage_clustering). Given a hierarchical clustering tree, one can cut the tree at a certain height to obtain flat clusters of data points (cf. \ref grp_cut_hclust_tree).
 
 @anchor complete_linkage_syntax
 @par Syntax

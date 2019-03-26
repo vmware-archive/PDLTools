@@ -126,7 +126,7 @@ SELECT * FROM pagerank_test_output ORDER BY node;
  
 
 /**
- * @brief Calculate PageRank of directed graph (http://en.wikipedia.org/wiki/PageRank). 
+ * @brief Calculate PageRank of directed graph (https://en.wikipedia.org/wiki/PageRank). 
  *
  * @param input_tab Input table that contains the edges of a directed graph.
  * @param source_node Column that specifies source nodes.
