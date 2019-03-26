@@ -24,5 +24,5 @@ PostInstall:
            echo '$ pdlpack --help';
            echo 'Release notes and additional documentation can be found at';
            echo 'https://sites.google.com/a/pivotal.io/global-data-science/pdl-tools,';
-           echo 'as well as on http://pdl-tools.pa.pivotal.io/';
+           echo 'as well as on https://pdl-tools.pa.pivotal.io/';
            echo 'accessible through the Pivotal VPN.';"
