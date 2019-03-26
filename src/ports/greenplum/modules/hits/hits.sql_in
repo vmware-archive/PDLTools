@@ -13,7 +13,7 @@
 /**                                                                                                                                                                             
 @addtogroup grp_hits                                                                                                                                                        
                                                                                                                                                                                 
-@brief Use the HITS alogrithm to calculate authority and hub scores of directed graph (http://en.wikipedia.org/wiki/HITS_algorithm).
+@brief Use the HITS alogrithm to calculate authority and hub scores of directed graph (https://en.wikipedia.org/wiki/HITS_algorithm).
                                                                                                                                                                                 
 <div class="toc"><b>Contents</b>                                                                                                                                                
 <ul>                                                                                                                                                                            
@@ -154,7 +154,7 @@ E    | 0			   |	0.25000000000000000000	|	3
 
 
 /**
- * @brief Use the HITS alogrithm to calculate authority and hub scores of directed graph (http://en.wikipedia.org/wiki/HITS_algorithm).
+ * @brief Use the HITS alogrithm to calculate authority and hub scores of directed graph (https://en.wikipedia.org/wiki/HITS_algorithm).
  *                                                                                                                                                                              
  * @param input_tab Input table that contains the edges of a directed graph.                                                                                                    
  * @param source_node Column that specifies source nodes.                                                                                                                       
