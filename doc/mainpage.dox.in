@@ -245,7 +245,7 @@ A collection of machine-learning algorithms.
 	merging closest clusters. Complete-linkage clustering defines the distance
 	between two clusters as the distance between the farthest pair of data points
 	in the two clusters
-	(See http://en.wikipedia.org/wiki/Complete-linkage_clustering).
+	(See https://en.wikipedia.org/wiki/Complete-linkage_clustering).
 	
 	(Written by [Jin Yu](mailto:jyu@pivotal.io), 22 Sep 2014.)
 	
@@ -263,7 +263,7 @@ A collection of machine-learning algorithms.
         @brief KD-tree and its application to k-nearest neighbour search
 
  	Construction of a KD-tree that organizes multi-dimensional data in a binary tree 
- 	(http://en.wikipedia.org/wiki/K-d_tree). The data is recursively partitioned at the 
+ 	(https://en.wikipedia.org/wiki/K-d_tree). The data is recursively partitioned at the 
  	median value along the dimension of maximum variance. KD-tree can be used for 
  	efficient nearest neighbour search in a low dimensional space (e.g. dimensionality < 10). 
  	The search function is intended for large-scale problems, e.g. finding nearest neighbours 

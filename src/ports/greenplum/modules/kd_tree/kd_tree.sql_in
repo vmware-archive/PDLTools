@@ -23,7 +23,7 @@
 </div>
 
 @about
-A KD-tree is a data structure that organizes multi-dimensional data in a binary tree (http://en.wikipedia.org/wiki/K-d_tree). 
+A KD-tree is a data structure that organizes multi-dimensional data in a binary tree (https://en.wikipedia.org/wiki/K-d_tree). 
 It is widely used for efficient nearest neighbour search in a low dimensional space (\ref grp_kdtree_knn). 
 Due to the "curse of dimensionality", the search however becomes less effective as the dimensionality of the 
 space increases (e.g. > 10). This function creates a KD-tree by recursively partitioning the data at the median  

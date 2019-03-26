@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# Packaging for the PostgreSQL Extension Network (PGXN), http://pgxn.org
+# Packaging for the PostgreSQL Extension Network (PGXN), https://pgxn.org
 # ------------------------------------------------------------------------------
 
 set(PDLTOOLS_PGXN_RELEASE_NUMBER 1)

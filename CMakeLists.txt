@@ -107,10 +107,10 @@ if(CMAKE_COMPILER_IS_GNUCC)
     OUTPUT_STRIP_TRAILING_WHITESPACE)
   
   # A useful summary of warning options can be found here:
-  # http://developer.apple.com/tools/xcode/compilercodewarnings.html
+  # https://developer.apple.com/tools/xcode/compilercodewarnings.html
   # Note: gcc does not implicitly set _POSIX_C_SOURCE or _XOPEN_SOURCE
   # when using -std=c99.
-  # http://pubs.opengroup.org/onlinepubs/9699919799/functions/V2_chap02.html#tag_15_02_01_01
+  # https://pubs.opengroup.org/onlinepubs/9699919799/functions/V2_chap02.html#tag_15_02_01_01
   # We specify that we are POSIX.1-2001 compliant and XSI-conforming. We only
   # need to specify _XOPEN_SOURCE as _POSIX_C_SOURCE will be set implicitly.
   set(CMAKE_C_FLAGS "-std=c99 -pedantic -Wall -Wextra -D_XOPEN_SOURCE=600"
