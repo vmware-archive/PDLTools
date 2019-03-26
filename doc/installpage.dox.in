@@ -72,7 +72,7 @@ For additional options run:
 $ pdlpack --help
 Release notes and additional documentation can be found at
 https://sites.google.com/a/pivotal.io/global-data-science/pdl-tools,
-as well as on http://pdl-tools.pa.pivotal.io/
+as well as on https://pdl-tools.pa.pivotal.io/
 accessible through the Pivotal VPN.
 20140826:07:05:23:015733 gppkg:localhost:gpadmin-[INFO]:-pdltools-@PDLTOOLS_VERSION_STRING@-gpdb4.3-
 rhel5-x86_64.gppkg successfully installed.

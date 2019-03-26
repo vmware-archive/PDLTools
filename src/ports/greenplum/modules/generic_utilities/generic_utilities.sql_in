@@ -70,7 +70,7 @@ RETURNS text;
 @usage
 The multitbl_summary() function utilizes MADlib's summary() function to produce summary statistics for a set of provided tables.
 The underlying summary function invokes various methods from the MADlib library to provide the data overview.
-More information about the underlying MADlib function can be found http://madlib.incubator.apache.org/docs/latest/group__grp__summary.html
+More information about the underlying MADlib function can be found https://madlib.incubator.apache.org/docs/latest/group__grp__summary.html
 
 Tables listed in the input array that are not found in the system catalog (e.g. does not exist, no permissions) are excluded from summary.
 
@@ -254,5 +254,5 @@ $$ LANGUAGE 'plpythonu';
 CREATE OR REPLACE FUNCTION PDLTOOLS_SCHEMA.multitbl_summary(usage text)
 RETURNS text AS
 $$
-    return '''PL/python driver to run MADLIB_SCHEMA.summary() on multiple tables. Refer to: http://pivotalsoftware.github.io/PDLTools/modules.html for more details'''
+    return '''PL/python driver to run MADLIB_SCHEMA.summary() on multiple tables. Refer to: https://pivotalsoftware.github.io/PDLTools/modules.html for more details'''
 $$ LANGUAGE 'plpythonu';
